@@ -1,0 +1,273 @@
+<?php
+
+namespace App\Services\Emergency;
+
+class EmergencyGuidanceService
+{
+    /**
+     * Get all structured emergency scenarios and their containment playbooks.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getScenarios(): array
+    {
+        return [
+            [
+                'key' => 'apk_malware',
+                'title' => 'Terlanjur Menginstal File APK Jahat',
+                'subtitle' => 'Malware pencuri OTP SMS dan pengambilalihan kontrol ponsel.',
+                'severity_label' => 'Kritis - Segera Bertindak',
+                'golden_time' => '< 5 Menit',
+                'icon' => 'ShieldAlert',
+                'summary' => 'File APK penipuan (berkedok surat undangan, resi kurir, atau surat tilang) umumnya menyisipkan malware pencuri SMS perbankan (SMS stealer) dan meminta izin aksesibilitas. Bertindak cepat dalam 5 menit pertama untuk memutus kendali penyerang.',
+                'steps' => [
+                    [
+                        'key' => 'disconnect_network',
+                        'order' => 1,
+                        'urgency' => 'Kritis',
+                        'title' => 'Putus Semua Koneksi Internet Ponsel Seketika',
+                        'instruction' => 'Segera aktifkan Mode Pesawat (Airplane Mode) dan pastikan Wi-Fi serta data seluler benar-benar mati. Langkah ini langsung memutus jalur transmisi data antara malware dan server penyerang (C2 server), mencegah SMS OTP atau data Anda terkirim ke penipu.',
+                        'callout' => 'Tindakan tercepat: Buka Quick Settings ponsel lalu tekan ikon Mode Pesawat (Airplane Mode).',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'revoke_admin_uninstall',
+                        'order' => 2,
+                        'urgency' => 'Kritis',
+                        'title' => 'Cabut Izin Perangkat Administrator & Hapus Aplikasi APK',
+                        'instruction' => 'Masuk ke Pengaturan Ponsel > Aplikasi > Kelola Aplikasi. Cari aplikasi mencurigakan yang baru diinstal (seringkali berkamuflase tanpa ikon atau bernama Surat Undangan/Resi Paket/Update Sistem). Buka Pengaturan Keamanan > Aplikasi Admin Perangkat, nonaktifkan izin admin untuk aplikasi tersebut, lalu pilih Copot Pemasangan (Uninstall).',
+                        'callout' => 'Jika tombol Uninstall abu-abu (tidak bisa diklik), Anda wajib mencabut hak "Aplikasi Admin Perangkat" dan "Aksesibilitas" terlebih dahulu di menu Keamanan ponsel.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'freeze_bank_account',
+                        'order' => 3,
+                        'urgency' => 'Segera',
+                        'title' => 'Amankan Rekening Bank & Blokir Mobile Banking Sementara',
+                        'instruction' => 'Gunakan ponsel lain milik keluarga atau telepon kabel untuk segera menghubungi Call Center resmi bank Anda. Minta petugas customer service untuk memblokir sementara rekening, kartu ATM, dan akses digital banking (m-banking / internet banking) Anda.',
+                        'callout' => 'Hotline Bank: BCA (1500888), Mandiri (14000), BRI (1500017), BNI (1500046), BSI (14040), CIMB Niaga (14041), Permata (1500111).',
+                        'action_type' => 'phone',
+                        'action_target' => 'tel:1500888',
+                        'links' => [
+                            ['label' => 'Daftar Call Center Bank Resmi', 'url' => 'https://cekrekening.id'],
+                        ],
+                    ],
+                    [
+                        'key' => 'check_sms_forwarding',
+                        'order' => 4,
+                        'urgency' => 'Segera',
+                        'title' => 'Periksa & Batalkan Kode Pengalihan Panggilan / SMS (Call Forwarding)',
+                        'instruction' => 'Beberapa malware APK memanfaatkan kode USSD diam-diam untuk mengalihkan panggilan dan SMS OTP ke nomor penipu. Buka menu Telepon/Dialer ponsel dan tekan kode pembatalan pengalihan.',
+                        'callout' => 'Ketik kode USSD: *#21# untuk cek status pengalihan, lalu ketik ##002# untuk batalkan semua pengalihan panggilan & SMS.',
+                        'action_type' => 'ussd',
+                        'action_target' => 'tel:##002#',
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'factory_reset',
+                        'order' => 5,
+                        'urgency' => 'Pencegahan Lanjutan',
+                        'title' => 'Lakukan Pemulihan Pengaturan Pabrik (Factory Reset)',
+                        'instruction' => 'Jika ponsel masih menunjukkan gejala tidak wajar (baterai cepat panas, muncul iklan sendiri, atau aplikasi tidak bisa dihapus tuntas), cadangkan hanya file dokumen/foto penting (jangan cadangkan aplikasi/APK) lalu lakukan Reset ke Setelan Pabrik (Factory Data Reset) untuk membersihkan residu trojan secara permanen.',
+                        'callout' => 'Setelah reset pabrik selesai, ubah seluruh kata sandi email Google, media sosial, dan PIN perbankan Anda dari perangkat lain yang aman.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'fraud_transfer',
+                'title' => 'Terlanjur Mentransfer Uang ke Rekening Penipu',
+                'subtitle' => 'Penyelamatan dana darurat (Golden Hour) dan pemblokiran rekening penampung.',
+                'severity_label' => 'Golden Hour (< 60 Menit)',
+                'golden_time' => '< 60 Menit',
+                'icon' => 'Landmark',
+                'summary' => 'Penipu biasanya segera memindahkan uang korban ke beberapa lapisan rekening penampung (money mule) atau menarik tunai dalam waktu 30-60 menit. Kecepatan Anda menghubungi bank pengirim menjadi faktor utama keberhasilan pemblokiran dana.',
+                'steps' => [
+                    [
+                        'key' => 'freeze_account',
+                        'order' => 1,
+                        'urgency' => 'Kritis',
+                        'title' => 'Hubungi Bank Pengirim Seketika (Golden Hour < 60 Menit)',
+                        'instruction' => 'Telepon call center resmi bank yang Anda gunakan untuk mentransfer. Sampaikan kronologi bahwa Anda baru saja menjadi korban penipuan siber. Sebutkan ID transaksi, nama bank tujuan, nomor rekening tujuan penampung, dan nama pemilik rekening penipu. Minta penerbitan nomor tiket pelaporan penipuan serta permohonan pembekuan dana di bank tujuan.',
+                        'callout' => 'Telepon sekarang: BCA 1500888 | Mandiri 14000 | BRI 1500017 | BNI 1500046 | BSI 14040. Mintalah nomor tiket aduan resmi.',
+                        'action_type' => 'phone',
+                        'action_target' => 'tel:1500888',
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'collect_digital_evidence',
+                        'order' => 2,
+                        'urgency' => 'Kritis',
+                        'title' => 'Amankan dan Kumpulkan Seluruh Bukti Digital',
+                        'instruction' => 'Simpan tangkapan layar (screenshot) mutasi rekening atau bukti transfer lengkap dengan tanggal/waktu presisi dan nomor referensi transaksi. Screenshot percakapan lengkap dengan penipu, nomor telepon WhatsApp, tautan situs web atau media sosial yang digunakan penipu. Jangan hapus obrolan chat.',
+                        'callout' => 'Pastikan nomor rekening, nomor referensi bank, dan nomor telepon penipu terbaca jelas tanpa terpotong.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'report_cekrekening_aduan',
+                        'order' => 3,
+                        'urgency' => 'Segera',
+                        'title' => 'Laporkan Rekening Penipu ke CekRekening.id & AduanKonten.id',
+                        'instruction' => 'Daftarkan laporan rekening bank penipu ke portal CekRekening.id (Kementerian Kominfo) agar rekening tersebut diberi tanda merah (red-flag) dan dibekukan oleh konsorsium perbankan. Laporkan juga nomor telepon penipu ke portal AduanKonten.id serta layanan Kontak OJK 157.',
+                        'callout' => 'Portal resmi: CekRekening.id (Kemkominfo) & Kontak OJK 157 (WhatsApp: 081-157-157-157).',
+                        'action_type' => 'link',
+                        'action_target' => 'https://cekrekening.id',
+                        'links' => [
+                            ['label' => 'Portal CekRekening.id', 'url' => 'https://cekrekening.id'],
+                            ['label' => 'Layanan AduanKonten Kominfo', 'url' => 'https://aduan.id'],
+                            ['label' => 'Portal Pengaduan Konsumen OJK', 'url' => 'https://kontak157.ojk.go.id'],
+                        ],
+                    ],
+                    [
+                        'key' => 'police_report_stpl',
+                        'order' => 4,
+                        'urgency' => 'Segera',
+                        'title' => 'Buat Laporan Polisi (STPL) di Kantor SPKT Kepolisian Terdekat',
+                        'instruction' => 'Kunjungi Sentra Pelayanan Kepolisian Terpadu (SPKT) di Polres/Polsek terdekat. Bawa bukti transfer tercetak, tangkapan layar percakapan, dan nomor tiket aduan dari bank. Mintalah penerbitan Surat Tanda Penerimaan Laporan (STPL) dugaan tindak pidana penipuan siber/ITE.',
+                        'callout' => 'STPL adalah syarat mutlak yang diwajibkan oleh pihak bank untuk membuka data rekening penampung dan memproses pengembalian dana sisa yang terblokir.',
+                        'action_type' => 'link',
+                        'action_target' => 'https://patrolisiber.id',
+                        'links' => [
+                            ['label' => 'Portal Patroli Siber Polri', 'url' => 'https://patrolisiber.id'],
+                        ],
+                    ],
+                    [
+                        'key' => 'bank_followup_reversal',
+                        'order' => 5,
+                        'urgency' => 'Pencegahan Lanjutan',
+                        'title' => 'Serahkan Berkas STPL ke Kantor Cabang Bank untuk Proses Mediasi',
+                        'instruction' => 'Datang ke kantor cabang bank pengirim Anda dengan membawa STPL asli dari kepolisian, KTP, dan bukti transaksi. Bank pengirim akan berkoordinasi secara resmi dengan bank penerima penampung untuk melakukan mediasi atau pengembalian (reversal) sisa dana jika saldo penampung berhasil dibekukan tepat waktu.',
+                        'callout' => 'Minta Surat Permohonan Blokir Resmi dari bank pengirim yang ditujukan kepada bank penampung dana penipu.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                ],
+            ],
+            [
+                'key' => 'ktp_leak',
+                'title' => 'Data KTP & Identitas Pribadi Tersebar',
+                'subtitle' => 'Perlindungan hukum dan mitigasi risiko penyalahgunaan pinjol ilegal.',
+                'severity_label' => 'Tindakan Hukum & Preventif',
+                'golden_time' => '< 24 Jam',
+                'icon' => 'IdCard',
+                'summary' => 'Foto KTP dan selfie yang bocor berisiko tinggi disalahgunakan oleh sindikat penipuan untuk mengajukan pinjaman online (pinjol) ilegal atau membuka rekening penampung kejahatan atas nama Anda. Bangun perisai hukum (legal shield) sedini mungkin.',
+                'steps' => [
+                    [
+                        'key' => 'slik_ojk',
+                        'order' => 1,
+                        'urgency' => 'Kritis',
+                        'title' => 'Periksa Riwayat Kredit di SLIK OJK (iDebku)',
+                        'instruction' => 'Segera ajukan permohonan informasi debitur melalui portal iDebku OJK untuk memeriksa apakah ada pinjaman atau fasilitas kredit perbankan/fintech yang aktif atas nama NIK Anda tanpa sepengetahuan Anda.',
+                        'callout' => 'Akses mandiri secara gratis di: https://idebku.ojk.go.id.',
+                        'action_type' => 'link',
+                        'action_target' => 'https://idebku.ojk.go.id',
+                        'links' => [
+                            ['label' => 'Portal Resmi iDebku OJK', 'url' => 'https://idebku.ojk.go.id'],
+                        ],
+                    ],
+                    [
+                        'key' => 'report_satgas_pasti',
+                        'order' => 2,
+                        'urgency' => 'Kritis',
+                        'title' => 'Adukan Dugaan Penyalahgunaan Data ke Satgas PASTI / Kontak OJK 157',
+                        'instruction' => 'Laporkan insiden kebocoran atau penyalahgunaan data NIK Anda kepada Satuan Tugas Pemberantasan Aktivitas Keuangan Ilegal (Satgas PASTI) Otoritas Jasa Keuangan melalui WhatsApp resmi atau email agar data Anda tercatat dalam daftar proteksi pengaduan konsumen.',
+                        'callout' => 'Kontak OJK: WhatsApp 081-157-157-157 | Telepon: 157 | Email: konsumen@ojk.go.id.',
+                        'action_type' => 'phone',
+                        'action_target' => 'tel:157',
+                        'links' => [
+                            ['label' => 'Portal Kontak OJK 157', 'url' => 'https://kontak157.ojk.go.id'],
+                        ],
+                    ],
+                    [
+                        'key' => 'police_report_sktlk',
+                        'order' => 3,
+                        'urgency' => 'Segera',
+                        'title' => 'Buat Surat Keterangan Lapor Kehilangan / Penyalahgunaan Identitas di Kepolisian',
+                        'instruction' => 'Datangi kantor kepolisian terdekat untuk membuat Surat Tanda Penerimaan Laporan (STPL) atau Surat Keterangan Tanda Lapor Kehilangan/Penyalahgunaan Identitas (SKTLK). Surat ini berfungsi sebagai bukti hukum sah (legal shield) jika suatu hari ada pihak penagih utang pinjol ilegal atau aparat hukum yang datang menagih pinjaman yang bukan dilakukan oleh Anda.',
+                        'callout' => 'Surat kepolisian adalah perisai hukum terkuat untuk membuktikan bahwa Anda adalah korban pencurian identitas.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'harden_digital_security',
+                        'order' => 4,
+                        'urgency' => 'Segera',
+                        'title' => 'Perketat Keamanan Akun Digital & Gunakan Watermark Digital',
+                        'instruction' => 'Ganti kata sandi seluruh akun email, perbankan, dan e-wallet. Aktifkan autentikasi dua faktor (2FA) berbasis aplikasi (seperti Google Authenticator) bukan berbasis SMS. Untuk kebutuhan administrasi foto KTP di masa depan, selalu tambahkan watermark teks miring (contoh: "UNTUK VERIFIKASI APLIKASI X TANGGAL DD/MM/YYYY") agar tidak bisa dipakai ulang.',
+                        'callout' => 'Jangan pernah lagi mengirim foto KTP atau foto selfie memegang KTP polos tanpa watermark digital.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                    [
+                        'key' => 'warn_family_contacts',
+                        'order' => 5,
+                        'urgency' => 'Pencegahan Lanjutan',
+                        'title' => 'Peringatkan Keluarga & Kontak Melalui Pesan Peringatan WhatsApp',
+                        'instruction' => 'Penipu sering kali menggunakan data identitas korban untuk menghubungi keluarga atau teman korban guna meminjam uang dengan dalih musibah. Gunakan fitur Generator Pesan WhatsApp di tab sebelah untuk menyebarkan peringatan resmi kepada keluarga Anda.',
+                        'callout' => 'Gunakan tab "Generator Pesan WhatsApp" di atas untuk menyalin pesan peringatan dengan 1 klik.',
+                        'action_type' => 'instruction',
+                        'action_target' => null,
+                        'links' => [],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Get predefined WhatsApp scam alert presets for immediate sharing.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public function getWhatsAppPresets(): array
+    {
+        return [
+            [
+                'category' => 'apk_malware',
+                'title' => 'Waspada Modus Undangan / Paket File APK',
+                'default_impersonation' => 'Kurir Paket J&T/JNE / Pengirim Undangan Pernikahan Asing',
+                'warning_template' => "🚨 *PERINGATAN KEAMANAN SIBER: JANGAN BUKA FILE APK!* 🚨\n\nKeluarga dan kerabat sekalian, harap berhati-hati jika menerima pesan berisi file berekstensi *.apk* (seperti Surat Undangan Pernikahan, Foto Resi Pengiriman Paket, atau Surat Tilang ETLE) dari nomor tidak dikenal.\n\nFile APK tersebut adalah aplikasi malware pencuri SMS OTP perbankan yang dapat menguras saldo rekening secara otomatis jika diinstal.",
+                'prevention_advice' => 'Jangan pernah membuka atau menginstal berkas berakhiran .apk di luar toko aplikasi resmi. Jika terlanjur klik, segera matikan koneksi internet ponsel Anda (Mode Pesawat).',
+            ],
+            [
+                'category' => 'fraud_transfer',
+                'title' => 'Waspada Penipuan Rekening Transfer Dana',
+                'default_impersonation' => 'Customer Service Bank Palsu / Penjual Belanja Online Bodong',
+                'warning_template' => "🚨 *WASPADA PENIPUAN REKENING TRANSFER BANK!* 🚨\n\nHarap berhati-hati jika ada pihak yang menghubungi dan meminta transfer uang dengan berbagai alasan mendesak, seperti pengurusan hadiah, pemulihan akun terblokir, ataupun pembayaran pesanan mencurigakan.",
+                'prevention_advice' => 'Bank resmi TIDAK PERNAH meminta nasabah mentransfer dana ke rekening pribadi atas nama perorangan. Selalu periksa rekam jejak rekening di https://cekrekening.id sebelum bertransaksi.',
+            ],
+            [
+                'category' => 'ktp_leak',
+                'title' => 'Waspada Penyalahgunaan Identitas / KTP',
+                'default_impersonation' => 'Pihak Mengatasnamakan Saya / Sindikat Pinjol',
+                'warning_template' => "🚨 *PEMBERITAHUAN DARURAT: WASPADA PENYALAHGUNAAN IDENTITAS* 🚨\n\nKepada seluruh keluarga dan rekan-rekan, saya ingin menginformasikan bahwa data identitas/KTP saya sedang disalahgunakan oleh pihak tidak bertanggung jawab untuk kepentingan penipuan.\n\nMohon abaikan jika ada nomor asing yang mengaku sebagai saya atau menagih pinjaman yang mengatasnamakan saya.",
+                'prevention_advice' => 'Jika dihubungi oleh nomor asing yang meminta transfer uang atau kode OTP mengatasnamakan saya, segera hubungi saya secara langsung di nomor telepon utama untuk konfirmasi.',
+            ],
+            [
+                'category' => 'freelance_scam',
+                'title' => 'Waspada Penipuan Loker Freelance / Misi Like Video',
+                'default_impersonation' => 'Admin HRD Agensi / Manajer Pemasaran Palsu',
+                'warning_template' => "🚨 *WASPADA PENIPUAN KERJA SAMBILAN (LIKE & SUBSCRIBE)* 🚨\n\nHarap waspada terhadap tawaran kerja paruh waktu via WhatsApp atau Telegram yang menjanjikan bayaran puluhan ribu rupiah hanya dengan menyelesaikan tugas like/subscribe YouTube atau ulasan Google Maps, yang pada akhirnya mewajibkan kita menyetor uang deposit.",
+                'prevention_advice' => 'Pekerjaan resmi tidak pernah memungut biaya atau meminta deposit uang dari pelamar. Segera blokir kontak jika diminta deposit dana.',
+            ],
+            [
+                'category' => 'fake_relative',
+                'title' => 'Waspada Panggilan Darurat Palsu Mengaku Kerabat',
+                'default_impersonation' => 'Kerabat Mengaku Kecelakaan / Oknum Kepolisian',
+                'warning_template' => "🚨 *WASPADA TELEPON DARURAT PALSU KERABAT DITAHAN / KECELAKAAN* 🚨\n\nJika ada yang menelepon dengan suara panik atau menangis mengaku sebagai anggota keluarga yang ditahan polisi atau mengalami musibah dan mendesak transfer uang rumah sakit/tebusan, jangan panik dan jangan langsung kirim uang.",
+                'prevention_advice' => 'Tutup telepon segera, lalu hubungi langsung kerabat yang bersangkutan melalui nomor kontak pribadi yang biasa Anda gunakan.',
+            ],
+        ];
+    }
+}

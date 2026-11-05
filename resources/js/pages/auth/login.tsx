@@ -62,7 +62,9 @@ export default function Login({ status }: LoginProps) {
                                 className="mt-1"
                                 autoComplete="username"
                                 autoFocus
-                                onChange={(e) => setData('email', e.target.value)}
+                                onChange={(e) =>
+                                    setData('email', e.target.value)
+                                }
                                 required
                             />
                             {errors.email && (
@@ -88,7 +90,9 @@ export default function Login({ status }: LoginProps) {
                                 value={data.password}
                                 className="mt-1"
                                 autoComplete="current-password"
-                                onChange={(e) => setData('password', e.target.value)}
+                                onChange={(e) =>
+                                    setData('password', e.target.value)
+                                }
                                 required
                             />
                             {errors.password && (
@@ -104,7 +108,9 @@ export default function Login({ status }: LoginProps) {
                                     type="checkbox"
                                     name="remember"
                                     checked={data.remember}
-                                    onChange={(e) => setData('remember', e.target.checked)}
+                                    onChange={(e) =>
+                                        setData('remember', e.target.checked)
+                                    }
                                     className="size-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900"
                                 />
                                 <span className="text-sm text-slate-600 dark:text-slate-400">

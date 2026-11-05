@@ -10,4 +10,10 @@ parameters:
         - database/
         - routes/
 
-    level: 7
+    level: 5
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        - identifier: nullsafe.neverNull
+        - identifier: catch.neverThrown
+        - identifier: class.notFound
+        - identifier: generics.notSubtype

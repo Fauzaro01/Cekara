@@ -4,7 +4,6 @@ import {
     AlertTriangle,
     Award,
     BookOpen,
-    Check,
     CheckCircle2,
     Heart,
     HelpCircle,
@@ -56,8 +55,13 @@ interface QuizResult {
     share_text: string;
 }
 
-export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Props) {
-    const [activeTab, setActiveTab] = useState<'cheatsheet' | 'quiz'>('cheatsheet');
+export default function FamilyGuardianIndex({
+    cheatSheets,
+    quizQuestions,
+}: Props) {
+    const [activeTab, setActiveTab] = useState<'cheatsheet' | 'quiz'>(
+        'cheatsheet',
+    );
     const [answers, setAnswers] = useState<Record<number, string>>({});
     const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
     const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
@@ -81,7 +85,9 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
     const handleQuizSubmit = async () => {
         const answeredCount = Object.keys(answers).length;
         if (answeredCount < quizQuestions.length) {
-            setQuizError(`Harap jawab seluruh ${quizQuestions.length} pertanyaan sebelum melihat hasil.`);
+            setQuizError(
+                `Harap jawab seluruh ${quizQuestions.length} pertanyaan sebelum melihat hasil.`,
+            );
             return;
         }
 
@@ -120,11 +126,11 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
 
     const familyShareWaText = encodeURIComponent(
         `🛡️ *PANDUAN WASPADA PENIPUAN HP UNTUK KELUARGA* (dari Cekara)\n\n` +
-        `Keluarga tercinta, jika menerima pesan mencurigakan di WhatsApp/SMS, selalu ingat *ATURAN 3T*:\n` +
-        `1. *TENANG* - Jangan panik jika ada kabar musibah atau rekening diblokir.\n` +
-        `2. *TELEPON LANGSUNG* - Hubungi nomor biasa kerabat/anak sebelum transfer.\n` +
-        `3. *TANYA ANAK/GUARDIAN* - Jangan pernah pasang file berekstensi .APK atau beri kode OTP.\n\n` +
-        `Baca panduan lengkapnya di: https://cekara.id/panduan-keluarga`
+            `Keluarga tercinta, jika menerima pesan mencurigakan di WhatsApp/SMS, selalu ingat *ATURAN 3T*:\n` +
+            `1. *TENANG* - Jangan panik jika ada kabar musibah atau rekening diblokir.\n` +
+            `2. *TELEPON LANGSUNG* - Hubungi nomor biasa kerabat/anak sebelum transfer.\n` +
+            `3. *TANYA ANAK/GUARDIAN* - Jangan pernah pasang file berekstensi .APK atau beri kode OTP.\n\n` +
+            `Baca panduan lengkapnya di: https://cekara.id/panduan-keluarga`,
     );
 
     return (
@@ -138,7 +144,7 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                         <div>
                             <div className="flex items-center gap-2">
                                 <Badge variant="brand">
-                                    <Heart className="size-3 mr-1 text-rose-500 fill-rose-500" />
+                                    <Heart className="mr-1 size-3 fill-rose-500 text-rose-500" />
                                     Family & School Guardian
                                 </Badge>
                                 <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -149,8 +155,10 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                 Toolkit Guardian Keluarga & Guru
                             </h1>
                             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                Bekali orang tua, kakek-nenek, dan adik di rumah dengan pemahaman sederhana menghadapi
-                                penipuan digital. Jadilah Guardian pertama di lingkungan terdekat Anda.
+                                Bekali orang tua, kakek-nenek, dan adik di rumah
+                                dengan pemahaman sederhana menghadapi penipuan
+                                digital. Jadilah Guardian pertama di lingkungan
+                                terdekat Anda.
                             </p>
                         </div>
 
@@ -160,20 +168,24 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                 href={`https://wa.me/?text=${familyShareWaText}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={`${buttonClasses('primary')} shadow-sm inline-flex items-center gap-1.5`}
+                                className={`${buttonClasses('primary')} inline-flex items-center gap-1.5 shadow-sm`}
                             >
                                 <Share2 className="size-4" />
                                 Bagikan Aturan 3T ke WA Keluarga
                             </a>
-                            <Button variant="outline" onClick={handlePrint} className="print:hidden">
-                                <Printer className="size-4 mr-1.5" />
+                            <Button
+                                variant="outline"
+                                onClick={handlePrint}
+                                className="print:hidden"
+                            >
+                                <Printer className="mr-1.5 size-4" />
                                 Cetak Lembar Panduan
                             </Button>
                         </div>
                     </div>
 
                     {/* Navigation Tabs */}
-                    <div className="mt-8 flex gap-6 border-b border-slate-200/80 print:hidden dark:border-slate-800">
+                    <div className="mt-8 flex gap-6 border-b border-slate-200/80 dark:border-slate-800 print:hidden">
                         <button
                             type="button"
                             onClick={() => setActiveTab('cheatsheet')}
@@ -206,13 +218,18 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
             {activeTab === 'cheatsheet' && (
                 <section className="mx-auto max-w-5xl px-6 py-10">
                     {/* 3T Golden Rules Banner */}
-                    <Card variant="glass" className="mb-8 border-brand-200/80 bg-brand-50/40 p-6 sm:p-8 dark:border-brand-900/50 dark:bg-brand-950/20">
+                    <Card
+                        variant="glass"
+                        className="mb-8 border-brand-200/80 bg-brand-50/40 p-6 sm:p-8 dark:border-brand-900/50 dark:bg-brand-950/20"
+                    >
                         <div className="flex items-center gap-2">
                             <Badge variant="brand">
-                                <ShieldCheck className="size-3 mr-1" />
+                                <ShieldCheck className="mr-1 size-3" />
                                 Pedoman Emas
                             </Badge>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">Proteksi Cepat</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Proteksi Cepat
+                            </span>
                         </div>
                         <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">
                             Aturan Emas 3T untuk Anggota Keluarga di Rumah
@@ -223,10 +240,15 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                     <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400">
                                         <Shield className="size-5" />
                                     </span>
-                                    <span className="text-lg font-extrabold text-brand-600 dark:text-brand-400">1. TENANG</span>
+                                    <span className="text-lg font-extrabold text-brand-600 dark:text-brand-400">
+                                        1. TENANG
+                                    </span>
                                 </div>
                                 <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                                    Jangan buru-buru panik saat menerima kabar darurat, musibah, atau ancaman pemblokiran rekening. Penipu sengaja memanfaatkan kepanikan agar Anda tidak berpikir logis.
+                                    Jangan buru-buru panik saat menerima kabar
+                                    darurat, musibah, atau ancaman pemblokiran
+                                    rekening. Penipu sengaja memanfaatkan
+                                    kepanikan agar Anda tidak berpikir logis.
                                 </p>
                             </div>
                             <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
@@ -234,10 +256,15 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                     <span className="flex size-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
                                         <PhoneCall className="size-5" />
                                     </span>
-                                    <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">2. TELEPON</span>
+                                    <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
+                                        2. TELEPON
+                                    </span>
                                 </div>
                                 <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                                    Selalu lakukan panggilan suara/video ke nomor lama orang yang bersangkutan sebelum mengirimkan uang. Jangan hanya percaya pada chat teks atau foto profil.
+                                    Selalu lakukan panggilan suara/video ke
+                                    nomor lama orang yang bersangkutan sebelum
+                                    mengirimkan uang. Jangan hanya percaya pada
+                                    chat teks atau foto profil.
                                 </p>
                             </div>
                             <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
@@ -245,10 +272,14 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                     <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
                                         <HelpCircle className="size-5" />
                                     </span>
-                                    <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">3. TANYA</span>
+                                    <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+                                        3. TANYA
+                                    </span>
                                 </div>
                                 <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                                    Tunjukkan pesan asing kepada anak, cucu, atau kerabat muda di rumah. Jadikan generasi muda sebagai Guardian Digital keluarga Anda.
+                                    Tunjukkan pesan asing kepada anak, cucu,
+                                    atau kerabat muda di rumah. Jadikan generasi
+                                    muda sebagai Guardian Digital keluarga Anda.
                                 </p>
                             </div>
                         </div>
@@ -257,17 +288,25 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                     {/* Cheat Sheets List */}
                     <div className="space-y-6">
                         {cheatSheets.map((item) => (
-                            <Card key={item.id} variant="floating" className="p-6">
+                            <Card
+                                key={item.id}
+                                variant="floating"
+                                className="p-6"
+                            >
                                 <div className="flex items-center gap-2">
-                                    <Badge variant="warn">{item.category}</Badge>
-                                    <span className="text-xs text-slate-400">Panduan #{item.id}</span>
+                                    <Badge variant="warn">
+                                        {item.category}
+                                    </Badge>
+                                    <span className="text-xs text-slate-400">
+                                        Panduan #{item.id}
+                                    </span>
                                 </div>
 
                                 <h3 className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
                                     {item.title}
                                 </h3>
 
-                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                                     {item.summary}
                                 </p>
 
@@ -277,8 +316,11 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                     </span>
                                     <ul className="mt-2 space-y-1.5">
                                         {item.red_flags.map((flag, idx) => (
-                                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                                <AlertTriangle className="size-3.5 shrink-0 text-red-500 mt-0.5" />
+                                            <li
+                                                key={idx}
+                                                className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400"
+                                            >
+                                                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-red-500" />
                                                 <span>{flag}</span>
                                             </li>
                                         ))}
@@ -286,9 +328,11 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                 </div>
 
                                 <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 text-xs text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
-                                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                     <div>
-                                        <span className="font-bold">Aksi Aman: </span>
+                                        <span className="font-bold">
+                                            Aksi Aman:{' '}
+                                        </span>
                                         <span>{item.action_rule}</span>
                                     </div>
                                 </div>
@@ -303,7 +347,10 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                 <section className="mx-auto max-w-5xl px-6 py-10">
                     {/* Quiz Result View */}
                     {quizResult && (
-                        <Card variant="floating" className="mb-8 border-l-4 border-l-brand-600 bg-brand-50/20 p-6 sm:p-8 dark:bg-brand-950/20">
+                        <Card
+                            variant="floating"
+                            className="mb-8 border-l-4 border-l-brand-600 bg-brand-50/20 p-6 sm:p-8 dark:bg-brand-950/20"
+                        >
                             <div className="flex items-center justify-between">
                                 <Badge variant={quizResult.badgeColor} withDot>
                                     Tingkat Kerentanan: {quizResult.level}
@@ -334,7 +381,7 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                         setAnswers({});
                                     }}
                                 >
-                                    <RotateCcw className="size-4 mr-1.5" />
+                                    <RotateCcw className="mr-1.5 size-4" />
                                     Ulangi Tes
                                 </Button>
                             </div>
@@ -362,12 +409,18 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
 
                                 <div className="mt-4 space-y-2.5">
                                     {q.options.map((opt) => {
-                                        const isSelected = answers[q.id] === opt.id;
+                                        const isSelected =
+                                            answers[q.id] === opt.id;
                                         return (
                                             <button
                                                 key={opt.id}
                                                 type="button"
-                                                onClick={() => handleSelectOption(q.id, opt.id)}
+                                                onClick={() =>
+                                                    handleSelectOption(
+                                                        q.id,
+                                                        opt.id,
+                                                    )
+                                                }
                                                 className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-left text-xs transition-all ${
                                                     isSelected
                                                         ? 'border-brand-500 bg-brand-50/60 font-medium text-brand-900 ring-2 ring-brand-500/20 dark:border-brand-400 dark:bg-brand-950/40 dark:text-brand-200'
@@ -383,7 +436,9 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                                                 >
                                                     {opt.id}
                                                 </span>
-                                                <span className="leading-relaxed">{opt.text}</span>
+                                                <span className="leading-relaxed">
+                                                    {opt.text}
+                                                </span>
                                             </button>
                                         );
                                     })}
@@ -399,8 +454,10 @@ export default function FamilyGuardianIndex({ cheatSheets, quizQuestions }: Prop
                             disabled={isSubmittingQuiz}
                             className="min-w-44 shadow-sm"
                         >
-                            <Sparkles className="size-4 mr-1.5" />
-                            {isSubmittingQuiz ? 'Mengevaluasi...' : 'Lihat Hasil Asesmen Keluarga'}
+                            <Sparkles className="mr-1.5 size-4" />
+                            {isSubmittingQuiz
+                                ? 'Mengevaluasi...'
+                                : 'Lihat Hasil Asesmen Keluarga'}
                         </Button>
                     </div>
                 </section>

@@ -19,11 +19,11 @@
     --color-brand-300: oklch(0.825 0.098 233);
     --color-brand-400: oklch(0.745 0.138 235);
     --color-brand-500: oklch(0.665 0.165 238);
-    --color-brand-600: oklch(0.575 0.160 241);
-    --color-brand-700: oklch(0.490 0.138 243);
-    --color-brand-800: oklch(0.410 0.112 245);
-    --color-brand-900: oklch(0.320 0.082 247);
-    --color-brand-950: oklch(0.220 0.055 249);
+    --color-brand-600: oklch(0.575 0.16 241);
+    --color-brand-700: oklch(0.49 0.138 243);
+    --color-brand-800: oklch(0.41 0.112 245);
+    --color-brand-900: oklch(0.32 0.082 247);
+    --color-brand-950: oklch(0.22 0.055 249);
 
     /* Semantic status accents */
     --color-danger: oklch(0.577 0.245 27);
@@ -36,31 +36,32 @@
 
     /* Hairline & Diffused Floating Shadows */
     --shadow-hairline: 0 0 0 1px rgb(15 23 42 / 0.06);
-    --shadow-floating: 0 16px 36px -12px rgb(15 23 42 / 0.08), 0 0 0 1px rgb(15 23 42 / 0.04);
+    --shadow-floating:
+        0 16px 36px -12px rgb(15 23 42 / 0.08), 0 0 0 1px rgb(15 23 42 / 0.04);
 
     /* Palet Es Jeruk dan Krem */
-    --color-cream: #FFF8EC;
-    --color-orange-citrus: #FF9A3C;
-    --color-sky-soft: #8ECDF0;
-    --color-butter-yellow: #FFE27A;
-    --color-brown-dark: #3B2A1E;
-    --color-brown-milk: #6B5646;
-    --color-terracotta: #D4573A;
-    --color-terracotta-dark: #A8412A;
+    --color-cream: #fff8ec;
+    --color-orange-citrus: #ff9a3c;
+    --color-sky-soft: #8ecdf0;
+    --color-butter-yellow: #ffe27a;
+    --color-brown-dark: #3b2a1e;
+    --color-brown-milk: #6b5646;
+    --color-terracotta: #d4573a;
+    --color-terracotta-dark: #a8412a;
 }
 
 :root {
     --font-heading: 'Fredoka', system-ui, -apple-system, sans-serif;
     --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
 
-    --color-bg: #FFF8EC;
-    --color-primary: #FF9A3C;
-    --color-companion: #8ECDF0;
-    --color-highlight: #FFE27A;
-    --color-text: #3B2A1E;
-    --color-text-secondary: #6B5646;
-    --color-warning-strong: #D4573A;
-    --color-warning-text: #A8412A;
+    --color-bg: #fff8ec;
+    --color-primary: #ff9a3c;
+    --color-companion: #8ecdf0;
+    --color-highlight: #ffe27a;
+    --color-text: #3b2a1e;
+    --color-text-secondary: #6b5646;
+    --color-warning-strong: #d4573a;
+    --color-warning-text: #a8412a;
 
     --radius-sm: 12px;
     --radius-md: 16px;
@@ -98,27 +99,37 @@
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.05);
+    box-shadow:
+        0 10px 30px -10px rgba(15, 23, 42, 0.05),
+        0 0 0 1px rgba(15, 23, 42, 0.05);
 }
 
 .dark .glass-card {
     background: rgba(15, 23, 42, 0.55);
-    box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    box-shadow:
+        0 12px 32px -10px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* Floating Card Hover Effect */
 .floating-card {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+        transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .floating-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(56, 189, 248, 0.2);
+    box-shadow:
+        0 20px 40px -15px rgba(15, 23, 42, 0.1),
+        0 0 0 1px rgba(56, 189, 248, 0.2);
 }
 
 .dark .floating-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(56, 189, 248, 0.3);
+    box-shadow:
+        0 20px 40px -15px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(56, 189, 248, 0.3);
 }
 
 /* Subtle Hero Mesh Gradient */
@@ -135,13 +146,23 @@
     transform: translateX(-50%);
     width: 800px;
     height: 500px;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(14, 165, 233, 0.05) 45%, transparent 70%);
+    background: radial-gradient(
+        circle,
+        rgba(56, 189, 248, 0.15) 0%,
+        rgba(14, 165, 233, 0.05) 45%,
+        transparent 70%
+    );
     pointer-events: none;
     z-index: 0;
 }
 
 .dark .hero-glow-bg::before {
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.03) 50%, transparent 75%);
+    background: radial-gradient(
+        circle,
+        rgba(56, 189, 248, 0.12) 0%,
+        rgba(14, 165, 233, 0.03) 50%,
+        transparent 75%
+    );
 }
 
 /* Accessibility: Safe reduced motion */
@@ -157,5 +178,18 @@
 
     .floating-card:hover {
         transform: none !important;
+    }
+}
+
+@media print {
+    nav,
+    footer,
+    .print\:hidden {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
     }
 }

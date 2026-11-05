@@ -64,7 +64,8 @@ export default function LlmProvidersPage({
     );
 
     useEffect(() => {
-        const currentList = providers.length > 0 ? providers : defaultProvidersList;
+        const currentList =
+            providers.length > 0 ? providers : defaultProvidersList;
         setProviderStates((prev) =>
             currentList.map((p) => {
                 const existing = prev.find((item) => item.id === p.id);
@@ -93,11 +94,15 @@ export default function LlmProvidersPage({
                             is_active: item.id === id,
                         })),
                     );
-                    setStatusMessage(`Provider ${name} berhasil diaktifkan sebagai provider utama.`);
+                    setStatusMessage(
+                        `Provider ${name} berhasil diaktifkan sebagai provider utama.`,
+                    );
                     setErrorMessage(null);
                 },
                 onError: () => {
-                    setErrorMessage('Gagal mengaktifkan provider. Silakan coba lagi.');
+                    setErrorMessage(
+                        'Gagal mengaktifkan provider. Silakan coba lagi.',
+                    );
                     setStatusMessage(null);
                 },
             },
@@ -109,7 +114,9 @@ export default function LlmProvidersPage({
         if (!item) return;
 
         setProviderStates((prev) =>
-            prev.map((p, idx) => (idx === index ? { ...p, isSubmitting: true } : p)),
+            prev.map((p, idx) =>
+                idx === index ? { ...p, isSubmitting: true } : p,
+            ),
         );
 
         router.put(
@@ -128,17 +135,23 @@ export default function LlmProvidersPage({
                             idx === index
                                 ? {
                                       ...p,
-                                      has_api_key: Boolean(p.apiKeyInput || p.has_api_key),
+                                      has_api_key: Boolean(
+                                          p.apiKeyInput || p.has_api_key,
+                                      ),
                                       apiKeyInput: '',
                                   }
                                 : p,
                         ),
                     );
-                    setStatusMessage(`Konfigurasi provider ${item.name} berhasil disimpan.`);
+                    setStatusMessage(
+                        `Konfigurasi provider ${item.name} berhasil disimpan.`,
+                    );
                     setErrorMessage(null);
                 },
                 onError: () => {
-                    setErrorMessage(`Gagal menyimpan konfigurasi provider ${item.name}. Silakan periksa kembali data Anda.`);
+                    setErrorMessage(
+                        `Gagal menyimpan konfigurasi provider ${item.name}. Silakan periksa kembali data Anda.`,
+                    );
                     setStatusMessage(null);
                 },
                 onFinish: () => {
@@ -170,7 +183,9 @@ export default function LlmProvidersPage({
                                 Manajemen Provider LLM
                             </h1>
                             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                Kelola kunci API, model, endpoint kustom, dan tentukan provider aktif yang digunakan chatbot Cekara.
+                                Kelola kunci API, model, endpoint kustom, dan
+                                tentukan provider aktif yang digunakan chatbot
+                                Cekara.
                             </p>
                         </div>
                         <Badge variant="brand" className="px-3 py-1 text-xs">
@@ -201,8 +216,11 @@ export default function LlmProvidersPage({
                             <span className="font-semibold text-slate-900 dark:text-slate-100">
                                 Mode Keandalan Tinggi (Fallback Mock Otomatis):
                             </span>{' '}
-                            Apabila kredensial API provider aktif belum dikonfigurasi, kuota habis, atau terjadi kendala jaringan eksternal,
-                            mesin Cekara secara cerdas beralih ke engine deteksi heuristik mock tanpa menghentikan layanan bagi pengguna akhir.
+                            Apabila kredensial API provider aktif belum
+                            dikonfigurasi, kuota habis, atau terjadi kendala
+                            jaringan eksternal, mesin Cekara secara cerdas
+                            beralih ke engine deteksi heuristik mock tanpa
+                            menghentikan layanan bagi pengguna akhir.
                         </div>
                     </div>
                 </Card>
@@ -223,14 +241,20 @@ export default function LlmProvidersPage({
                                     <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                                         {provider.name}
                                     </h2>
-                                    <Badge variant="neutral" className="uppercase font-mono text-[10px]">
+                                    <Badge
+                                        variant="neutral"
+                                        className="font-mono text-[10px] uppercase"
+                                    >
                                         {provider.key}
                                     </Badge>
                                 </div>
 
                                 <div className="flex items-center gap-2">
                                     {provider.is_active ? (
-                                        <Badge variant="safe" className="gap-1.5 font-semibold">
+                                        <Badge
+                                            variant="safe"
+                                            className="gap-1.5 font-semibold"
+                                        >
                                             <span className="size-1.5 rounded-full bg-emerald-500" />
                                             Provider Aktif
                                         </Badge>
@@ -239,7 +263,12 @@ export default function LlmProvidersPage({
                                             type="button"
                                             variant="outline"
                                             className="h-8 text-xs font-medium"
-                                            onClick={() => handleActivate(provider.id, provider.name)}
+                                            onClick={() =>
+                                                handleActivate(
+                                                    provider.id,
+                                                    provider.name,
+                                                )
+                                            }
                                         >
                                             Jadikan Aktif
                                         </Button>
@@ -258,7 +287,13 @@ export default function LlmProvidersPage({
                                         onChange={(e) =>
                                             setProviderStates((prev) =>
                                                 prev.map((p, idx) =>
-                                                    idx === index ? { ...p, model: e.target.value } : p,
+                                                    idx === index
+                                                        ? {
+                                                              ...p,
+                                                              model: e.target
+                                                                  .value,
+                                                          }
+                                                        : p,
                                                 ),
                                             )
                                         }
@@ -277,7 +312,14 @@ export default function LlmProvidersPage({
                                         onChange={(e) =>
                                             setProviderStates((prev) =>
                                                 prev.map((p, idx) =>
-                                                    idx === index ? { ...p, base_url: e.target.value } : p,
+                                                    idx === index
+                                                        ? {
+                                                              ...p,
+                                                              base_url:
+                                                                  e.target
+                                                                      .value,
+                                                          }
+                                                        : p,
                                                 ),
                                             )
                                         }
@@ -298,7 +340,14 @@ export default function LlmProvidersPage({
                                         onChange={(e) =>
                                             setProviderStates((prev) =>
                                                 prev.map((p, idx) =>
-                                                    idx === index ? { ...p, apiKeyInput: e.target.value } : p,
+                                                    idx === index
+                                                        ? {
+                                                              ...p,
+                                                              apiKeyInput:
+                                                                  e.target
+                                                                      .value,
+                                                          }
+                                                        : p,
                                                 ),
                                             )
                                         }
@@ -313,10 +362,14 @@ export default function LlmProvidersPage({
                                         type="button"
                                         variant="primary"
                                         disabled={provider.isSubmitting}
-                                        onClick={() => handleSave(provider.id, index)}
+                                        onClick={() =>
+                                            handleSave(provider.id, index)
+                                        }
                                         className="h-10 text-xs font-semibold sm:w-auto"
                                     >
-                                        {provider.isSubmitting ? 'Menyimpan...' : 'Simpan'}
+                                        {provider.isSubmitting
+                                            ? 'Menyimpan...'
+                                            : 'Simpan'}
                                     </Button>
                                 </div>
                                 <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">

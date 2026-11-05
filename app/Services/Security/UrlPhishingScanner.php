@@ -47,6 +47,10 @@ class UrlPhishingScanner
         'shorturl.at',
         'bl.ink',
         'rebrand.ly',
+        'intip.in',
+        'tiny.cc',
+        'gg.gg',
+        'linktr.ee',
     ];
 
     /**
@@ -76,6 +80,14 @@ class UrlPhishingScanner
         'gdn',
         'cc',
         'live',
+        'online',
+        'site',
+        'vip',
+        'shop',
+        'space',
+        'fun',
+        'cfd',
+        'sbs',
     ];
 
     /**
@@ -195,6 +207,19 @@ class UrlPhishingScanner
         if (filter_var($cleanHost, FILTER_VALIDATE_IP)) {
             $score = max($score, 85);
             $indicators[] = "Menggunakan alamat IP langsung ({$cleanHost}) tanpa nama domain resmi, indikasi kuat server sementara penyebar phishing atau malware.";
+        }
+
+        // 2b. Credential Spoofing / HTTP Userinfo Deception (e.g. https://bca.co.id@evil.com)
+        $user = parse_url($parsedUrl, PHP_URL_USER);
+        if (! empty($user)) {
+            $score = max($score, 85);
+            $indicators[] = "Tautan menggunakan format kredensial (@{$user}) sebelum nama host sebenarnya untuk mengelabui pengguna.";
+        }
+
+        // 2c. Non-standard Web Port Detection
+        if ($port !== null && ! in_array($port, [80, 443], true)) {
+            $score = max($score, 65);
+            $indicators[] = "Menggunakan port non-standar (:{$port}) yang tidak lazim untuk portal publik institusi resmi.";
         }
 
         // 3. Punycode / IDN Homoglyph Spoofing

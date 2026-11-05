@@ -4,8 +4,47 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @theme {
-    --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+    --font-heading: 'Fredoka', system-ui, -apple-system, sans-serif;
+    --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
+
+    --color-cream: #FFF8EC;
+    --color-orange-citrus: #FF9A3C;
+    --color-sky-soft: #8ECDF0;
+    --color-butter-yellow: #FFE27A;
+    --color-brown-dark: #3B2A1E;
+    --color-brown-milk: #6B5646;
+    --color-terracotta: #D4573A;
+    --color-terracotta-dark: #A8412A;
+}
+
+:root {
+    --font-heading: 'Fredoka', system-ui, -apple-system, sans-serif;
+    --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
+
+    --color-bg: #FFF8EC;
+    --color-primary: #FF9A3C;
+    --color-companion: #8ECDF0;
+    --color-highlight: #FFE27A;
+    --color-text: #3B2A1E;
+    --color-text-secondary: #6B5646;
+    --color-warning-strong: #D4573A;
+    --color-warning-text: #A8412A;
+
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --radius-pill: 9999px;
+    --target-touch-min: 44px;
+}
+
+body {
+    background-color: #FFF8EC;
+    color: #3B2A1E;
+    font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
 }

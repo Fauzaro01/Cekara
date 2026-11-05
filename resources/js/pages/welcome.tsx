@@ -1,356 +1,777 @@
 import { Head } from '@inertiajs/react';
+import { useState } from 'react';
+
+// Tipe data untuk status hasil pengecekan sesuai ATURAN-DESAIN.md
+type RiskLevel = 'high' | 'medium' | 'undetected';
+
+interface ScanResult {
+    level: RiskLevel;
+    badgeLabel: string;
+    headline: string;
+    suspiciousPoints: string[];
+    explanation: string;
+    recommendedActions: string[];
+}
 
 export default function Welcome() {
+    // Tab pemeriksaan: 'text' | 'image' | 'link'
+    const [activeTab, setActiveTab] = useState<'text' | 'image' | 'link'>('text');
+    const [inputText, setInputText] = useState('');
+    const [selectedImageName, setSelectedImageName] = useState<string | null>(null);
+    const [inputUrl, setInputUrl] = useState('');
+    
+    // Status alur interaksi: 'idle' | 'loading' | 'result'
+    const [scanState, setScanState] = useState<'idle' | 'loading' | 'result'>('idle');
+    const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+
+    // Mini simulasi di landing page
+    const [simAnswer, setSimAnswer] = useState<number | null>(null);
+    const [simFeedbackOpen, setSimFeedbackOpen] = useState(false);
+
+    // Contoh cepat untuk dicoba langsung oleh pelajar
+    const loadSample = (type: 'task_scam' | 'apk_kurir' | 'giveaway') => {
+        if (type === 'task_scam') {
+            setActiveTab('text');
+            setInputText(
+                'Halo kak! Kami dari PT Media Nusantara membuka loker freelance paruh waktu. Tugasnya cuma like video YouTube dan follow akun medsos. Komisi Rp50.000 - Rp200.000 per tugas. Tapi sebelum mulai, silakan transfer uang jaminan deposit Rp100.000 ke rekening admin ya kak.'
+            );
+        } else if (type === 'apk_kurir') {
+            setActiveTab('text');
+            setInputText(
+                'Selamat siang, dari kurir J&T Express. Paket Anda tertahan di gudang karena resi rusak. Silakan instal aplikasi resi pengiriman berikut untuk melacak paket: LIHAT_FOTO_PAKET.apk'
+            );
+        } else {
+            setActiveTab('link');
+            setInputUrl('https://daget-dana-kaget-gratis-2026.xyz/klaim-sekarang');
+        }
+        setScanState('idle');
+        setScanResult(null);
+    };
+
+    // Simulasi aksi pemeriksaan
+    const handleRunCheck = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        let hasContent = false;
+        if (activeTab === 'text' && inputText.trim().length > 0) hasContent = true;
+        if (activeTab === 'image' && selectedImageName) hasContent = true;
+        if (activeTab === 'link' && inputUrl.trim().length > 0) hasContent = true;
+
+        if (!hasContent) return;
+
+        setScanState('loading');
+
+        setTimeout(() => {
+            if (activeTab === 'text') {
+                const lower = inputText.toLowerCase();
+                if (lower.includes('deposit') || lower.includes('.apk') || lower.includes('transfer uang') || lower.includes('otp')) {
+                    setScanResult({
+                        level: 'high',
+                        badgeLabel: 'Hati-hati, ini mencurigakan',
+                        headline: 'Ditemukan tanda bahaya yang sering muncul pada modus penipuan tugas berbayar & berkas berbahaya.',
+                        suspiciousPoints: [
+                            'Meminta transfer uang muka / deposit jaminan sebelum kamu mulai bekerja.',
+                            'Menawarkan imbalan uang yang tidak masuk akal untuk tugas yang sangat ringan (like video/follow).',
+                            lower.includes('.apk') ? 'Mengirimkan berkas berekstensi .apk yang berpotensi mencuri SMS & kode perbankan.' : 'Pola manipulasi mendesak pengguna untuk segera mengirim uang.'
+                        ],
+                        explanation: 'Di dunia kerja nyata, perusahaan yang membayar karyawan, bukan karyawan yang membayar perusahaan. Tawaran seperti ini biasanya memancing di awal dengan uang kecil, lalu meminta setoran yang makin besar hingga uangmu lenyap.',
+                        recommendedActions: [
+                            'Jangan transfer uang dalam jumlah berapa pun.',
+                            'Jangan klik tautan atau pasang berkas yang dikirimkan.',
+                            'Blokir nomor pengirim dan laporkan ke kanal Indonesia Anti-Scam Centre (iasc.ojk.go.id).'
+                        ]
+                    });
+                } else {
+                    setScanResult({
+                        level: 'medium',
+                        badgeLabel: 'Yuk cek dulu',
+                        headline: 'Pesan ini perlu dicek ulang ke sumber resminya sebelum dipercaya.',
+                        suspiciousPoints: [
+                            'Gaya bahasa terkesan terburu-buru atau menawarkan keuntungan tanpa kejelasan identitas resmi pengirim.',
+                            'Belum ada bukti legalitas yang bisa diverifikasi langsung dari saluran resmi.'
+                        ],
+                        explanation: 'Meskipun tidak secara terang-terangan meminta uang atau data sensitif, tawaran tanpa kejelasan kontak resmi perusahaan berisiko mengarahkanmu ke obrolan privat berbahaya.',
+                        recommendedActions: [
+                            'Cek nama perusahaan atau akun pengirim di mesin pencari resmi.',
+                            'Tanyakan pendapat teman atau keluarga sebelum mengambil tindakan lanjutan.'
+                        ]
+                    });
+                }
+            } else if (activeTab === 'image') {
+                setScanResult({
+                    level: 'high',
+                    badgeLabel: 'Hati-hati, ini mencurigakan',
+                    headline: 'Tangkapan layar terindikasi memuat manipulasi visual atau format bukti tidak resmi.',
+                    suspiciousPoints: [
+                        'Tata letak font atau perataan teks pada struk transfer tampak tidak konsisten dengan format resmi perbankan.',
+                        'Tidak tercantum nomor referensi transaksi yang dapat dilacak secara sah.'
+                    ],
+                    explanation: 'Penipu sering memakai generator struk palsu untuk meyakinkan korban bahwa uang sudah dikirim, lalu mendesak korban mengirimkan barang atau uang kembali.',
+                    recommendedActions: [
+                        'Cek mutasi rekening langsung lewat aplikasi m-banking atau ATM kamu, bukan dari struk kiriman orang lain.',
+                        'Jangan percaya tangkapan layar saldo sebelum kamu melihat saldomu bertambah sendiri.'
+                    ]
+                });
+            } else {
+                setScanResult({
+                    level: 'high',
+                    badgeLabel: 'Hati-hati, ini mencurigakan',
+                    headline: 'Tautan menggunakan domain tidak lazim yang menyerupai nama merek terpercaya (phishing).',
+                    suspiciousPoints: [
+                        'Akhiran domain (.xyz / domain gratis) jarang digunakan oleh lembaga resmi atau dompet digital.',
+                        'Nama tautan meniru kata kunci populer untuk memancing kamu login atau memasukkan data rahasia.'
+                    ],
+                    explanation: 'Tautan palsu seperti ini dibuat menyerupai halaman asli untuk mencuri kata sandi, PIN dompet digital, atau kode OTP.',
+                    recommendedActions: [
+                        'Jangan masukkan nomor HP, PIN, atau kata sandi di situs tersebut.',
+                        'Tutup segera tab peramban dan pastikan akun dompet digitalmu masih aktif aman.'
+                    ]
+                });
+            }
+            setScanState('result');
+        }, 1200);
+    };
+
+    const resetScan = () => {
+        setScanState('idle');
+        setScanResult(null);
+    };
+
     return (
         <>
-            <Head title="Welcome" />
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]">
-                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
-                    <main className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-4xl lg:flex-row">
-                        <div className="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
-                            <h1 className="mb-1 font-medium">
-                                Let's get started
-                            </h1>
-                            <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                                Laravel has an incredibly rich ecosystem.
-                                <br />
-                                We suggest starting with the following.
+            <Head title="CEKARA - Cek dulu sebelum percaya" />
+
+            <div className="min-h-screen bg-[#FFF8EC] text-[#3B2A1E] font-['Nunito',system-ui,sans-serif] selection:bg-[#FFE27A] selection:text-[#3B2A1E]">
+                
+                {/* 1. HEADER / NAVIGASI */}
+                <header className="sticky top-0 z-30 bg-[#FFF8EC] border-b-2 border-[#EFE3D0]">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+                        
+                        {/* Logo Brand */}
+                        <a href="#hero" className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-[#3B2A1E] rounded-xl p-1">
+                            <img 
+                                src="/logo.png" 
+                                alt="Logo Maskot CEKARA" 
+                                className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0" 
+                            />
+                            <div>
+                                <span className="font-['Fredoka',system-ui,sans-serif] text-2xl font-bold tracking-tight text-[#3B2A1E] block leading-none">
+                                    CEKARA
+                                </span>
+                                <span className="text-[12px] text-[#6B5646] font-semibold block leading-tight mt-0.5">
+                                    Cek dulu sebelum percaya
+                                </span>
+                            </div>
+                        </a>
+
+                        {/* Navigasi Menu */}
+                        <nav className="hidden md:flex items-center gap-7 text-[15px] font-bold text-[#6B5646]">
+                            <a href="#pemeriksa" className="hover:text-[#3B2A1E] transition-colors">
+                                Pemeriksa
+                            </a>
+                            <a href="#pilar" className="hover:text-[#3B2A1E] transition-colors">
+                                Cara Kerja
+                            </a>
+                            <a href="#simulasi" className="hover:text-[#3B2A1E] transition-colors">
+                                Simulasi Kasus
+                            </a>
+                            <a href="#kejujuran" className="hover:text-[#3B2A1E] transition-colors">
+                                Pedoman & Etika
+                            </a>
+                        </nav>
+
+                        {/* Tombol Aksi Masuk / Akun */}
+                        <div className="flex items-center gap-3">
+                            <a
+                                href="#login"
+                                className="inline-flex items-center justify-center h-11 px-5 rounded-[20px] border-2 border-[#3B2A1E] bg-[#FFF8EC] text-[#3B2A1E] font-bold text-sm hover:bg-[#FFE27A] transition-colors focus-visible:outline-2 focus-visible:outline-[#3B2A1E]"
+                            >
+                                Masuk Akun
+                            </a>
+                        </div>
+                    </div>
+                </header>
+
+                <main>
+                    {/* 2. HERO & FITUR PEMERIKSA UTAMA */}
+                    <section id="hero" className="pt-8 pb-14 sm:pt-12 sm:pb-20 px-4 sm:px-6">
+                        <div className="max-w-4xl mx-auto">
+                            
+                            {/* Headline & Pengantar (Ramah, Rapi, Sejajar) */}
+                            <div className="mb-8 sm:mb-10 text-left max-w-2xl">
+                                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8ECDF0] border-2 border-[#3B2A1E] text-xs font-bold text-[#3B2A1E] mb-4">
+                                    <span>Ruang Aman Belajar Digital Pelajar & Mahasiswa</span>
+                                </div>
+                                
+                                <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl sm:text-4xl md:text-5xl font-bold text-[#3B2A1E] leading-[1.2] mb-4">
+                                    Dapat pesan mencurigakan?{' '}
+                                    <span className="relative inline-block whitespace-nowrap">
+                                        Tenang, kita cek bareng.
+                                        {/* Hiasan Garis Bergelombang Buatan Tangan (SVG hemat) */}
+                                        <svg 
+                                            className="absolute -bottom-2 left-0 w-full h-2.5 text-[#FF9A3C]" 
+                                            viewBox="0 0 200 9" 
+                                            fill="none" 
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            preserveAspectRatio="none"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M2 7C25 1 45 7 70 3C95 -1 115 6 140 2C165 -2 185 7 198 3" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                        </svg>
+                                    </span>
+                                </h1>
+
+                                <p className="text-base sm:text-lg text-[#6B5646] font-normal leading-relaxed">
+                                    Bantu kamu menilai pesan chat, tawaran kerja freelance, tautan, atau bukti transfer yang bikin ragu—tanpa menghakimi, lengkap dengan alasannya.
+                                </p>
+                            </div>
+
+                            {/* KOTAK PEMERIKSA (SATU FOKUS UTAMA) */}
+                            <div id="pemeriksa" className="bg-[#FFFFFF] rounded-[24px] border-2 border-[#3B2A1E] p-5 sm:p-7 shadow-[4px_4px_0px_0px_#3B2A1E]">
+                                
+                                {/* Tab Pilihan Format Input */}
+                                <div className="flex flex-wrap gap-2 p-1.5 bg-[#FFF8EC] rounded-2xl border-2 border-[#EFE3D0] mb-5">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setActiveTab('text'); resetScan(); }}
+                                        className={`flex-1 min-w-[100px] h-11 px-4 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
+                                            activeTab === 'text'
+                                                ? 'bg-[#FF9A3C] text-[#3B2A1E] border-2 border-[#3B2A1E]'
+                                                : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                        }`}
+                                    >
+                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                        </svg>
+                                        Pesan Teks
+                                    </button>
+                                    
+                                    <button
+                                        type="button"
+                                        onClick={() => { setActiveTab('image'); resetScan(); }}
+                                        className={`flex-1 min-w-[100px] h-11 px-4 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
+                                            activeTab === 'image'
+                                                ? 'bg-[#FF9A3C] text-[#3B2A1E] border-2 border-[#3B2A1E]'
+                                                : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                        }`}
+                                    >
+                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                            <circle cx="9" cy="9" r="2" />
+                                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                                        </svg>
+                                        Tangkapan Layar
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => { setActiveTab('link'); resetScan(); }}
+                                        className={`flex-1 min-w-[100px] h-11 px-4 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
+                                            activeTab === 'link'
+                                                ? 'bg-[#FF9A3C] text-[#3B2A1E] border-2 border-[#3B2A1E]'
+                                                : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                        }`}
+                                    >
+                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                        </svg>
+                                        Tautan Website
+                                    </button>
+                                </div>
+
+                                {/* Form Input Berdasarkan Tab */}
+                                <form onSubmit={handleRunCheck}>
+                                    {activeTab === 'text' && (
+                                        <div className="mb-4">
+                                            <label htmlFor="text-input" className="block text-sm font-bold text-[#3B2A1E] mb-2">
+                                                Salin dan tempel pesan yang bikin kamu ragu:
+                                            </label>
+                                            <textarea
+                                                id="text-input"
+                                                rows={5}
+                                                value={inputText}
+                                                onChange={(e) => setInputText(e.target.value)}
+                                                placeholder="Contoh: 'Halo kak, kami dari agensi membuka lowongan freelance like video komisi 150rb per tugas. Silakan transfer uang jaminan 50rb...'"
+                                                className="w-full p-4 rounded-2xl border-2 border-[#8ECDF0] focus:border-[#FF9A3C] focus:outline-none focus:ring-2 focus:ring-[#3B2A1E] bg-[#FFF8EC]/40 text-[#3B2A1E] text-base placeholder-[#6B5646] resize-y"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'image' && (
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-bold text-[#3B2A1E] mb-2">
+                                                Unggah tangkapan layar (struk transfer, bukti chat, profil):
+                                            </label>
+                                            <div 
+                                                className="border-2 border-dashed border-[#8ECDF0] rounded-2xl p-6 sm:p-8 text-center bg-[#FFF8EC]/40 hover:bg-[#FFE27A]/20 transition-colors cursor-pointer"
+                                                onClick={() => setSelectedImageName('bukti_transfer_palsu.png')}
+                                            >
+                                                <div className="w-12 h-12 rounded-2xl bg-[#8ECDF0] border-2 border-[#3B2A1E] mx-auto flex items-center justify-center mb-3">
+                                                    <svg className="w-6 h-6 text-[#3B2A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                        <polyline points="17 8 12 3 7 8" />
+                                                        <line x1="12" x2="12" y1="3" y2="15" />
+                                                    </svg>
+                                                </div>
+                                                <p className="text-sm font-bold text-[#3B2A1E] mb-1">
+                                                    {selectedImageName ? `Berkas terpilih: ${selectedImageName}` : 'Klik untuk pilih foto atau tarik berkas ke sini'}
+                                                </p>
+                                                <p className="text-xs text-[#6B5646]">
+                                                    Mendukung format JPG atau PNG (Maksimal 5 MB)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'link' && (
+                                        <div className="mb-4">
+                                            <label htmlFor="url-input" className="block text-sm font-bold text-[#3B2A1E] mb-2">
+                                                Masukkan tautan (URL) yang mencurigakan:
+                                            </label>
+                                            <input
+                                                id="url-input"
+                                                type="url"
+                                                value={inputUrl}
+                                                onChange={(e) => setInputUrl(e.target.value)}
+                                                placeholder="https://contoh-tautan-ganjil.xyz/klaim-hadiah"
+                                                className="w-full h-12 px-4 rounded-2xl border-2 border-[#8ECDF0] focus:border-[#FF9A3C] focus:outline-none focus:ring-2 focus:ring-[#3B2A1E] bg-[#FFF8EC]/40 text-[#3B2A1E] text-base placeholder-[#6B5646]"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Tombol Contoh Cepat */}
+                                    <div className="flex flex-wrap items-center gap-2 mb-5">
+                                        <span className="text-xs font-bold text-[#6B5646]">Mau coba contoh?</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => loadSample('task_scam')}
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FFE27A] border border-[#3B2A1E] text-[#3B2A1E] hover:bg-[#FF9A3C] transition-colors"
+                                        >
+                                            Tawaran Like Video
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => loadSample('apk_kurir')}
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FFE27A] border border-[#3B2A1E] text-[#3B2A1E] hover:bg-[#FF9A3C] transition-colors"
+                                        >
+                                            Resi Paket .APK
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => loadSample('giveaway')}
+                                            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#FFE27A] border border-[#3B2A1E] text-[#3B2A1E] hover:bg-[#FF9A3C] transition-colors"
+                                        >
+                                            Link Saldo Kaget
+                                        </button>
+                                    </div>
+
+                                    {/* Peringatan Privasi (Wajib di dekat input sesuai panduan) */}
+                                    <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#FFF8EC] border border-[#EFE3D0] mb-5">
+                                        <svg className="w-5 h-5 text-[#FF9A3C] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                        </svg>
+                                        <p className="text-xs text-[#6B5646] leading-relaxed">
+                                            <strong className="text-[#3B2A1E]">Jaga rahasia pribadi:</strong> Demi keamananmu, jangan tempel kode OTP, kata sandi, PIN, nomor kartu, atau nomor rekening bank di sini ya.
+                                        </p>
+                                    </div>
+
+                                    {/* Tombol Aksi Pemeriksa */}
+                                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                                        <button
+                                            type="submit"
+                                            disabled={scanState === 'loading'}
+                                            className="w-full sm:w-auto h-12 px-8 rounded-[20px] bg-[#FF9A3C] hover:bg-[#F28A27] text-[#3B2A1E] font-['Fredoka',system-ui,sans-serif] font-bold text-base border-2 border-[#3B2A1E] transition-all shadow-[2px_2px_0px_0px_#3B2A1E] active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {scanState === 'loading' ? (
+                                                <>
+                                                    <svg className="w-5 h-5 animate-spin text-[#3B2A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <line x1="12" x2="12" y1="2" y2="6" />
+                                                        <line x1="12" x2="12" y1="18" y2="22" />
+                                                        <line x1="4.93" x2="7.76" y1="4.93" y2="7.76" />
+                                                        <line x1="16.24" x2="19.07" y1="16.24" y2="19.07" />
+                                                        <line x1="2" x2="6" y1="12" y2="12" />
+                                                        <line x1="18" x2="22" y1="12" y2="12" />
+                                                        <line x1="4.93" x2="7.76" y1="19.07" y2="16.24" />
+                                                        <line x1="16.24" x2="19.07" y1="7.76" y2="4.93" />
+                                                    </svg>
+                                                    Sedang memeriksa...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <circle cx="11" cy="11" r="7" />
+                                                        <path d="m21 21-4.35-4.35" />
+                                                    </svg>
+                                                    Cek Pesan Sekarang
+                                                </>
+                                            )}
+                                        </button>
+
+                                        {scanState === 'result' && (
+                                            <button
+                                                type="button"
+                                                onClick={resetScan}
+                                                className="w-full sm:w-auto h-12 px-6 rounded-[20px] bg-transparent hover:bg-[#FFF8EC] text-[#3B2A1E] font-bold text-sm border-2 border-[#3B2A1E] transition-colors"
+                                            >
+                                                Periksa Pesan Lain
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
+
+                                {/* HASIL PEMERIKSAAN (KARTU HASIL INTERAKTIF) */}
+                                {scanState === 'result' && scanResult && (
+                                    <div className="mt-7 pt-7 border-t-2 border-[#EFE3D0] animate-fadeIn">
+                                        <div className="rounded-3xl border-2 border-[#3B2A1E] p-6 bg-[#FFF8EC]">
+                                            
+                                            {/* Lencana Status Resmi (Wajib Teks + Warna Sesuai Aturan) */}
+                                            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                                <div 
+                                                    className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold border-2 border-[#3B2A1E] ${
+                                                        scanResult.level === 'high'
+                                                            ? 'bg-[#D4573A] text-white'
+                                                            : scanResult.level === 'medium'
+                                                            ? 'bg-[#FFE27A] text-[#3B2A1E]'
+                                                            : 'bg-[#8ECDF0] text-[#3B2A1E]'
+                                                    }`}
+                                                >
+                                                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <circle cx="12" cy="12" r="10" />
+                                                        <line x1="12" x2="12" y1="8" y2="12" />
+                                                        <line x1="12" x2="12.01" y1="16" y2="16" />
+                                                    </svg>
+                                                    <span>{scanResult.badgeLabel}</span>
+                                                </div>
+
+                                                <span className="text-xs text-[#6B5646] font-semibold">
+                                                    Analisis Berbasis Pola Umum
+                                                </span>
+                                            </div>
+
+                                            {/* Ringkasan Temuan */}
+                                            <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] mb-3">
+                                                {scanResult.headline}
+                                            </h3>
+
+                                            {/* Poin Tanda Bahaya (Tanda Kuning Mentega) */}
+                                            <div className="mb-4">
+                                                <span className="text-xs font-bold text-[#A8412A] uppercase tracking-wider block mb-2">
+                                                    Tanda Janggal yang Ditemukan:
+                                                </span>
+                                                <ul className="space-y-2">
+                                                    {scanResult.suspiciousPoints.map((point, idx) => (
+                                                        <li key={idx} className="flex items-start gap-2.5 text-sm text-[#3B2A1E]">
+                                                            <span className="w-5 h-5 rounded-full bg-[#FFE27A] border border-[#3B2A1E] flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                                                                !
+                                                            </span>
+                                                            <span className="leading-snug">{point}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            {/* Penjelasan Ramah (Explainability) */}
+                                            <div className="p-4 rounded-2xl bg-white border border-[#EFE3D0] mb-5">
+                                                <span className="text-xs font-bold text-[#6B5646] block mb-1">
+                                                    Kenapa Pola Ini Mencurigakan?
+                                                </span>
+                                                <p className="text-sm text-[#3B2A1E] leading-relaxed">
+                                                    {scanResult.explanation}
+                                                </p>
+                                            </div>
+
+                                            {/* Pedoman Tindakan Segera (Act) */}
+                                            <div>
+                                                <span className="text-xs font-bold text-[#3B2A1E] uppercase tracking-wider block mb-2">
+                                                    Langkah Aman yang Disarankan:
+                                                </span>
+                                                <div className="space-y-2 mb-4">
+                                                    {scanResult.recommendedActions.map((act, idx) => (
+                                                        <div key={idx} className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-[#8ECDF0] text-sm text-[#3B2A1E] font-semibold">
+                                                            <svg className="w-4 h-4 text-[#FF9A3C] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                <polyline points="20 6 9 17 4 12" />
+                                                            </svg>
+                                                            <span>{act}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Catatan Transparansi Produk */}
+                                            <p className="text-xs text-[#6B5646] mt-4 pt-4 border-t border-[#EFE3D0]">
+                                                * Hasil ini merupakan perkiraan berdasarkan kecocokan pola umum dan bukan vonis hukum final. Tetap verifikasi ke kanal resmi sebelum mengambil keputusan.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 3. TIGA PILAR UTAMA: KENALI, BELAJAR, BERTINDAK */}
+                    <section id="pilar" className="py-14 sm:py-20 border-t-2 border-[#EFE3D0] bg-[#FFF8EC]">
+                        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+                            
+                            <div className="text-left max-w-xl mb-12">
+                                <h2 className="font-['Fredoka',system-ui,sans-serif] text-2xl sm:text-3xl font-bold text-[#3B2A1E] mb-3">
+                                    Tiga Langkah Sederhana Menjaga Diri di Ruang Digital
+                                </h2>
+                                <p className="text-base text-[#6B5646]">
+                                    CEKARA bukan cuma alat pemindai pesan, tapi ruang belajar biar kamu makin peka membaca gelagat bahaya.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                
+                                {/* Pilar 1: Kenali */}
+                                <div className="bg-white rounded-3xl p-6 border-2 border-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] flex flex-col justify-between">
+                                    <div>
+                                        <div className="w-12 h-12 rounded-2xl bg-[#8ECDF0] border-2 border-[#3B2A1E] flex items-center justify-center mb-4">
+                                            <svg className="w-6 h-6 text-[#3B2A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <circle cx="11" cy="11" r="8" />
+                                                <line x1="21" x2="16.65" y1="21" y2="16.65" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-xs font-bold text-[#6B5646] tracking-wider uppercase block mb-1">
+                                            Pilar 1: Recognize
+                                        </span>
+                                        <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] mb-3">
+                                            Kenali Polanya
+                                        </h3>
+                                        <p className="text-sm text-[#6B5646] leading-relaxed">
+                                            Menilai pesan, tautan, atau profil yang mencurigakan dengan menunjukkan tanda bahaya (*red flags*) dan membeberkan alasannya secara masuk akal.
+                                        </p>
+                                    </div>
+                                    <div className="mt-5 pt-4 border-t border-[#EFE3D0] text-xs font-bold text-[#3B2A1E]">
+                                        Pendekatan berbasis penjelasan
+                                    </div>
+                                </div>
+
+                                {/* Pilar 2: Belajar */}
+                                <div className="bg-white rounded-3xl p-6 border-2 border-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] flex flex-col justify-between">
+                                    <div>
+                                        <div className="w-12 h-12 rounded-2xl bg-[#FFE27A] border-2 border-[#3B2A1E] flex items-center justify-center mb-4">
+                                            <svg className="w-6 h-6 text-[#3B2A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-xs font-bold text-[#6B5646] tracking-wider uppercase block mb-1">
+                                            Pilar 2: Learn
+                                        </span>
+                                        <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] mb-3">
+                                            Latih Keputusan
+                                        </h3>
+                                        <p className="text-sm text-[#6B5646] leading-relaxed">
+                                            Melatih nalarmu lewat simulasi interaktif berdasarkan skenario nyata yang sering dihadapi pelajar (loker bodong, APK kurir, phishing game).
+                                        </p>
+                                    </div>
+                                    <div className="mt-5 pt-4 border-t border-[#EFE3D0] text-xs font-bold text-[#3B2A1E]">
+                                        Umpan balik langsung & tanpa vonis
+                                    </div>
+                                </div>
+
+                                {/* Pilar 3: Bertindak */}
+                                <div className="bg-white rounded-3xl p-6 border-2 border-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] flex flex-col justify-between">
+                                    <div>
+                                        <div className="w-12 h-12 rounded-2xl bg-[#FF9A3C] border-2 border-[#3B2A1E] flex items-center justify-center mb-4">
+                                            <svg className="w-6 h-6 text-[#3B2A1E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-xs font-bold text-[#6B5646] tracking-wider uppercase block mb-1">
+                                            Pilar 3: Act
+                                        </span>
+                                        <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] mb-3">
+                                            Pilih Langkah Aman
+                                        </h3>
+                                        <p className="text-sm text-[#6B5646] leading-relaxed">
+                                            Panduan langkah konkret: daftar periksa keselamatan akun, cara amankan perbankan, dan cara melapor ke otoritas resmi pemerintah secara tepat.
+                                        </p>
+                                    </div>
+                                    <div className="mt-5 pt-4 border-t border-[#EFE3D0] text-xs font-bold text-[#3B2A1E]">
+                                        Checklist keselamatan praktis
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 4. CONTOH SIMULASI MINI INTERAKTIF (LEARN) */}
+                    <section id="simulasi" className="py-14 sm:py-20 border-t-2 border-[#EFE3D0] bg-[#FFFFFF]">
+                        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+                            
+                            <div className="text-left mb-8">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFE27A] border border-[#3B2A1E] text-xs font-bold text-[#3B2A1E] mb-3">
+                                    <span>Coba Skenario Simulasi Singkat</span>
+                                </div>
+                                <h2 className="font-['Fredoka',system-ui,sans-serif] text-2xl sm:text-3xl font-bold text-[#3B2A1E] mb-2">
+                                    Kasus: Tawaran Freelance Berkedok Like & Subscribe
+                                </h2>
+                                <p className="text-sm text-[#6B5646]">
+                                    Bayangkan kamu dapat pesan chat di Telegram seperti ini. Apa langkah yang bakal kamu ambil?
+                                </p>
+                            </div>
+
+                            {/* Kotak Pesan Simulasi */}
+                            <div className="bg-[#FFF8EC] rounded-2xl border-2 border-[#3B2A1E] p-5 mb-6">
+                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#EFE3D0]">
+                                    <div className="w-7 h-7 rounded-full bg-[#8ECDF0] border border-[#3B2A1E] flex items-center justify-center text-xs font-bold">
+                                        HR
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-[#3B2A1E] block">Recruiter_Dewi (Nomor Luar Negeri +628...)</span>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-[#3B2A1E] leading-relaxed font-mono bg-white p-3.5 rounded-xl border border-[#EFE3D0]">
+                                    "Halo kak, kami mencari partner remote. Tugas pertama: like 3 video YouTube di link berikut, langsung dapat komisi Rp30.000 via e-wallet. Untuk tugas selanjutnya dengan komisi Rp500.000, kakak wajib setor uang deposit jaminan tugas Rp150.000 ya."
+                                </p>
+                            </div>
+
+                            {/* Opsi Pilihan Jawaban */}
+                            <div className="space-y-3 mb-6">
+                                <button
+                                    type="button"
+                                    onClick={() => { setSimAnswer(1); setSimFeedbackOpen(true); }}
+                                    className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-start gap-3 ${
+                                        simAnswer === 1
+                                            ? 'bg-[#FFE27A] border-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                            : 'bg-[#FFF8EC]/60 border-[#EFE3D0] hover:border-[#3B2A1E]'
+                                    }`}
+                                >
+                                    <span className="w-6 h-6 rounded-full bg-white border border-[#3B2A1E] flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                        A
+                                    </span>
+                                    <span className="text-sm font-semibold text-[#3B2A1E]">
+                                        Ambil uang Rp30.000 pertama, terus langsung transfer deposit Rp150.000 biar komisinya cepat cair banyak.
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => { setSimAnswer(2); setSimFeedbackOpen(true); }}
+                                    className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-start gap-3 ${
+                                        simAnswer === 2
+                                            ? 'bg-[#FFE27A] border-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                            : 'bg-[#FFF8EC]/60 border-[#EFE3D0] hover:border-[#3B2A1E]'
+                                    }`}
+                                >
+                                    <span className="w-6 h-6 rounded-full bg-white border border-[#3B2A1E] flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                        B
+                                    </span>
+                                    <span className="text-sm font-semibold text-[#3B2A1E]">
+                                        Tunggu dulu. Pekerjaan asli tidak pernah meminta pelamar mentransfer deposit jaminan. Tolak dan blokir nomornya.
+                                    </span>
+                                </button>
+                            </div>
+
+                            {/* Kotak Umpan Balik Simulasi */}
+                            {simFeedbackOpen && (
+                                <div className="p-5 rounded-2xl bg-[#FFF8EC] border-2 border-[#3B2A1E] animate-fadeIn">
+                                    <div className="flex items-center gap-2.5 mb-2">
+                                        <img 
+                                            src="/logo.png" 
+                                            alt="Maskot CEKARA" 
+                                            className="w-9 h-9 object-contain shrink-0" 
+                                        />
+                                        <h4 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
+                                            {simAnswer === 2 ? 'Pilihan Tepat! Instingmu Tajam.' : 'Hampir Terkecoh! Yuk Pahami Polanya.'}
+                                        </h4>
+                                    </div>
+                                    <p className="text-sm text-[#6B5646] leading-relaxed">
+                                        {simAnswer === 2
+                                            ? 'Uang kecil Rp30.000 sengaja diberikan penipu sebagai umpan untuk membangun rasa percaya. Begitu kamu transfer uang deposit Rp150.000, mereka akan meminta setoran jutaan rupiah berikutnya dengan alasan kode error, hingga seluruh tabunganmu habis.'
+                                            : 'Penipu memang sengaja mentransfer uang kecil di tugas pertama supaya kamu percaya ini asli. Tapi begitu kamu mengirimkan uang deposit, dana tersebut tidak akan pernah kembali. Ingat prinsip emas: kerja beneran itu yang membayar kamu, bukan kamu yang membayar.'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
+                    {/* 5. PRINSIP KEJUJURAN & KANAL RESMI PENGADUAN */}
+                    <section id="kejujuran" className="py-14 sm:py-20 border-t-2 border-[#EFE3D0] bg-[#FFF8EC]">
+                        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+                            
+                            <div className="bg-white rounded-3xl border-2 border-[#3B2A1E] p-6 sm:p-9 shadow-[4px_4px_0px_0px_#3B2A1E]">
+                                <div className="max-w-2xl mb-6">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8ECDF0] border border-[#3B2A1E] text-xs font-bold text-[#3B2A1E] mb-3">
+                                        <span>Prinsip Kejujuran Produk</span>
+                                    </div>
+                                    <h2 className="font-['Fredoka',system-ui,sans-serif] text-2xl sm:text-3xl font-bold text-[#3B2A1E] mb-3">
+                                        CEKARA Hadir Sebagai Teman Diskusi, Bukan Vonis Mutlak
+                                    </h2>
+                                    <p className="text-sm sm:text-base text-[#6B5646] leading-relaxed">
+                                        Kami tidak memberi label hijau "pasti aman" karena modus kejahatan siber terus berkembang. CEKARA menyajikan kemungkinan dan indikator risiko agar kamu terbiasa berpikir kritis sebelum percaya.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t-2 border-[#EFE3D0]">
+                                    <div className="p-4 rounded-2xl bg-[#FFF8EC] border border-[#EFE3D0]">
+                                        <h4 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E] mb-1">
+                                            Status Prototipe Lomba
+                                        </h4>
+                                        <p className="text-xs text-[#6B5646] leading-relaxed">
+                                            Aplikasi ini dikembangkan untuk ajang lomba MIT-Week 2026. Data yang kamu periksa diproses untuk memberikan analisis edukatif dan tidak dijual kepada pihak ketiga.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-[#FFF8EC] border border-[#EFE3D0]">
+                                        <h4 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E] mb-1">
+                                            Kanal Pengaduan Resmi
+                                        </h4>
+                                        <p className="text-xs text-[#6B5646] leading-relaxed">
+                                            Jika kamu sudah telanjur menjadi korban penipuan finansial, segera laporkan ke <strong>Indonesia Anti-Scam Centre (iasc.ojk.go.id)</strong> atau hubungi <strong>Kontak OJK 157</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+
+                {/* 6. FOOTER */}
+                <footer className="border-t-2 border-[#EFE3D0] bg-[#FFF8EC] py-10 px-4 sm:px-6">
+                    <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        
+                        <div>
+                            <div className="flex items-center gap-2.5 mb-2">
+                                <img 
+                                    src="/logo.png" 
+                                    alt="Logo Maskot CEKARA" 
+                                    className="w-8 h-8 object-contain shrink-0" 
+                                />
+                                <span className="font-['Fredoka',system-ui,sans-serif] text-2xl font-bold text-[#3B2A1E] block">
+                                    CEKARA
+                                </span>
+                            </div>
+                            <p className="text-xs text-[#6B5646]">
+                                Cek dulu sebelum percaya — Ruang belajar dan deteksi risiko digital untuk pelajar Indonesia.
                             </p>
-                            <ul className="mb-4 flex flex-col lg:mb-6">
-                                <li className="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
-                                    <span className="relative bg-white py-1 dark:bg-[#161615]">
-                                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]" />
-                                        </span>
-                                    </span>
-                                    <span>
-                                        Read the
-                                        <a
-                                            href="https://laravel.com/docs"
-                                            target="_blank"
-                                            className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                        >
-                                            <span>Documentation</span>
-                                            <svg
-                                                width={10}
-                                                height={11}
-                                                viewBox="0 0 10 11"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-2.5 w-2.5"
-                                            >
-                                                <path
-                                                    d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                    stroke="currentColor"
-                                                    strokeLinecap="square"
-                                                />
-                                            </svg>
-                                        </a>
-                                    </span>
-                                </li>
-                                <li className="relative flex items-center gap-4 py-2 before:absolute before:top-0 before:bottom-1/2 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
-                                    <span className="relative bg-white py-1 dark:bg-[#161615]">
-                                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]" />
-                                        </span>
-                                    </span>
-                                    <span>
-                                        Watch video tutorials at
-                                        <a
-                                            href="https://laracasts.com"
-                                            target="_blank"
-                                            className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                        >
-                                            <span>Laracasts</span>
-                                            <svg
-                                                width={10}
-                                                height={11}
-                                                viewBox="0 0 10 11"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-2.5 w-2.5"
-                                            >
-                                                <path
-                                                    d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                    stroke="currentColor"
-                                                    strokeLinecap="square"
-                                                />
-                                            </svg>
-                                        </a>
-                                    </span>
-                                </li>
-                            </ul>
-                            <ul className="flex gap-3 text-sm leading-normal">
-                                <li>
-                                    <a
-                                        href="https://cloud.laravel.com"
-                                        target="_blank"
-                                        className="inline-block rounded-sm border border-black bg-[#1b1b18] px-5 py-1.5 text-sm leading-normal text-white hover:border-black hover:bg-black dark:border-[#eeeeec] dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:border-white dark:hover:bg-white"
-                                    >
-                                        Deploy now
-                                    </a>
-                                </li>
-                            </ul>
                         </div>
-                        <div className="relative -mb-px aspect-[335/364] w-full shrink-0 overflow-hidden rounded-t-lg bg-[#fff2f2] lg:mb-0 lg:-ml-px lg:aspect-auto lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg dark:bg-[#1D0002]">
-                            {/* Laravel Logo */}
-                            <svg
-                                className="w-full max-w-none translate-y-0 text-[#F53003] opacity-100 transition-all duration-750 dark:text-[#F61500] starting:opacity-0 motion-safe:starting:translate-y-6"
-                                viewBox="0 0 438 104"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M17.2036 -3H0V102.197H49.5189V86.7187H17.2036V-3Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M110.256 41.6337C108.061 38.1275 104.945 35.3731 100.905 33.3681C96.8667 31.3647 92.8016 30.3618 88.7131 30.3618C83.4247 30.3618 78.5885 31.3389 74.201 33.2923C69.8111 35.2456 66.0474 37.928 62.9059 41.3333C59.7643 44.7401 57.3198 48.6726 55.5754 53.1293C53.8287 57.589 52.9572 62.274 52.9572 67.1813C52.9572 72.1925 53.8287 76.8995 55.5754 81.3069C57.3191 85.7173 59.7636 89.6241 62.9059 93.0293C66.0474 96.4361 69.8119 99.1155 74.201 101.069C78.5885 103.022 83.4247 103.999 88.7131 103.999C92.8016 103.999 96.8667 102.997 100.905 100.994C104.945 98.9911 108.061 96.2359 110.256 92.7282V102.195H126.563V32.1642H110.256V41.6337ZM108.76 75.7472C107.762 78.4531 106.366 80.8078 104.572 82.8112C102.776 84.8161 100.606 86.4183 98.0637 87.6206C95.5202 88.823 92.7004 89.4238 89.6103 89.4238C86.5178 89.4238 83.7252 88.823 81.2324 87.6206C78.7388 86.4183 76.5949 84.8161 74.7998 82.8112C73.004 80.8078 71.6319 78.4531 70.6856 75.7472C69.7356 73.0421 69.2644 70.1868 69.2644 67.1821C69.2644 64.1758 69.7356 61.3205 70.6856 58.6154C71.6319 55.9102 73.004 53.5571 74.7998 51.5522C76.5949 49.5495 78.738 47.9451 81.2324 46.7427C83.7252 45.5404 86.5178 44.9396 89.6103 44.9396C92.7012 44.9396 95.5202 45.5404 98.0637 46.7427C100.606 47.9451 102.776 49.5487 104.572 51.5522C106.367 53.5571 107.762 55.9102 108.76 58.6154C109.756 61.3205 110.256 64.1758 110.256 67.1821C110.256 70.1868 109.756 73.0421 108.76 75.7472Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M242.805 41.6337C240.611 38.1275 237.494 35.3731 233.455 33.3681C229.416 31.3647 225.351 30.3618 221.262 30.3618C215.974 30.3618 211.138 31.3389 206.75 33.2923C202.36 35.2456 198.597 37.928 195.455 41.3333C192.314 44.7401 189.869 48.6726 188.125 53.1293C186.378 57.589 185.507 62.274 185.507 67.1813C185.507 72.1925 186.378 76.8995 188.125 81.3069C189.868 85.7173 192.313 89.6241 195.455 93.0293C198.597 96.4361 202.361 99.1155 206.75 101.069C211.138 103.022 215.974 103.999 221.262 103.999C225.351 103.999 229.416 102.997 233.455 100.994C237.494 98.9911 240.611 96.2359 242.805 92.7282V102.195H259.112V32.1642H242.805V41.6337ZM241.31 75.7472C240.312 78.4531 238.916 80.8078 237.122 82.8112C235.326 84.8161 233.156 86.4183 230.614 87.6206C228.07 88.823 225.251 89.4238 222.16 89.4238C219.068 89.4238 216.275 88.823 213.782 87.6206C211.289 86.4183 209.145 84.8161 207.35 82.8112C205.554 80.8078 204.182 78.4531 203.236 75.7472C202.286 73.0421 201.814 70.1868 201.814 67.1821C201.814 64.1758 202.286 61.3205 203.236 58.6154C204.182 55.9102 205.554 53.5571 207.35 51.5522C209.145 49.5495 211.288 47.9451 213.782 46.7427C216.275 45.5404 219.068 44.9396 222.16 44.9396C225.251 44.9396 228.07 45.5404 230.614 46.7427C233.156 47.9451 235.326 49.5487 237.122 51.5522C238.917 53.5571 240.312 55.9102 241.31 58.6154C242.306 61.3205 242.806 64.1758 242.806 67.1821C242.805 70.1868 242.305 73.0421 241.31 75.7472Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M438 -3H421.694V102.197H438V-3Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M139.43 102.197H155.735V48.2834H183.712V32.1665H139.43V102.197Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M324.49 32.1665L303.995 85.794L283.498 32.1665H266.983L293.748 102.197H314.242L341.006 32.1665H324.49Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M376.571 30.3656C356.603 30.3656 340.797 46.8497 340.797 67.1828C340.797 89.6597 356.094 104 378.661 104C391.29 104 399.354 99.1488 409.206 88.5848L398.189 80.0226C398.183 80.031 389.874 90.9895 377.468 90.9895C363.048 90.9895 356.977 79.3111 356.977 73.269H411.075C413.917 50.1328 398.775 30.3656 376.571 30.3656ZM357.02 61.0967C357.145 59.7487 359.023 43.3761 376.442 43.3761C393.861 43.3761 395.978 59.7464 396.099 61.0967H357.02Z"
-                                    fill="currentColor"
-                                />
-                            </svg>
 
-                            {/* 13 */}
-                            <svg
-                                className="relative -mt-[6.6rem] -ml-8 w-[438px] max-w-none [--stroke-color:#1B1B18] lg:ml-0 dark:[--stroke-color:#FF750F]"
-                                viewBox="0 0 440 392"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <g className="text-[#1B1B18] opacity-100 mix-blend-darken transition-all delay-300 duration-750 dark:text-black dark:mix-blend-normal starting:opacity-0">
-                                    <mask
-                                        id="path-1-mask"
-                                        maskUnits="userSpaceOnUse"
-                                        x="-0.328613"
-                                        y="103"
-                                        width="338"
-                                        height="299"
-                                        fill="black"
-                                    >
-                                        <rect
-                                            fill="white"
-                                            x="-0.328613"
-                                            y="103"
-                                            width="338"
-                                            height="299"
-                                        />
-                                        <path d="M234.936 400.8C204.136 400.8 178.936 392.4 159.336 375.6C140.136 358.8 130.536 337 130.536 310.2H200.736C200.736 318.2 203.736 324.8 209.736 330C215.736 335.2 223.736 337.8 233.736 337.8C243.336 337.8 251.136 335 257.136 329.4C263.536 323.8 266.736 316.6 266.736 307.8C266.736 299.8 263.936 293.2 258.336 288C252.736 282.8 245.536 280.2 236.736 280.2H199.536V218.4H236.736C243.536 218.4 249.336 216 254.136 211.2C258.936 206.4 261.336 200.4 261.336 193.2C261.336 184.8 258.736 178.2 253.536 173.4C248.336 168.6 241.736 166.2 233.736 166.2C226.536 166.2 220.336 168.4 215.136 172.8C210.336 177.2 207.936 182.8 207.936 189.6H141.336C141.336 164.8 150.136 144.6 167.736 129C185.336 113 207.936 105 235.536 105C263.136 105 285.536 112.2 302.736 126.6C320.336 141 329.136 160 329.136 183.6C329.136 200.8 324.536 214.8 315.336 225.6C306.136 236 294.336 243.2 279.936 247.2C297.136 252 310.736 260.2 320.736 271.8C331.136 283.4 336.336 298 336.336 315.6C336.336 340.4 326.936 360.8 308.136 376.8C289.336 392.8 264.936 400.8 234.936 400.8Z" />
-                                        <path d="M26.8714 167.6H1.67139V105.2H94.6714V400.2H26.8714V167.6Z" />
-                                    </mask>
-                                    <path
-                                        d="M234.936 400.8C204.136 400.8 178.936 392.4 159.336 375.6C140.136 358.8 130.536 337 130.536 310.2H200.736C200.736 318.2 203.736 324.8 209.736 330C215.736 335.2 223.736 337.8 233.736 337.8C243.336 337.8 251.136 335 257.136 329.4C263.536 323.8 266.736 316.6 266.736 307.8C266.736 299.8 263.936 293.2 258.336 288C252.736 282.8 245.536 280.2 236.736 280.2H199.536V218.4H236.736C243.536 218.4 249.336 216 254.136 211.2C258.936 206.4 261.336 200.4 261.336 193.2C261.336 184.8 258.736 178.2 253.536 173.4C248.336 168.6 241.736 166.2 233.736 166.2C226.536 166.2 220.336 168.4 215.136 172.8C210.336 177.2 207.936 182.8 207.936 189.6H141.336C141.336 164.8 150.136 144.6 167.736 129C185.336 113 207.936 105 235.536 105C263.136 105 285.536 112.2 302.736 126.6C320.336 141 329.136 160 329.136 183.6C329.136 200.8 324.536 214.8 315.336 225.6C306.136 236 294.336 243.2 279.936 247.2C297.136 252 310.736 260.2 320.736 271.8C331.136 283.4 336.336 298 336.336 315.6C336.336 340.4 326.936 360.8 308.136 376.8C289.336 392.8 264.936 400.8 234.936 400.8Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M26.8714 167.6H1.67139V105.2H94.6714V400.2H26.8714V167.6Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M234.936 400.8C204.136 400.8 178.936 392.4 159.336 375.6C140.136 358.8 130.536 337 130.536 310.2H200.736C200.736 318.2 203.736 324.8 209.736 330C215.736 335.2 223.736 337.8 233.736 337.8C243.336 337.8 251.136 335 257.136 329.4C263.536 323.8 266.736 316.6 266.736 307.8C266.736 299.8 263.936 293.2 258.336 288C252.736 282.8 245.536 280.2 236.736 280.2H199.536V218.4H236.736C243.536 218.4 249.336 216 254.136 211.2C258.936 206.4 261.336 200.4 261.336 193.2C261.336 184.8 258.736 178.2 253.536 173.4C248.336 168.6 241.736 166.2 233.736 166.2C226.536 166.2 220.336 168.4 215.136 172.8C210.336 177.2 207.936 182.8 207.936 189.6H141.336C141.336 164.8 150.136 144.6 167.736 129C185.336 113 207.936 105 235.536 105C263.136 105 285.536 112.2 302.736 126.6C320.336 141 329.136 160 329.136 183.6C329.136 200.8 324.536 214.8 315.336 225.6C306.136 236 294.336 243.2 279.936 247.2C297.136 252 310.736 260.2 320.736 271.8C331.136 283.4 336.336 298 336.336 315.6C336.336 340.4 326.936 360.8 308.136 376.8C289.336 392.8 264.936 400.8 234.936 400.8Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-1-mask)"
-                                    />
-                                    <path
-                                        d="M26.8714 167.6H1.67139V105.2H94.6714V400.2H26.8714V167.6Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-1-mask)"
-                                    />
-                                </g>
-
-                                <g className="text-[#F3BEC7] opacity-100 transition-all delay-400 duration-750 dark:text-[#4B0600] starting:opacity-0 motion-safe:starting:-translate-x-[26px]">
-                                    <mask
-                                        id="path-2-mask"
-                                        maskUnits="userSpaceOnUse"
-                                        x="25.3357"
-                                        y="103"
-                                        width="338"
-                                        height="299"
-                                        fill="black"
-                                    >
-                                        <rect
-                                            fill="white"
-                                            x="25.3357"
-                                            y="103"
-                                            width="338"
-                                            height="299"
-                                        />
-                                        <path d="M260.6 400.8C229.8 400.8 204.6 392.4 185 375.6C165.8 358.8 156.2 337 156.2 310.2H226.4C226.4 318.2 229.4 324.8 235.4 330C241.4 335.2 249.4 337.8 259.4 337.8C269 337.8 276.8 335 282.8 329.4C289.2 323.8 292.4 316.6 292.4 307.8C292.4 299.8 289.6 293.2 284 288C278.4 282.8 271.2 280.2 262.4 280.2H225.2V218.4H262.4C269.2 218.4 275 216 279.8 211.2C284.6 206.4 287 200.4 287 193.2C287 184.8 284.4 178.2 279.2 173.4C274 168.6 267.4 166.2 259.4 166.2C252.2 166.2 246 168.4 240.8 172.8C236 177.2 233.6 182.8 233.6 189.6H167C167 164.8 175.8 144.6 193.4 129C211 113 233.6 105 261.2 105C288.8 105 311.2 112.2 328.4 126.6C346 141 354.8 160 354.8 183.6C354.8 200.8 350.2 214.8 341 225.6C331.8 236 320 243.2 305.6 247.2C322.8 252 336.4 260.2 346.4 271.8C356.8 283.4 362 298 362 315.6C362 340.4 352.6 360.8 333.8 376.8C315 392.8 290.6 400.8 260.6 400.8Z" />
-                                        <path d="M52.5357 167.6H27.3357V105.2H120.336V400.2H52.5357V167.6Z" />
-                                    </mask>
-                                    <path
-                                        d="M260.6 400.8C229.8 400.8 204.6 392.4 185 375.6C165.8 358.8 156.2 337 156.2 310.2H226.4C226.4 318.2 229.4 324.8 235.4 330C241.4 335.2 249.4 337.8 259.4 337.8C269 337.8 276.8 335 282.8 329.4C289.2 323.8 292.4 316.6 292.4 307.8C292.4 299.8 289.6 293.2 284 288C278.4 282.8 271.2 280.2 262.4 280.2H225.2V218.4H262.4C269.2 218.4 275 216 279.8 211.2C284.6 206.4 287 200.4 287 193.2C287 184.8 284.4 178.2 279.2 173.4C274 168.6 267.4 166.2 259.4 166.2C252.2 166.2 246 168.4 240.8 172.8C236 177.2 233.6 182.8 233.6 189.6H167C167 164.8 175.8 144.6 193.4 129C211 113 233.6 105 261.2 105C288.8 105 311.2 112.2 328.4 126.6C346 141 354.8 160 354.8 183.6C354.8 200.8 350.2 214.8 341 225.6C331.8 236 320 243.2 305.6 247.2C322.8 252 336.4 260.2 346.4 271.8C356.8 283.4 362 298 362 315.6C362 340.4 352.6 360.8 333.8 376.8C315 392.8 290.6 400.8 260.6 400.8Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M52.5357 167.6H27.3357V105.2H120.336V400.2H52.5357V167.6Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M260.6 400.8C229.8 400.8 204.6 392.4 185 375.6C165.8 358.8 156.2 337 156.2 310.2H226.4C226.4 318.2 229.4 324.8 235.4 330C241.4 335.2 249.4 337.8 259.4 337.8C269 337.8 276.8 335 282.8 329.4C289.2 323.8 292.4 316.6 292.4 307.8C292.4 299.8 289.6 293.2 284 288C278.4 282.8 271.2 280.2 262.4 280.2H225.2V218.4H262.4C269.2 218.4 275 216 279.8 211.2C284.6 206.4 287 200.4 287 193.2C287 184.8 284.4 178.2 279.2 173.4C274 168.6 267.4 166.2 259.4 166.2C252.2 166.2 246 168.4 240.8 172.8C236 177.2 233.6 182.8 233.6 189.6H167C167 164.8 175.8 144.6 193.4 129C211 113 233.6 105 261.2 105C288.8 105 311.2 112.2 328.4 126.6C346 141 354.8 160 354.8 183.6C354.8 200.8 350.2 214.8 341 225.6C331.8 236 320 243.2 305.6 247.2C322.8 252 336.4 260.2 346.4 271.8C356.8 283.4 362 298 362 315.6C362 340.4 352.6 360.8 333.8 376.8C315 392.8 290.6 400.8 260.6 400.8Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-2-mask)"
-                                    />
-                                    <path
-                                        d="M52.5357 167.6H27.3357V105.2H120.336V400.2H52.5357V167.6Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-2-mask)"
-                                    />
-                                </g>
-
-                                <g className="text-[#F8B803] opacity-100 mix-blend-color transition-all delay-400 duration-750 dark:text-[#391800] dark:mix-blend-hard-light starting:opacity-0 motion-safe:starting:-translate-x-[51px]">
-                                    <mask
-                                        id="path-3-mask"
-                                        maskUnits="userSpaceOnUse"
-                                        x="51"
-                                        y="103"
-                                        width="338"
-                                        height="299"
-                                        fill="black"
-                                    >
-                                        <rect
-                                            fill="white"
-                                            x="51"
-                                            y="103"
-                                            width="338"
-                                            height="299"
-                                        />
-                                        <path d="M286.264 400.8C255.464 400.8 230.264 392.4 210.664 375.6C191.464 358.8 181.864 337 181.864 310.2H252.064C252.064 318.2 255.064 324.8 261.064 330C267.064 335.2 275.064 337.8 285.064 337.8C294.664 337.8 302.464 335 308.464 329.4C314.864 323.8 318.064 316.6 318.064 307.8C318.064 299.8 315.264 293.2 309.664 288C304.064 282.8 296.864 280.2 288.064 280.2H250.864V218.4H288.064C294.864 218.4 300.664 216 305.464 211.2C310.264 206.4 312.664 200.4 312.664 193.2C312.664 184.8 310.064 178.2 304.864 173.4C299.664 168.6 293.064 166.2 285.064 166.2C277.864 166.2 271.664 168.4 266.464 172.8C261.664 177.2 259.264 182.8 259.264 189.6H192.664C192.664 164.8 201.464 144.6 219.064 129C236.664 113 259.264 105 286.864 105C314.464 105 336.864 112.2 354.064 126.6C371.664 141 380.464 160 380.464 183.6C380.464 200.8 375.864 214.8 366.664 225.6C357.464 236 345.664 243.2 331.264 247.2C348.464 252 362.064 260.2 372.064 271.8C382.464 283.4 387.664 298 387.664 315.6C387.664 340.4 378.264 360.8 359.464 376.8C340.664 392.8 316.264 400.8 286.264 400.8Z" />
-                                        <path d="M78.2 167.6H53V105.2H146V400.2H78.2V167.6Z" />
-                                    </mask>
-                                    <path
-                                        d="M286.264 400.8C255.464 400.8 230.264 392.4 210.664 375.6C191.464 358.8 181.864 337 181.864 310.2H252.064C252.064 318.2 255.064 324.8 261.064 330C267.064 335.2 275.064 337.8 285.064 337.8C294.664 337.8 302.464 335 308.464 329.4C314.864 323.8 318.064 316.6 318.064 307.8C318.064 299.8 315.264 293.2 309.664 288C304.064 282.8 296.864 280.2 288.064 280.2H250.864V218.4H288.064C294.864 218.4 300.664 216 305.464 211.2C310.264 206.4 312.664 200.4 312.664 193.2C312.664 184.8 310.064 178.2 304.864 173.4C299.664 168.6 293.064 166.2 285.064 166.2C277.864 166.2 271.664 168.4 266.464 172.8C261.664 177.2 259.264 182.8 259.264 189.6H192.664C192.664 164.8 201.464 144.6 219.064 129C236.664 113 259.264 105 286.864 105C314.464 105 336.864 112.2 354.064 126.6C371.664 141 380.464 160 380.464 183.6C380.464 200.8 375.864 214.8 366.664 225.6C357.464 236 345.664 243.2 331.264 247.2C348.464 252 362.064 260.2 372.064 271.8C382.464 283.4 387.664 298 387.664 315.6C387.664 340.4 378.264 360.8 359.464 376.8C340.664 392.8 316.264 400.8 286.264 400.8Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M78.2 167.6H53V105.2H146V400.2H78.2V167.6Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M286.264 400.8C255.464 400.8 230.264 392.4 210.664 375.6C191.464 358.8 181.864 337 181.864 310.2H252.064C252.064 318.2 255.064 324.8 261.064 330C267.064 335.2 275.064 337.8 285.064 337.8C294.664 337.8 302.464 335 308.464 329.4C314.864 323.8 318.064 316.6 318.064 307.8C318.064 299.8 315.264 293.2 309.664 288C304.064 282.8 296.864 280.2 288.064 280.2H250.864V218.4H288.064C294.864 218.4 300.664 216 305.464 211.2C310.264 206.4 312.664 200.4 312.664 193.2C312.664 184.8 310.064 178.2 304.864 173.4C299.664 168.6 293.064 166.2 285.064 166.2C277.864 166.2 271.664 168.4 266.464 172.8C261.664 177.2 259.264 182.8 259.264 189.6H192.664C192.664 164.8 201.464 144.6 219.064 129C236.664 113 259.264 105 286.864 105C314.464 105 336.864 112.2 354.064 126.6C371.664 141 380.464 160 380.464 183.6C380.464 200.8 375.864 214.8 366.664 225.6C357.464 236 345.664 243.2 331.264 247.2C348.464 252 362.064 260.2 372.064 271.8C382.464 283.4 387.664 298 387.664 315.6C387.664 340.4 378.264 360.8 359.464 376.8C340.664 392.8 316.264 400.8 286.264 400.8Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-3-mask)"
-                                    />
-                                    <path
-                                        d="M78.2 167.6H53V105.2H146V400.2H78.2V167.6Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-3-mask)"
-                                    />
-                                </g>
-
-                                <g className="text-[#F3BEC7] opacity-100 mix-blend-multiply transition-all delay-400 duration-750 dark:text-[#733000] dark:mix-blend-normal starting:opacity-0 motion-safe:starting:-translate-x-[78px]">
-                                    <mask
-                                        id="path-4-mask"
-                                        maskUnits="userSpaceOnUse"
-                                        x="76.6643"
-                                        y="103"
-                                        width="338"
-                                        height="299"
-                                        fill="black"
-                                    >
-                                        <rect
-                                            fill="white"
-                                            x="76.6643"
-                                            y="103"
-                                            width="338"
-                                            height="299"
-                                        />
-                                        <path d="M311.929 400.8C281.129 400.8 255.929 392.4 236.329 375.6C217.129 358.8 207.529 337 207.529 310.2H277.729C277.729 318.2 280.729 324.8 286.729 330C292.729 335.2 300.729 337.8 310.729 337.8C320.329 337.8 328.129 335 334.129 329.4C340.529 323.8 343.729 316.6 343.729 307.8C343.729 299.8 340.929 293.2 335.329 288C329.729 282.8 322.529 280.2 313.729 280.2H276.529V218.4H313.729C320.529 218.4 326.329 216 331.129 211.2C335.929 206.4 338.329 200.4 338.329 193.2C338.329 184.8 335.729 178.2 330.529 173.4C325.329 168.6 318.729 166.2 310.729 166.2C303.529 166.2 297.329 168.4 292.129 172.8C287.329 177.2 284.929 182.8 284.929 189.6H218.329C218.329 164.8 227.129 144.6 244.729 129C262.329 113 284.929 105 312.529 105C340.129 105 362.529 112.2 379.729 126.6C397.329 141 406.129 160 406.129 183.6C406.129 200.8 401.529 214.8 392.329 225.6C383.129 236 371.329 243.2 356.929 247.2C374.129 252 387.729 260.2 397.729 271.8C408.129 283.4 413.329 298 413.329 315.6C413.329 340.4 403.929 360.8 385.129 376.8C366.329 392.8 341.929 400.8 311.929 400.8Z" />
-                                        <path d="M103.864 167.6H78.6643V105.2H171.664V400.2H103.864V167.6Z" />
-                                    </mask>
-                                    <path
-                                        d="M311.929 400.8C281.129 400.8 255.929 392.4 236.329 375.6C217.129 358.8 207.529 337 207.529 310.2H277.729C277.729 318.2 280.729 324.8 286.729 330C292.729 335.2 300.729 337.8 310.729 337.8C320.329 337.8 328.129 335 334.129 329.4C340.529 323.8 343.729 316.6 343.729 307.8C343.729 299.8 340.929 293.2 335.329 288C329.729 282.8 322.529 280.2 313.729 280.2H276.529V218.4H313.729C320.529 218.4 326.329 216 331.129 211.2C335.929 206.4 338.329 200.4 338.329 193.2C338.329 184.8 335.729 178.2 330.529 173.4C325.329 168.6 318.729 166.2 310.729 166.2C303.529 166.2 297.329 168.4 292.129 172.8C287.329 177.2 284.929 182.8 284.929 189.6H218.329C218.329 164.8 227.129 144.6 244.729 129C262.329 113 284.929 105 312.529 105C340.129 105 362.529 112.2 379.729 126.6C397.329 141 406.129 160 406.129 183.6C406.129 200.8 401.529 214.8 392.329 225.6C383.129 236 371.329 243.2 356.929 247.2C374.129 252 387.729 260.2 397.729 271.8C408.129 283.4 413.329 298 413.329 315.6C413.329 340.4 403.929 360.8 385.129 376.8C366.329 392.8 341.929 400.8 311.929 400.8Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M103.864 167.6H78.6643V105.2H171.664V400.2H103.864V167.6Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M311.929 400.8C281.129 400.8 255.929 392.4 236.329 375.6C217.129 358.8 207.529 337 207.529 310.2H277.729C277.729 318.2 280.729 324.8 286.729 330C292.729 335.2 300.729 337.8 310.729 337.8C320.329 337.8 328.129 335 334.129 329.4C340.529 323.8 343.729 316.6 343.729 307.8C343.729 299.8 340.929 293.2 335.329 288C329.729 282.8 322.529 280.2 313.729 280.2H276.529V218.4H313.729C320.529 218.4 326.329 216 331.129 211.2C335.929 206.4 338.329 200.4 338.329 193.2C338.329 184.8 335.729 178.2 330.529 173.4C325.329 168.6 318.729 166.2 310.729 166.2C303.529 166.2 297.329 168.4 292.129 172.8C287.329 177.2 284.929 182.8 284.929 189.6H218.329C218.329 164.8 227.129 144.6 244.729 129C262.329 113 284.929 105 312.529 105C340.129 105 362.529 112.2 379.729 126.6C397.329 141 406.129 160 406.129 183.6C406.129 200.8 401.529 214.8 392.329 225.6C383.129 236 371.329 243.2 356.929 247.2C374.129 252 387.729 260.2 397.729 271.8C408.129 283.4 413.329 298 413.329 315.6C413.329 340.4 403.929 360.8 385.129 376.8C366.329 392.8 341.929 400.8 311.929 400.8Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-4-mask)"
-                                    />
-                                    <path
-                                        d="M103.864 167.6H78.6643V105.2H171.664V400.2H103.864V167.6Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-4-mask)"
-                                    />
-                                </g>
-
-                                <g className="text-[#F3BEC7] opacity-100 mix-blend-hard-light transition-all delay-400 duration-750 dark:text-[#4B0600] starting:opacity-0 motion-safe:starting:-translate-x-[102px]">
-                                    <mask
-                                        id="path-5-mask"
-                                        maskUnits="userSpaceOnUse"
-                                        x="102.329"
-                                        y="103"
-                                        width="338"
-                                        height="299"
-                                        fill="black"
-                                    >
-                                        <rect
-                                            fill="white"
-                                            x="102.329"
-                                            y="103"
-                                            width="338"
-                                            height="299"
-                                        />
-                                        <path d="M337.593 400.8C306.793 400.8 281.593 392.4 261.993 375.6C242.793 358.8 233.193 337 233.193 310.2H303.393C303.393 318.2 306.393 324.8 312.393 330C318.393 335.2 326.393 337.8 336.393 337.8C345.993 337.8 353.793 335 359.793 329.4C366.193 323.8 369.393 316.6 369.393 307.8C369.393 299.8 366.593 293.2 360.993 288C355.393 282.8 348.193 280.2 339.393 280.2H302.193V218.4H339.393C346.193 218.4 351.993 216 356.793 211.2C361.593 206.4 363.993 200.4 363.993 193.2C363.993 184.8 361.393 178.2 356.193 173.4C350.993 168.6 344.393 166.2 336.393 166.2C329.193 166.2 322.993 168.4 317.793 172.8C312.993 177.2 310.593 182.8 310.593 189.6H243.993C243.993 164.8 252.793 144.6 270.393 129C287.993 113 310.593 105 338.193 105C365.793 105 388.193 112.2 405.393 126.6C422.993 141 431.793 160 431.793 183.6C431.793 200.8 427.193 214.8 417.993 225.6C408.793 236 396.993 243.2 382.593 247.2C399.793 252 413.393 260.2 423.393 271.8C433.793 283.4 438.993 298 438.993 315.6C438.993 340.4 429.593 360.8 410.793 376.8C391.993 392.8 367.593 400.8 337.593 400.8Z" />
-                                        <path d="M129.529 167.6H104.329V105.2H197.329V400.2H129.529V167.6Z" />
-                                    </mask>
-                                    <path
-                                        d="M337.593 400.8C306.793 400.8 281.593 392.4 261.993 375.6C242.793 358.8 233.193 337 233.193 310.2H303.393C303.393 318.2 306.393 324.8 312.393 330C318.393 335.2 326.393 337.8 336.393 337.8C345.993 337.8 353.793 335 359.793 329.4C366.193 323.8 369.393 316.6 369.393 307.8C369.393 299.8 366.593 293.2 360.993 288C355.393 282.8 348.193 280.2 339.393 280.2H302.193V218.4H339.393C346.193 218.4 351.993 216 356.793 211.2C361.593 206.4 363.993 200.4 363.993 193.2C363.993 184.8 361.393 178.2 356.193 173.4C350.993 168.6 344.393 166.2 336.393 166.2C329.193 166.2 322.993 168.4 317.793 172.8C312.993 177.2 310.593 182.8 310.593 189.6H243.993C243.993 164.8 252.793 144.6 270.393 129C287.993 113 310.593 105 338.193 105C365.793 105 388.193 112.2 405.393 126.6C422.993 141 431.793 160 431.793 183.6C431.793 200.8 427.193 214.8 417.993 225.6C408.793 236 396.993 243.2 382.593 247.2C399.793 252 413.393 260.2 423.393 271.8C433.793 283.4 438.993 298 438.993 315.6C438.993 340.4 429.593 360.8 410.793 376.8C391.993 392.8 367.593 400.8 337.593 400.8Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M129.529 167.6H104.329V105.2H197.329V400.2H129.529V167.6Z"
-                                        fill="currentColor"
-                                    />
-                                    <path
-                                        d="M337.593 400.8C306.793 400.8 281.593 392.4 261.993 375.6C242.793 358.8 233.193 337 233.193 310.2H303.393C303.393 318.2 306.393 324.8 312.393 330C318.393 335.2 326.393 337.8 336.393 337.8C345.993 337.8 353.793 335 359.793 329.4C366.193 323.8 369.393 316.6 369.393 307.8C369.393 299.8 366.593 293.2 360.993 288C355.393 282.8 348.193 280.2 339.393 280.2H302.193V218.4H339.393C346.193 218.4 351.993 216 356.793 211.2C361.593 206.4 363.993 200.4 363.993 193.2C363.993 184.8 361.393 178.2 356.193 173.4C350.993 168.6 344.393 166.2 336.393 166.2C329.193 166.2 322.993 168.4 317.793 172.8C312.993 177.2 310.593 182.8 310.593 189.6H243.993C243.993 164.8 252.793 144.6 270.393 129C287.993 113 310.593 105 338.193 105C365.793 105 388.193 112.2 405.393 126.6C422.993 141 431.793 160 431.793 183.6C431.793 200.8 427.193 214.8 417.993 225.6C408.793 236 396.993 243.2 382.593 247.2C399.793 252 413.393 260.2 423.393 271.8C433.793 283.4 438.993 298 438.993 315.6C438.993 340.4 429.593 360.8 410.793 376.8C391.993 392.8 367.593 400.8 337.593 400.8Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-5-mask)"
-                                    />
-                                    <path
-                                        d="M129.529 167.6H104.329V105.2H197.329V400.2H129.529V167.6Z"
-                                        stroke="var(--stroke-color)"
-                                        strokeWidth="2.4"
-                                        mask="url(#path-5-mask)"
-                                    />
-                                </g>
-                            </svg>
-                            <div className="absolute inset-0 rounded-t-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-t-none lg:rounded-r-lg dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"></div>
+                        <div className="flex flex-wrap items-center gap-6 text-xs font-bold text-[#6B5646]">
+                            <a href="#pemeriksa" className="hover:text-[#3B2A1E] transition-colors">
+                                Pemeriksa
+                            </a>
+                            <a href="#simulasi" className="hover:text-[#3B2A1E] transition-colors">
+                                Simulasi Kasus
+                            </a>
+                            <a href="/terms" className="hover:text-[#3B2A1E] transition-colors">
+                                Ketentuan Penggunaan
+                            </a>
+                            <a href="/privacy" className="hover:text-[#3B2A1E] transition-colors">
+                                Privasi Data
+                            </a>
                         </div>
-                    </main>
-                </div>
+                    </div>
+
+                    <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-[#EFE3D0] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B5646]">
+                        <span>© 2026 CEKARA. Prototipe Edukasi Digital.</span>
+                        <span>Dibuat dengan kepedulian untuk generasi muda.</span>
+                    </div>
+                </footer>
             </div>
         </>
     );

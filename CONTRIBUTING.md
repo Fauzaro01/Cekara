@@ -1,170 +1,80 @@
-# Panduan Kontribusi CEKARA 🛡️🇮🇩
+# Panduan Kontribusi Cekara
 
-Terima kasih atas ketertarikan Anda untuk berkontribusi pada **CEKARA**! Bersama-sama, kita membangun dan memperkuat pertahanan ruang digital untuk melindungi anak muda, keluarga, dan masyarakat Indonesia dari ancaman penipuan online (_scam & social engineering_).
+Dokumen ini berisi panduan teknis untuk berkontribusi ke repositori Cekara.
 
-Panduan ini bertujuan agar proses kontribusi berjalan lancar, terarah, dan selaras dengan standar kualitas kode serta pedoman desain proyek.
+## Prasyarat
 
----
+- PHP 8.4 atau lebih baru
+- Composer 2.x
+- Node.js 20.x ke atas dan npm
 
-## 📌 Kode Etik & Filosofi Pengembangan
+## Setup Lokal
 
-Dalam berkontribusi ke CEKARA, harap selalu mengindahkan prinsip-prinsip utama proyek:
+1. Fork dan clone repositori:
 
-1. **Empati & Bahasa Manusiawi**:
-   Hindari jargon pemasaran berlebihan atau istilah teknis yang menakut-nakuti. Gunakan bahasa Indonesia sehari-hari yang santai, bersahabat, dan menenangkan (contoh: _"Tenang, kita periksa bareng"_).
-2. **Kepatuhan Pedoman Desain Anti-Slop (`ATURAN-DESAIN.md`)**:
-    - Desain mengusung gaya **datar murni (_flat design_)** yang taktil dan bersih.
-    - Dilarang menggunakan gradasi warna ungu-biru mengambang, _glassmorphism_, atau efek neon menyala.
-    - Gunakan palet resmi: Jingga es jeruk (`#FF9A3C`), Biru langit (`#8ECDF0`), Kuning mentega (`#FFE27A`), Cokelat tua (`#3B2A1E`), Terakota (`#D4573A`), dan Latar krem hangat (`#FFF8EC`).
-    - Dilarang menggunakan emoji sistem sebagai ikon antarmuka; gunakan selalu ikon SVG garis seragam dari pustaka `lucide-react`.
-3. **Integritas Data & Privasi**:
-   CEKARA memprioritaskan privasi pengguna. Jangan pernah menyimpan data sensitif, nomor rekening, kontak pribadi, atau kunci API tanpa enkripsi yang semestinya.
-
----
-
-## 🛠️ Alur Kerja Kontribusi (Workflow)
-
-### 1. Fork & Clone Repositori
-
-```bash
-# Fork repositori ini melalui GitHub, lalu clone hasil fork Anda:
-git clone https://github.com/USERNAME_ANDA/Cekara.git
-cd Cekara
-
-# Tambahkan remote upstream untuk sinkronisasi pembaruan terkini:
-git remote add upstream https://github.com/Fauzaro01/Cekara.git
-git fetch upstream
-```
-
-### 2. Persiapan Lingkungan Lokal (Local Setup)
-
-Pastikan sistem Anda telah terpasang:
-
-- **PHP >= 8.4**
-- **Composer >= 2.x**
-- **Node.js >= 20.x** & **npm**
-
-Jalankan perintah instalasi awal:
-
-```bash
-# Salin konfigurasi environment
-cp .env.example .env
-
-# Instal paket dependensi backend & frontend
-composer install
-npm install
-
-# Buat kunci enkripsi aplikasi & jalankan migrasi database
-php artisan key:generate
-php artisan migrate
-
-# Jalankan seeder akun demo (opsional untuk pengujian tampilan)
-php artisan db:seed --class=DemoShowcaseSeeder
-
-# Kompilasi aset frontend
-npm run build
-```
-
-### 3. Buat Branch Baru
-
-Gunakan penamaan branch yang jelas dan deskriptif:
-
-```bash
-# Untuk perbaikan bug
-git checkout -b fix/nama-perbaikan
-
-# Untuk penambahan fitur
-git checkout -b feat/nama-fitur
-
-# Untuk dokumentasi
-git checkout -b docs/nama-dokumen
-```
-
----
-
-## 🧪 Pengujian & Verifikasi Mutu Kode
-
-Sebelum melakukan commit atau mengajukan Pull Request, pastikan seluruh pemeriksaan otomatis di bawah ini berhasil melewati verifikasi tanpa kesalahan (_zero warnings & zero errors_):
-
-### 1. Frontend Linting & Formatting (Vite+)
-
-Proyek ini mengaktifkan aturan ketat `denyWarnings: true` untuk memastikan kebersihan kode:
-
-```bash
-# Otomatis rapikan format dan perbaiki linting
-npm run check:fix
-
-# Periksa status linting & format
-npm run check
-```
-
-### 2. Pemeriksaan Tipe TypeScript
-
-```bash
-npm run types:check
-```
-
-### 3. Pemeriksaan Gaya Kode PHP (Laravel Pint)
-
-```bash
-# Format otomatis dengan Laravel Pint
-vendor/bin/pint --format agent
-
-# Periksa kesesuaian tanpa mengubah berkas
-vendor/bin/pint --test
-```
-
-### 4. Analisis Statis PHP (PHPStan)
-
-```bash
-vendor/bin/phpstan analyse
-```
-
-### 5. Pengujian Fungsional Otomatis (Pest Tests)
-
-Pastikan seluruh 525+ pengujian skenario berjalan sukses:
-
-```bash
-php artisan test --compact
-```
-
----
-
-## 📝 Konvensi Pesan Commit
-
-Kami mengadopsi standar **Conventional Commits**:
-
-- `feat: <deskripsi>`: Penambahan fitur atau modul baru.
-- `fix: <deskripsi>`: Perbaikan bug atau penanganan kesalahan.
-- `docs: <deskripsi>`: Pembaruan atau penambahan dokumentasi.
-- `style: <deskripsi>`: Perbaikan format kode, spasi, atau linting tanpa mengubah logika.
-- `refactor: <deskripsi>`: Restrukturisasi kode tanpa mengubah fungsionalitas.
-- `test: <deskripsi>`: Penambahan atau perbaikan rangkaian uji otomatis (_test cases_).
-- `chore: <deskripsi>`: Pembaruan dependensi, konfigurasi build, atau skrip pembantu.
-
-_Contoh_:
-
-```bash
-git commit -m "fix(ci): fix code formatting across resources and update phpstan config"
-```
-
----
-
-## 🚀 Mengajukan Pull Request (PR)
-
-1. **Sinkronkan branch Anda** dengan branch `main` upstream:
     ```bash
-    git fetch upstream
-    git rebase upstream/main
+    git clone https://github.com/USERNAME/Cekara.git
+    cd Cekara
+    git remote add upstream https://github.com/Fauzaro01/Cekara.git
     ```
-2. **Push branch Anda** ke remote fork:
-    ```bash
-    git push origin fix/nama-branch
-    ```
-3. **Buka Pull Request** di repositori GitHub `Fauzaro01/Cekara`.
-4. Berikan judul yang informatif serta deskripsi lengkap:
-    - Apa latar belakang masalah atau kebutuhan perubahan ini?
-    - Apa saja berkas dan komponen yang dimodifikasi?
-    - Konfirmasi bahwa pengujian lokal (`npm run check`, `npm run types:check`, `vendor/bin/pint --test`, `php artisan test`) telah berstatus hijau.
 
-Terima kasih atas kontribusi Anda dalam menjaga keamanan ruang digital generasi muda Indonesia! 🇮🇩✨
+2. Pasang dependensi dan siapkan environment:
+
+    ```bash
+    cp .env.example .env
+    composer install
+    npm install
+    php artisan key:generate
+    php artisan migrate
+    ```
+
+3. Jalankan server development:
+    ```bash
+    composer run dev
+    ```
+
+## Standar Kode dan Desain
+
+- Antarmuka mengacu pada aturan di `ATURAN-DESAIN.md` (desain flat, palet warna yang sudah ditentukan, dan ikon SVG garis tanpa emoji sistem sebagai ikon).
+- Bahasa pengantar aplikasi menggunakan bahasa Indonesia yang santai dan lugas.
+
+## Pengecekan Mutu (Wajib Sebelum Buat PR)
+
+CI akan menjalankan pengecekan ketat. Pastikan seluruh perintah berikut lolos secara lokal sebelum push:
+
+1. Format dan linting frontend:
+
+    ```bash
+    npm run check:fix
+    npm run check
+    ```
+
+2. Pemeriksaan tipe TypeScript:
+
+    ```bash
+    npm run types:check
+    ```
+
+3. Standar gaya kode PHP (Pint):
+
+    ```bash
+    vendor/bin/pint --test
+    ```
+
+4. Analisis statis PHP (PHPStan):
+
+    ```bash
+    vendor/bin/phpstan analyse
+    ```
+
+5. Test otomatis (Pest):
+    ```bash
+    php artisan test --compact
+    ```
+
+## Alur Pull Request
+
+1. Buat branch baru dari `main` (misal: `fix/nama-masalah` atau `feat/nama-fitur`).
+2. Tulis pesan commit yang jelas (gunakan format conventional commit seperti `fix:`, `feat:`, `docs:`).
+3. Pastikan branch sudah sinkron dengan `upstream/main`.
+4. Buka Pull Request ke branch `main` repositori upstream dan jelaskan perubahan yang dibuat secara ringkas.

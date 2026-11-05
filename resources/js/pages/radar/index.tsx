@@ -56,6 +56,16 @@ const categories = [
     { key: 'fake_giveaway', label: 'Undian Palsu' },
 ];
 
+const platforms = [
+    { key: 'all', label: 'Semua Media' },
+    { key: 'WhatsApp', label: 'WhatsApp' },
+    { key: 'Telegram', label: 'Telegram' },
+    { key: 'Instagram', label: 'Instagram' },
+    { key: 'SMS / Telepon', label: 'SMS / Telepon' },
+    { key: 'QRIS', label: 'QRIS Fisik' },
+    { key: 'Situs Web', label: 'Situs Web' },
+];
+
 export default function CommunityRadarIndex({
     alerts: initialAlerts,
     filters,
@@ -64,6 +74,9 @@ export default function CommunityRadarIndex({
     const [alerts, setAlerts] = useState<ThreatAlert[]>(initialAlerts);
     const [selectedCategory, setSelectedCategory] = useState<string>(
         filters.category || 'all',
+    );
+    const [selectedPlatform, setSelectedPlatform] = useState<string>(
+        filters.platform || 'all',
     );
     const [searchQuery, setSearchQuery] = useState<string>(
         filters.search || '',
@@ -171,6 +184,14 @@ export default function CommunityRadarIndex({
             if (
                 selectedCategory !== 'all' &&
                 item.category !== selectedCategory
+            ) {
+                return false;
+            }
+            if (
+                selectedPlatform !== 'all' &&
+                !item.platform
+                    .toLowerCase()
+                    .includes(selectedPlatform.toLowerCase())
             ) {
                 return false;
             }
@@ -504,7 +525,7 @@ export default function CommunityRadarIndex({
                 </div>
 
                 {/* Category Pills */}
-                <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+                <div className="mt-4 flex flex-wrap gap-2 pb-2">
                     {categories.map((c) => (
                         <button
                             key={c.key}
@@ -517,6 +538,27 @@ export default function CommunityRadarIndex({
                             }`}
                         >
                             {c.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Platform Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+                    <span className="mr-1 text-xs font-medium text-slate-400 dark:text-slate-500">
+                        Media:
+                    </span>
+                    {platforms.map((p) => (
+                        <button
+                            key={p.key}
+                            type="button"
+                            onClick={() => setSelectedPlatform(p.key)}
+                            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                                selectedPlatform === p.key
+                                    ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
+                                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                            }`}
+                        >
+                            {p.label}
                         </button>
                     ))}
                 </div>

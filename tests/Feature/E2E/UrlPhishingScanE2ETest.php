@@ -157,6 +157,25 @@ test('tier 3: custom port numbers on ip and hosts do not bypass heuristics', fun
     expect(strtolower($result['risk_level']))->toBeIn(['high', 'danger', 'tinggi']);
 });
 
+test('tier 3: credential spoofing with userinfo trick triggers high risk evaluation', function () {
+    $scanner = app(UrlPhishingScanner::class);
+
+    $result = $scanner->scan('https://bca.co.id@server-phishing-evil.net/login');
+
+    expect($result['is_suspicious'])->toBeTrue();
+    expect(strtolower($result['risk_level']))->toBeIn(['high', 'danger', 'tinggi']);
+    expect(collect($result['indicators'])->some(fn ($i) => str_contains(strtolower($i), 'kredensial') || str_contains($i, '@')))->toBeTrue();
+});
+
+test('tier 2: regional url shorteners like intip.in and tiny.cc trigger suspicious indicator', function () {
+    $scanner = app(UrlPhishingScanner::class);
+
+    $result = $scanner->scan('https://intip.in/paket-dana-kaget');
+
+    expect($result['is_suspicious'])->toBeTrue();
+    expect(collect($result['indicators'])->some(fn ($i) => str_contains(strtolower($i), 'pemendek') || str_contains(strtolower($i), 'shortener')))->toBeTrue();
+});
+
 /*
 |--------------------------------------------------------------------------
 | Tier 4: Integrated Chat Analysis with Embedded Phishing URLs

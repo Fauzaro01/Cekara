@@ -307,6 +307,109 @@ class SimulationScenarioSeeder extends Seeder
                 ],
                 'prevention_advice' => 'Cek legalitas pinjol di situs resmi OJK (ojk.go.id) atau WhatsApp OJK 081-157-157-157. Jangan pernah mentransfer uang muka untuk mendapatkan pinjaman.',
             ],
+            [
+                'title' => 'Stiker QRIS Palsu Menimpa Rekening Merchant',
+                'slug' => 'stiker-qris-palsu-menimpa-rekening-merchant',
+                'category' => 'phishing_banking',
+                'difficulty' => 'mudah',
+                'order' => 6,
+                'sender_name' => 'Kasir / Barcode QRIS Pembayaran Toko',
+                'sender_avatar' => 'building',
+                'context_description' => 'Anda hendak membayar pesanan di kafe atau toko fisik. Di meja kasir terdapat stiker QRIS yang sedikit menggelembung karena ditempeli barcode lain.',
+                'chat_messages' => [
+                    [
+                        'sender' => 'scammer',
+                        'text' => 'Silakan Kak, untuk pembayaran non-tunai langsung scan stiker QRIS di depan kasir ya.',
+                        'time' => '13:02',
+                    ],
+                    [
+                        'sender' => 'system',
+                        'text' => '[Notifikasi Aplikasi E-Wallet]: Anda memindai kode QRIS. Nama penerima yang muncul di layar: "RESTORAN MAKMUR SEJAHTERA (PRIBADI / NIK-0872xxxx)". Padahal nama kafe tempat Anda makan adalah "Kopi Senja Bahagia".',
+                        'time' => '13:03',
+                    ],
+                ],
+                'options' => [
+                    [
+                        'id' => 'A',
+                        'text' => 'Lanjutkan transaksi dan masukkan PIN karena biasanya nama PT atau rekening pemilik toko memang berbeda.',
+                        'is_safe' => false,
+                        'score' => 0,
+                        'explanation' => 'Sangat Berbahaya! Modus penempelan stiker QRIS palsu sering menimpa barcode toko dengan barcode penipu. Selalu cocokkan nama merchant resmi di layar ponsel dengan nama toko fisik sebelum memasukkan PIN.',
+                    ],
+                    [
+                        'id' => 'B',
+                        'text' => 'Batalkan pembayaran, tanyakan langsung ke kasir mengapa nama merchant berbeda, dan minta barcode QRIS resmi toko.',
+                        'is_safe' => true,
+                        'score' => 100,
+                        'explanation' => 'Tindakan Sangat Tepat! Mengonfirmasi ketidaksesuaian nama merchant resmi (NMID) ke kasir mencegah uang Anda masuk ke penipu dan membantu toko menyadari adanya sabotase stiker palsu.',
+                    ],
+                ],
+                'psychological_tricks' => [
+                    'Ketergesaan Saat Antre Pembayaran di Kasir (Rushing)',
+                    'Asumsi Umum bahwa Nama PT Pemilik Berbeda dari Merk Toko',
+                    'Kelalaian Memeriksa Nama Merchant di Layar Konfirmasi Ponsel',
+                ],
+                'red_flags' => [
+                    'Stiker QRIS tampak bertumpuk, terkelupas, atau miring karena baru ditempelkan di atas barcode lama.',
+                    'Nama merchant yang tertera di aplikasi e-wallet sama sekali tidak sesuai dengan nama toko fisik.',
+                    'Kategori merchant tertera sebagai perorangan (pribadi), bukan merchant usaha terdaftar.',
+                ],
+                'prevention_advice' => 'Biasakan selalu membaca ulang nama merchant dan nominal pada layar konfirmasi aplikasi e-wallet sebelum menekan tombol bayar atau memasukkan PIN.',
+            ],
+            [
+                'title' => 'Pemberitahuan Hadiah Poin Festival / Akun Meminta Kode OTP WhatsApp',
+                'slug' => 'hadiah-festival-permintaan-kode-otp-whatsapp',
+                'category' => 'social_engineering',
+                'difficulty' => 'menengah',
+                'order' => 7,
+                'sender_name' => 'Customer Care Festival Poin (Akun Mengaku Resmi)',
+                'sender_avatar' => 'user',
+                'context_description' => 'Sebuah akun WhatsApp dengan foto profil logo festival belanja nasional mengabarkan bahwa Anda memenangkan undian voucher belanja Rp 5.000.000.',
+                'chat_messages' => [
+                    [
+                        'sender' => 'scammer',
+                        'text' => 'Selamat siang Kak! Selamat nomor WhatsApp Kakak terpilih sebagai pemenang Kupon Belanja Festival senilai Rp 5.000.000 tanpa diundi.',
+                        'time' => '14:20',
+                    ],
+                    [
+                        'sender' => 'scammer',
+                        'text' => 'Untuk proses verifikasi klaim hadiah, sistem kami baru saja mengirimkan 6 digit kode konfirmasi ke SMS Kakak. Mohon sebutkan 6 digit angka tersebut sekarang ya Kak agar voucher tidak hangus.',
+                        'time' => '14:21',
+                    ],
+                    [
+                        'sender' => 'system',
+                        'text' => '[SMS Masuk]: "Jangan berikan kode ini kepada siapa pun! Kode verifikasi WhatsApp Anda: 481-902. Jika Anda tidak meminta kode ini, abaikan pesan ini."',
+                        'time' => '14:21',
+                    ],
+                ],
+                'options' => [
+                    [
+                        'id' => 'A',
+                        'text' => 'Segera kirimkan 6 digit angka 481902 agar voucher belanja 5 juta tidak hangus.',
+                        'is_safe' => false,
+                        'score' => 0,
+                        'explanation' => 'Fatal! Kode tersebut bukan kode hadiah, melainkan OTP pendaftaran WhatsApp. Memberikannya kepada penipu akan langsung memindahkan akun WhatsApp Anda ke ponsel pelaku (account takeover).',
+                    ],
+                    [
+                        'id' => 'B',
+                        'text' => 'Abaikan permintaan kode, jangan bagikan angka tersebut kepada siapa pun, dan segera blokir kontak penipu.',
+                        'is_safe' => true,
+                        'score' => 100,
+                        'explanation' => 'Keputusan Terbaik! Kode OTP verifikasi adalah kunci rahasia akun Anda. Layanan resmi mana pun tidak pernah meminta kode OTP pelanggan.',
+                    ],
+                ],
+                'psychological_tricks' => [
+                    'Godaan Hadiah Besar Instan (Greed & Excitement)',
+                    'Tekanan Waktu Hadiah Hangus (Fear of Missing Out / FOMO)',
+                    'Manipulasi Pengalihan Perhatian terhadap Isi SMS Sebenarnya',
+                ],
+                'red_flags' => [
+                    'Mendapatkan hadiah dari undian yang tidak pernah Anda ikuti sebelumnya.',
+                    'SMS yang masuk jelas-jelas bertuliskan "Kode verifikasi WhatsApp Anda", bukan voucher hadiah.',
+                    'Mendesak agar kode segera diberikan dalam hitungan menit.',
+                ],
+                'prevention_advice' => 'Ingat aturan emas: Kode OTP (One-Time Password) sama seperti PIN ATM pribadi. Siapa pun yang memintanya dipastikan penipu.',
+            ],
         ];
 
         foreach ($scenarios as $scenarioData) {

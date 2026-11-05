@@ -10,6 +10,7 @@ import {
     ExternalLink,
     MessageCircle,
     PhoneCall,
+    Printer,
     RotateCcw,
     Share2,
     ShieldAlert,
@@ -337,7 +338,7 @@ export default function EmergencyIndex({
                 </div>
 
                 {/* Primary Tabs */}
-                <div className="mb-8 border-b border-slate-200/80 dark:border-slate-800">
+                <div className="mb-8 border-b border-slate-200/80 dark:border-slate-800 print:hidden">
                     <div className="flex gap-4 sm:gap-8">
                         <button
                             type="button"
@@ -374,7 +375,7 @@ export default function EmergencyIndex({
                     <div className="space-y-8">
                         {/* Guest Banner */}
                         {isGuest && (
-                            <div className="flex flex-col gap-4 rounded-2xl border border-amber-300/60 bg-amber-50/80 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/30">
+                            <div className="flex flex-col gap-4 rounded-2xl border border-amber-300/60 bg-amber-50/80 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/30 print:hidden">
                                 <div className="flex items-start gap-3">
                                     <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
                                     <div>
@@ -404,11 +405,11 @@ export default function EmergencyIndex({
                         )}
 
                         {/* Scenario Selector Pills */}
-                        <div>
+                        <div className="print:hidden">
                             <label className="mb-3 block text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                                 Pilih Skenario Insiden:
                             </label>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 {scenarios.map((scenario) => {
                                     const isSelected =
                                         scenario.key === selectedScenarioKey;
@@ -500,7 +501,15 @@ export default function EmergencyIndex({
                                             </p>
                                         </div>
 
-                                        <div className="flex shrink-0 items-center gap-2 self-start">
+                                        <div className="flex shrink-0 items-center gap-2 self-start print:hidden">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => window.print()}
+                                                className="h-9 px-3 text-xs text-slate-600 dark:text-slate-300"
+                                            >
+                                                <Printer className="mr-1.5 size-3.5" />
+                                                Cetak Panduan
+                                            </Button>
                                             <Button
                                                 variant="outline"
                                                 onClick={

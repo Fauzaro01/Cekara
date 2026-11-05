@@ -180,3 +180,16 @@
         transform: none !important;
     }
 }
+
+@media print {
+    nav,
+    footer,
+    .print\:hidden {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+    }
+}

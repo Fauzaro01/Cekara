@@ -1,7 +1,6 @@
 import { useState, type PropsWithChildren } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    ShieldCheck,
     Search,
     BookOpen,
     LifeBuoy,
@@ -60,7 +59,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 alt="Logo Cekara"
                                 className="size-8 object-contain transition group-hover:scale-105"
                             />
-                            <span className="text-base font-semibold tracking-tight">Cekara</span>
+                            <span className="text-base font-semibold tracking-tight">
+                                Cekara
+                            </span>
                         </Link>
 
                         <nav className="hidden items-center gap-1 lg:flex">
@@ -77,7 +78,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                                 : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100'
                                         }`}
                                     >
-                                        <Icon className="size-3.5 opacity-70" strokeWidth={1.75} />
+                                        <Icon
+                                            className="size-3.5 opacity-70"
+                                            strokeWidth={1.75}
+                                        />
                                         <span>{item.label}</span>
                                     </Link>
                                 );
@@ -92,7 +96,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                             : 'text-brand-600 hover:bg-brand-50/70 hover:text-brand-700 dark:text-brand-400 dark:hover:bg-brand-950/40'
                                     }`}
                                 >
-                                    <LayoutDashboard className="size-3.5" strokeWidth={1.75} />
+                                    <LayoutDashboard
+                                        className="size-3.5"
+                                        strokeWidth={1.75}
+                                    />
                                     <span>Dashboard</span>
                                 </Link>
                             )}
@@ -102,7 +109,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                     href="/admin/llm-providers"
                                     className="flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/50"
                                 >
-                                    <Settings className="size-3" strokeWidth={2} />
+                                    <Settings
+                                        className="size-3"
+                                        strokeWidth={2}
+                                    />
                                     <span>Admin</span>
                                 </Link>
                             )}
@@ -120,11 +130,18 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                     className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                                     title="Pengaturan Profil"
                                 >
-                                    <User className="size-3.5 opacity-70" strokeWidth={1.75} />
-                                    <span className="max-w-28 truncate">{user.name}</span>
+                                    <User
+                                        className="size-3.5 opacity-70"
+                                        strokeWidth={1.75}
+                                    />
+                                    <span className="max-w-28 truncate">
+                                        {user.name}
+                                    </span>
                                 </Link>
 
-                                <span className="text-slate-300 dark:text-slate-700">|</span>
+                                <span className="text-slate-300 dark:text-slate-700">
+                                    |
+                                </span>
 
                                 <Link
                                     href="/logout"
@@ -132,7 +149,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                     as="button"
                                     className="flex items-center gap-1 text-slate-500 transition hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
                                 >
-                                    <LogOut className="size-3.5" strokeWidth={1.75} />
+                                    <LogOut
+                                        className="size-3.5"
+                                        strokeWidth={1.75}
+                                    />
                                     <span>Keluar</span>
                                 </Link>
                             </div>
@@ -188,7 +208,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                                 : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                                         }`}
                                     >
-                                        <Icon className="size-4" strokeWidth={1.75} />
+                                        <Icon
+                                            className="size-4"
+                                            strokeWidth={1.75}
+                                        />
                                         <span>{item.label}</span>
                                     </Link>
                                 );
@@ -201,7 +224,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         onClick={() => setMobileMenuOpen(false)}
                                         className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950/40"
                                     >
-                                        <LayoutDashboard className="size-4" strokeWidth={1.75} />
+                                        <LayoutDashboard
+                                            className="size-4"
+                                            strokeWidth={1.75}
+                                        />
                                         <span>Dashboard</span>
                                     </Link>
                                     <Link
@@ -209,7 +235,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         onClick={() => setMobileMenuOpen(false)}
                                         className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                                     >
-                                        <User className="size-4" strokeWidth={1.75} />
+                                        <User
+                                            className="size-4"
+                                            strokeWidth={1.75}
+                                        />
                                         <span>Profil ({user.name})</span>
                                     </Link>
                                     <Link
@@ -219,7 +248,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         onClick={() => setMobileMenuOpen(false)}
                                         className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                                     >
-                                        <LogOut className="size-4" strokeWidth={1.75} />
+                                        <LogOut
+                                            className="size-4"
+                                            strokeWidth={1.75}
+                                        />
                                         <span>Keluar</span>
                                     </Link>
                                 </>
@@ -251,28 +283,50 @@ export default function AppLayout({ children }: PropsWithChildren) {
             <footer className="border-t border-slate-200/80 bg-white/40 py-8 dark:border-slate-800/80 dark:bg-slate-950/40">
                 <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 text-xs text-slate-500 sm:flex-row dark:text-slate-400">
                     <div className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Logo Cekara" className="size-5 object-contain" />
-                        <span>© {new Date().getFullYear()} Cekara — Cek dulu sebelum percaya.</span>
+                        <img
+                            src="/logo.png"
+                            alt="Logo Cekara"
+                            className="size-5 object-contain"
+                        />
+                        <span>
+                            © {new Date().getFullYear()} Cekara — Cek dulu
+                            sebelum percaya.
+                        </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs font-medium">
-                        <Link href="/" className="transition hover:text-slate-900 dark:hover:text-slate-100">
+                        <Link
+                            href="/"
+                            className="transition hover:text-slate-900 dark:hover:text-slate-100"
+                        >
                             Kenali
                         </Link>
                         <span>•</span>
-                        <Link href="/simulasi" className="transition hover:text-slate-900 dark:hover:text-slate-100">
+                        <Link
+                            href="/simulasi"
+                            className="transition hover:text-slate-900 dark:hover:text-slate-100"
+                        >
                             Belajar
                         </Link>
                         <span>•</span>
-                        <Link href="/tanggap-darurat" className="transition hover:text-slate-900 dark:hover:text-slate-100">
+                        <Link
+                            href="/tanggap-darurat"
+                            className="transition hover:text-slate-900 dark:hover:text-slate-100"
+                        >
                             Bertindak
                         </Link>
                         <span>•</span>
-                        <Link href="/radar" className="transition hover:text-slate-900 dark:hover:text-slate-100">
+                        <Link
+                            href="/radar"
+                            className="transition hover:text-slate-900 dark:hover:text-slate-100"
+                        >
                             Radar Komunitas
                         </Link>
                         <span>•</span>
-                        <Link href="/panduan-keluarga" className="transition hover:text-slate-900 dark:hover:text-slate-100">
+                        <Link
+                            href="/panduan-keluarga"
+                            className="transition hover:text-slate-900 dark:hover:text-slate-100"
+                        >
                             Panduan Keluarga
                         </Link>
                     </div>

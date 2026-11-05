@@ -52,7 +52,9 @@ export default function Register() {
                                 className="mt-1"
                                 autoComplete="name"
                                 autoFocus
-                                onChange={(e) => setData('name', e.target.value)}
+                                onChange={(e) =>
+                                    setData('name', e.target.value)
+                                }
                                 required
                             />
                             {errors.name && (
@@ -76,7 +78,9 @@ export default function Register() {
                                 value={data.email}
                                 className="mt-1"
                                 autoComplete="username"
-                                onChange={(e) => setData('email', e.target.value)}
+                                onChange={(e) =>
+                                    setData('email', e.target.value)
+                                }
                                 required
                             />
                             {errors.email && (
@@ -100,7 +104,9 @@ export default function Register() {
                                 value={data.password}
                                 className="mt-1"
                                 autoComplete="new-password"
-                                onChange={(e) => setData('password', e.target.value)}
+                                onChange={(e) =>
+                                    setData('password', e.target.value)
+                                }
                                 required
                             />
                             {errors.password && (
@@ -125,7 +131,10 @@ export default function Register() {
                                 className="mt-1"
                                 autoComplete="new-password"
                                 onChange={(e) =>
-                                    setData('password_confirmation', e.target.value)
+                                    setData(
+                                        'password_confirmation',
+                                        e.target.value,
+                                    )
                                 }
                                 required
                             />

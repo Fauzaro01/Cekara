@@ -1,24 +1,15 @@
 import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import {
-    Activity,
-    AlertTriangle,
-    ArrowUpRight,
     CheckCircle2,
     Clock,
-    Globe,
-    Layers,
     MapPin,
-    MessageCircle,
     Plus,
     Radio,
     Search,
     Send,
     Share2,
-    ShieldAlert,
-    Sparkles,
     ThumbsUp,
-    Users,
     X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -65,10 +56,18 @@ const categories = [
     { key: 'fake_giveaway', label: 'Undian Palsu' },
 ];
 
-export default function CommunityRadarIndex({ alerts: initialAlerts, filters, stats }: Props) {
+export default function CommunityRadarIndex({
+    alerts: initialAlerts,
+    filters,
+    stats,
+}: Props) {
     const [alerts, setAlerts] = useState<ThreatAlert[]>(initialAlerts);
-    const [selectedCategory, setSelectedCategory] = useState<string>(filters.category || 'all');
-    const [searchQuery, setSearchQuery] = useState<string>(filters.search || '');
+    const [selectedCategory, setSelectedCategory] = useState<string>(
+        filters.category || 'all',
+    );
+    const [searchQuery, setSearchQuery] = useState<string>(
+        filters.search || '',
+    );
     const [sortBy, setSortBy] = useState<string>(filters.sort || 'trending');
     const [upvotedIds, setUpvotedIds] = useState<number[]>([]);
     const [isReporting, setIsReporting] = useState(false);
@@ -112,8 +111,10 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                 setUpvotedIds((prev) => [...prev, alertId]);
                 setAlerts((prev) =>
                     prev.map((a) =>
-                        a.id === alertId ? { ...a, upvotes_count: data.new_count } : a
-                    )
+                        a.id === alertId
+                            ? { ...a, upvotes_count: data.new_count }
+                            : a,
+                    ),
                 );
                 setNotification(data.message);
                 setTimeout(() => setNotification(null), 4000);
@@ -167,14 +168,18 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
 
     const filteredAlerts = alerts
         .filter((item) => {
-            if (selectedCategory !== 'all' && item.category !== selectedCategory) {
+            if (
+                selectedCategory !== 'all' &&
+                item.category !== selectedCategory
+            ) {
                 return false;
             }
             if (searchQuery.trim() !== '') {
                 const q = searchQuery.toLowerCase();
                 const matchTitle = item.title.toLowerCase().includes(q);
                 const matchDesc = item.description.toLowerCase().includes(q);
-                const matchLoc = item.location?.toLowerCase().includes(q) ?? false;
+                const matchLoc =
+                    item.location?.toLowerCase().includes(q) ?? false;
                 if (!matchTitle && !matchDesc && !matchLoc) {
                     return false;
                 }
@@ -199,7 +204,7 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                         <div>
                             <div className="flex items-center gap-2">
                                 <Badge variant="brand">
-                                    <Radio className="size-3 mr-1" />
+                                    <Radio className="mr-1 size-3" />
                                     Sistem Peringatan Dini
                                 </Badge>
                                 <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -211,8 +216,10 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                 Radar Ancaman Komunitas
                             </h1>
                             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                Pantau modus kejahatan siber terkini di Indonesia. Laporan nyata yang dikurasi dan
-                                divalidasi langsung oleh komunitas Guardian untuk melindungi ruang digital bersama.
+                                Pantau modus kejahatan siber terkini di
+                                Indonesia. Laporan nyata yang dikurasi dan
+                                divalidasi langsung oleh komunitas Guardian
+                                untuk melindungi ruang digital bersama.
                             </p>
                         </div>
 
@@ -223,12 +230,12 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                         >
                             {isReporting ? (
                                 <>
-                                    <X className="size-4 mr-1.5" />
+                                    <X className="mr-1.5 size-4" />
                                     Tutup Formulir
                                 </>
                             ) : (
                                 <>
-                                    <Plus className="size-4 mr-1.5" />
+                                    <Plus className="mr-1.5 size-4" />
                                     Laporkan Modus Baru
                                 </>
                             )}
@@ -238,19 +245,28 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                     {/* Stats Highlights */}
                     <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
                         <Card variant="floating" className="p-4">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Modus Terverifikasi</span>
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                Modus Terverifikasi
+                            </span>
                             <div className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-slate-100">
                                 {stats.total_alerts} Pola
                             </div>
                         </Card>
                         <Card variant="floating" className="p-4">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Konfirmasi Warga</span>
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                Konfirmasi Warga
+                            </span>
                             <div className="mt-1 text-2xl font-extrabold text-brand-600 dark:text-brand-400">
                                 {stats.total_confirmed_cases}+ Korban
                             </div>
                         </Card>
-                        <Card variant="floating" className="col-span-2 p-4 sm:col-span-1">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Platform Paling Rawan</span>
+                        <Card
+                            variant="floating"
+                            className="col-span-2 p-4 sm:col-span-1"
+                        >
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                Platform Paling Rawan
+                            </span>
                             <div className="mt-1 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
                                 {stats.top_targeted_platform}
                             </div>
@@ -272,19 +288,28 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
             {/* Report Form Modal / Collapse */}
             {isReporting && (
                 <section className="mx-auto max-w-5xl px-6 pt-6">
-                    <Card variant="glass" className="border-brand-200/80 bg-brand-50/20 p-6 sm:p-8 dark:border-brand-900/50 dark:bg-brand-950/20">
+                    <Card
+                        variant="glass"
+                        className="border-brand-200/80 bg-brand-50/20 p-6 sm:p-8 dark:border-brand-900/50 dark:bg-brand-950/20"
+                    >
                         <div className="flex items-center gap-2">
                             <Badge variant="brand">Formulir Pelaporan</Badge>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">Pola Baru</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Pola Baru
+                            </span>
                         </div>
                         <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">
                             Laporkan Temuan Modus Penipuan Baru
                         </h2>
                         <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                            Laporan Anda akan dianalisis dan diterbitkan pada Radar Komunitas agar masyarakat luas lebih waspada.
+                            Laporan Anda akan dianalisis dan diterbitkan pada
+                            Radar Komunitas agar masyarakat luas lebih waspada.
                         </p>
 
-                        <form onSubmit={handleReportSubmit} className="mt-6 space-y-4">
+                        <form
+                            onSubmit={handleReportSubmit}
+                            className="mt-6 space-y-4"
+                        >
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -292,7 +317,9 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                     </label>
                                     <Input
                                         value={formTitle}
-                                        onChange={(e) => setFormTitle(e.target.value)}
+                                        onChange={(e) =>
+                                            setFormTitle(e.target.value)
+                                        }
                                         placeholder="Contoh: Modus QRIS Tempelan di Kafe XYZ"
                                         required
                                         className="mt-1"
@@ -304,7 +331,9 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                     </label>
                                     <Input
                                         value={formLocation}
-                                        onChange={(e) => setFormLocation(e.target.value)}
+                                        onChange={(e) =>
+                                            setFormLocation(e.target.value)
+                                        }
                                         placeholder="Contoh: Bandung, Jawa Barat"
                                         className="mt-1"
                                     />
@@ -318,14 +347,26 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                     </label>
                                     <select
                                         value={formCategory}
-                                        onChange={(e) => setFormCategory(e.target.value)}
+                                        onChange={(e) =>
+                                            setFormCategory(e.target.value)
+                                        }
                                         className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
                                     >
-                                        <option value="apk_malware">Malware APK</option>
-                                        <option value="phishing_banking">Phishing Bank</option>
-                                        <option value="fake_job">Lowongan Palsu</option>
-                                        <option value="social_engineering">Rekayasa Sosial</option>
-                                        <option value="fake_giveaway">Undian Palsu</option>
+                                        <option value="apk_malware">
+                                            Malware APK
+                                        </option>
+                                        <option value="phishing_banking">
+                                            Phishing Bank
+                                        </option>
+                                        <option value="fake_job">
+                                            Lowongan Palsu
+                                        </option>
+                                        <option value="social_engineering">
+                                            Rekayasa Sosial
+                                        </option>
+                                        <option value="fake_giveaway">
+                                            Undian Palsu
+                                        </option>
                                     </select>
                                 </div>
                                 <div>
@@ -334,15 +375,29 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                     </label>
                                     <select
                                         value={formPlatform}
-                                        onChange={(e) => setFormPlatform(e.target.value)}
+                                        onChange={(e) =>
+                                            setFormPlatform(e.target.value)
+                                        }
                                         className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
                                     >
-                                        <option value="WhatsApp">WhatsApp</option>
-                                        <option value="Telegram">Telegram</option>
-                                        <option value="Instagram">Instagram</option>
-                                        <option value="SMS / Telepon">SMS / Telepon</option>
-                                        <option value="QRIS Fisik / Offline">QRIS Fisik / Offline</option>
-                                        <option value="Situs Web Phishing">Situs Web Phishing</option>
+                                        <option value="WhatsApp">
+                                            WhatsApp
+                                        </option>
+                                        <option value="Telegram">
+                                            Telegram
+                                        </option>
+                                        <option value="Instagram">
+                                            Instagram
+                                        </option>
+                                        <option value="SMS / Telepon">
+                                            SMS / Telepon
+                                        </option>
+                                        <option value="QRIS Fisik / Offline">
+                                            QRIS Fisik / Offline
+                                        </option>
+                                        <option value="Situs Web Phishing">
+                                            Situs Web Phishing
+                                        </option>
                                     </select>
                                 </div>
                             </div>
@@ -353,7 +408,9 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                 </label>
                                 <textarea
                                     value={formDescription}
-                                    onChange={(e) => setFormDescription(e.target.value)}
+                                    onChange={(e) =>
+                                        setFormDescription(e.target.value)
+                                    }
                                     placeholder="Jelaskan secara singkat bagaimana pelaku mendekati korban dan apa yang mereka minta..."
                                     rows={3}
                                     required
@@ -367,10 +424,12 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                 </label>
                                 <textarea
                                     value={formEvidence}
-                                    onChange={(e) => setFormEvidence(e.target.value)}
+                                    onChange={(e) =>
+                                        setFormEvidence(e.target.value)
+                                    }
                                     placeholder="Kutipan pesan teks atau ciri khas nomor pengirim..."
                                     rows={2}
-                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-mono focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 font-mono text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
                                 />
                             </div>
 
@@ -387,8 +446,10 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                     variant="primary"
                                     disabled={isSubmitting}
                                 >
-                                    <Send className="size-3.5 mr-1.5" />
-                                    {isSubmitting ? 'Mengirim...' : 'Kirim Laporan Modus'}
+                                    <Send className="mr-1.5 size-3.5" />
+                                    {isSubmitting
+                                        ? 'Mengirim...'
+                                        : 'Kirim Laporan Modus'}
                                 </Button>
                             </div>
                         </form>
@@ -401,7 +462,7 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     {/* Search */}
                     <div className="relative max-w-xs flex-1">
-                        <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+                        <Search className="absolute top-2.5 left-3 size-4 text-slate-400" />
                         <Input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -412,7 +473,9 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
 
                     {/* Sort */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Urutkan:</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            Urutkan:
+                        </span>
                         <div className="flex rounded-xl border border-slate-200/80 bg-slate-100/70 p-1 dark:border-slate-800 dark:bg-slate-900/60">
                             <button
                                 type="button"
@@ -467,7 +530,7 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                         const shareUrl = `https://wa.me/?text=${encodeURIComponent(
                             `⚠️ WASPADA PENIPUAN BARU: ${alert.title}\n\nPlatform: ${alert.platform}\nLokasi: ${
                                 alert.location || 'Indonesia'
-                            }\nModus: ${alert.description}\n\nPantau radar selengkapnya di Cekara: https://cekara.id/radar`
+                            }\nModus: ${alert.description}\n\nPantau radar selengkapnya di Cekara: https://cekara.id/radar`,
                         )}`;
 
                         return (
@@ -479,7 +542,9 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                     <div className="flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <Badge variant="warn">{alert.platform}</Badge>
+                                            <Badge variant="warn">
+                                                {alert.platform}
+                                            </Badge>
                                             {alert.location && (
                                                 <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                                                     <MapPin className="size-3 text-slate-400" />
@@ -505,7 +570,9 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                                                     Ciri Percakapan / Bukti:
                                                 </span>{' '}
-                                                <span className="italic font-mono">{alert.evidence_text}</span>
+                                                <span className="font-mono italic">
+                                                    {alert.evidence_text}
+                                                </span>
                                             </div>
                                         )}
                                     </div>
@@ -514,11 +581,13 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                     <div className="flex shrink-0 flex-row gap-2 sm:flex-col sm:items-end">
                                         <button
                                             type="button"
-                                            onClick={() => handleUpvote(alert.id)}
+                                            onClick={() =>
+                                                handleUpvote(alert.id)
+                                            }
                                             disabled={hasUpvoted}
                                             className={`inline-flex h-9 items-center gap-2 rounded-xl px-3.5 text-xs font-semibold transition-all ${
                                                 hasUpvoted
-                                                    ? 'border border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900 dark:bg-brand-950/50 dark:text-brand-300 shadow-xs'
+                                                    ? 'border border-brand-200 bg-brand-50 text-brand-700 shadow-xs dark:border-brand-900 dark:bg-brand-950/50 dark:text-brand-300'
                                                     : 'border border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800'
                                             }`}
                                         >
@@ -533,7 +602,7 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
                                             href={shareUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={`${buttonClasses('ghost')} text-xs inline-flex items-center gap-1.5`}
+                                            className={`${buttonClasses('ghost')} inline-flex items-center gap-1.5 text-xs`}
                                             title="Bagikan peringatan ini ke grup WhatsApp"
                                         >
                                             <Share2 className="size-3.5" />
@@ -547,7 +616,8 @@ export default function CommunityRadarIndex({ alerts: initialAlerts, filters, st
 
                     {filteredAlerts.length === 0 && (
                         <div className="rounded-2xl border border-dashed border-slate-200/80 py-16 text-center text-sm text-slate-500 dark:border-slate-800">
-                            Tidak ada laporan penipuan yang cocok dengan pencarian Anda.
+                            Tidak ada laporan penipuan yang cocok dengan
+                            pencarian Anda.
                         </div>
                     )}
                 </div>

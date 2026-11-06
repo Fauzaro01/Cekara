@@ -104,7 +104,9 @@ export default function Welcome() {
 
     // GSAP Staggered Entrance Animation
     useEffect(() => {
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const prefersReducedMotion = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+        ).matches;
         if (prefersReducedMotion) return;
 
         const ctx = gsap.context(() => {
@@ -156,13 +158,17 @@ export default function Welcome() {
     const validateAndSetImage = (file: File) => {
         const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
         if (!validTypes.includes(file.type.toLowerCase())) {
-            setErrorMessage('Format berkas tidak didukung. Harap unggah tangkapan layar berformat JPG atau PNG.');
+            setErrorMessage(
+                'Format berkas tidak didukung. Harap unggah tangkapan layar berformat JPG atau PNG.',
+            );
             return false;
         }
 
         const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
         if (file.size > maxSizeInBytes) {
-            setErrorMessage('Ukuran gambar terlalu besar. Maksimal ukuran berkas adalah 5MB.');
+            setErrorMessage(
+                'Ukuran gambar terlalu besar. Maksimal ukuran berkas adalah 5MB.',
+            );
             return false;
         }
 
@@ -228,17 +234,23 @@ export default function Welcome() {
 
         if (modality === 'image' || selectedImage) {
             if (!selectedImage && !text) {
-                setErrorMessage('Silakan pilih berkas gambar tangkapan layar atau masukkan teks pesan untuk dianalisis.');
+                setErrorMessage(
+                    'Silakan pilih berkas gambar tangkapan layar atau masukkan teks pesan untuk dianalisis.',
+                );
                 return;
             }
         } else {
             if (!text) {
-                setErrorMessage('Silakan masukkan atau tempel teks pesan yang ingin dianalisis.');
+                setErrorMessage(
+                    'Silakan masukkan atau tempel teks pesan yang ingin dianalisis.',
+                );
                 return;
             }
 
             if (text.length < 3) {
-                setErrorMessage('Teks terlalu pendek. Masukkan minimal 3 karakter.');
+                setErrorMessage(
+                    'Teks terlalu pendek. Masukkan minimal 3 karakter.',
+                );
                 return;
             }
         }
@@ -279,12 +291,16 @@ export default function Welcome() {
             }
 
             if (response.status === 419) {
-                setErrorMessage('Sesi Anda telah kedaluwarsa. Silakan muat ulang halaman.');
+                setErrorMessage(
+                    'Sesi Anda telah kedaluwarsa. Silakan muat ulang halaman.',
+                );
                 return;
             }
 
             if (response.status === 429) {
-                setErrorMessage('Terlalu banyak permintaan analisis. Silakan tunggu beberapa saat.');
+                setErrorMessage(
+                    'Terlalu banyak permintaan analisis. Silakan tunggu beberapa saat.',
+                );
                 return;
             }
 
@@ -296,11 +312,19 @@ export default function Welcome() {
             }
 
             if (!response.ok) {
-                const validationErrors = data?.errors?.content || data?.errors?.image;
+                const validationErrors =
+                    data?.errors?.content || data?.errors?.image;
                 if (validationErrors && validationErrors.length > 0) {
-                    setErrorMessage(Array.isArray(validationErrors) ? validationErrors.join(' ') : String(validationErrors));
+                    setErrorMessage(
+                        Array.isArray(validationErrors)
+                            ? validationErrors.join(' ')
+                            : String(validationErrors),
+                    );
                 } else {
-                    setErrorMessage(data?.message || 'Terjadi kesalahan saat memproses analisis.');
+                    setErrorMessage(
+                        data?.message ||
+                            'Terjadi kesalahan saat memproses analisis.',
+                    );
                 }
                 return;
             }
@@ -308,7 +332,9 @@ export default function Welcome() {
             const analysisData: FraudAnalysisResponse = data.data || data;
             setResult(analysisData);
         } catch {
-            setErrorMessage('Gagal menghubungi server analisis. Periksa koneksi internet Anda.');
+            setErrorMessage(
+                'Gagal menghubungi server analisis. Periksa koneksi internet Anda.',
+            );
         } finally {
             setIsLoading(false);
         }
@@ -327,25 +353,32 @@ export default function Welcome() {
             return {
                 variant: 'danger' as const,
                 label: 'Risiko Tinggi / Berbahaya',
-                borderClass: 'border-rose-500/30 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-950/20',
+                borderClass:
+                    'border-rose-500/30 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-950/20',
             };
         }
         if (norm === 'medium' || norm === 'sedang') {
             return {
                 variant: 'warn' as const,
                 label: 'Risiko Sedang / Waspada',
-                borderClass: 'border-amber-500/30 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20',
+                borderClass:
+                    'border-amber-500/30 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20',
             };
         }
         return {
             variant: 'safe' as const,
             label: 'Risiko Rendah / Relatif Aman',
-            borderClass: 'border-emerald-500/30 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20',
+            borderClass:
+                'border-emerald-500/30 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20',
         };
     };
 
     const flagsList = result?.red_flags || result?.indicators || [];
-    const recsList = result?.recommendations || (result?.recommendation ? [result.recommendation] : result?.action_steps || []);
+    const recsList =
+        result?.recommendations ||
+        (result?.recommendation
+            ? [result.recommendation]
+            : result?.action_steps || []);
     const riskBadgeInfo = result ? getRiskBadge(result.risk_level) : null;
 
     return (
@@ -353,11 +386,22 @@ export default function Welcome() {
             <Head title="Cekara — Cek dulu sebelum percaya" />
 
             {/* Hero Section with Spatial Mesh Backdrop */}
-            <section ref={heroRef} className="hero-glow-bg border-b border-slate-200/60 pt-16 pb-12 dark:border-slate-800/60">
+            <section
+                ref={heroRef}
+                className="hero-glow-bg border-b border-slate-200/60 pt-16 pb-12 dark:border-slate-800/60"
+            >
                 <div className="mx-auto max-w-5xl px-6 text-center">
                     <div className="gsap-hero-item inline-flex items-center gap-2">
-                        <img src="/logo.png" alt="Logo Cekara" className="size-6 object-contain" />
-                        <Badge variant="brand" dot className="px-3 py-1 text-xs">
+                        <img
+                            src="/logo.png"
+                            alt="Logo Cekara"
+                            className="size-6 object-contain"
+                        />
+                        <Badge
+                            variant="brand"
+                            dot
+                            className="px-3 py-1 text-xs"
+                        >
                             Cek dulu sebelum percaya
                         </Badge>
                     </div>
@@ -370,15 +414,23 @@ export default function Welcome() {
                     </h1>
 
                     <p className="gsap-hero-item mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-400">
-                        Deteksi pesan mencurigakan, tangkapan layar chat, dan tautan phishing bank secara otomatis sebelum Anda atau keluarga menjadi korban berikutnya.
+                        Deteksi pesan mencurigakan, tangkapan layar chat, dan
+                        tautan phishing bank secara otomatis sebelum Anda atau
+                        keluarga menjadi korban berikutnya.
                     </p>
 
                     <div className="gsap-hero-item mt-8 flex flex-wrap items-center justify-center gap-3">
-                        <a href="#cek-pesan" className={buttonClasses('primary', 'md')}>
+                        <a
+                            href="#cek-pesan"
+                            className={buttonClasses('primary', 'md')}
+                        >
                             <span>Mulai Cek Pesan</span>
                             <ArrowRight className="size-4" />
                         </a>
-                        <Link href="/simulasi" className={buttonClasses('outline', 'md')}>
+                        <Link
+                            href="/simulasi"
+                            className={buttonClasses('outline', 'md')}
+                        >
                             <span>Latihan Simulasi Kasus</span>
                         </Link>
                     </div>
@@ -386,7 +438,11 @@ export default function Welcome() {
             </section>
 
             {/* Interactive Fraud Analyzer Tool (Floating Glass Container) */}
-            <section id="cek-pesan" ref={analyzerCardRef} className="mx-auto max-w-4xl px-6 -mt-6 pb-16">
+            <section
+                id="cek-pesan"
+                ref={analyzerCardRef}
+                className="mx-auto -mt-6 max-w-4xl px-6 pb-16"
+            >
                 <div className="gsap-analyzer rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xl backdrop-blur-xl transition dark:border-slate-800/90 dark:bg-slate-900/80">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -397,10 +453,15 @@ export default function Welcome() {
                                 </h2>
                             </div>
                             <p className="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
-                                Tempel teks pesan WhatsApp, tautan URL, atau unggah tangkapan layar percakapan untuk evaluasi risiko seketika.
+                                Tempel teks pesan WhatsApp, tautan URL, atau
+                                unggah tangkapan layar percakapan untuk evaluasi
+                                risiko seketika.
                             </p>
                         </div>
-                        <Badge variant="neutral" className="self-start sm:self-auto text-[11px]">
+                        <Badge
+                            variant="neutral"
+                            className="self-start text-[11px] sm:self-auto"
+                        >
                             Multi-Modal Vision & Heuristik URL
                         </Badge>
                     </div>
@@ -431,7 +492,7 @@ export default function Welcome() {
                             <ImageIcon className="size-3.5" />
                             <span>Unggah Screenshot (JPG/PNG)</span>
                             {selectedImage && (
-                                <span className="size-2 rounded-full bg-brand-500 animate-pulse" />
+                                <span className="size-2 animate-pulse rounded-full bg-brand-500" />
                             )}
                         </button>
                     </div>
@@ -447,7 +508,9 @@ export default function Welcome() {
                                     <button
                                         key={ex.label}
                                         type="button"
-                                        onClick={() => handleExampleClick(ex.text)}
+                                        onClick={() =>
+                                            handleExampleClick(ex.text)
+                                        }
                                         className="rounded-full border border-slate-200/80 bg-slate-50/80 px-2.5 py-1 text-[11px] text-slate-600 transition hover:border-brand-300 hover:bg-brand-50/50 hover:text-brand-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:text-brand-300"
                                     >
                                         {ex.label}
@@ -465,11 +528,16 @@ export default function Welcome() {
                                 onChange={(e) => setInputText(e.target.value)}
                                 placeholder="Salin dan tempel pesan mencurigakan, SMS kurir, tawaran loker Telegram, atau tautan URL di sini..."
                                 rows={4}
-                                className="w-full rounded-xl border border-slate-200 bg-white/70 p-3.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400"
+                                className="w-full rounded-xl border border-slate-200 bg-white/70 p-3.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400"
                             />
                             <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-                                <span>Mendukung teks percakapan, SMS perbankan, dan tautan URL.</span>
-                                <span>{inputText.length} / 10.000 karakter</span>
+                                <span>
+                                    Mendukung teks percakapan, SMS perbankan,
+                                    dan tautan URL.
+                                </span>
+                                <span>
+                                    {inputText.length} / 10.000 karakter
+                                </span>
                             </div>
                         </div>
                     )}
@@ -490,7 +558,9 @@ export default function Welcome() {
                                     onDragOver={handleDragOver}
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() =>
+                                        fileInputRef.current?.click()
+                                    }
                                     className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition ${
                                         isDragging
                                             ? 'border-brand-500 bg-brand-50/40 dark:bg-brand-950/20'
@@ -501,7 +571,8 @@ export default function Welcome() {
                                         <UploadCloud className="size-6" />
                                     </div>
                                     <p className="mt-3 text-xs font-semibold text-slate-700 sm:text-sm dark:text-slate-300">
-                                        Klik untuk memilih atau seret gambar ke sini
+                                        Klik untuk memilih atau seret gambar ke
+                                        sini
                                     </p>
                                     <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                                         Format JPG atau PNG (Maksimal 5MB).
@@ -509,12 +580,12 @@ export default function Welcome() {
                                 </div>
                             ) : (
                                 <div className="flex items-center justify-between rounded-xl border border-brand-200/80 bg-brand-50/40 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
-                                    <div className="flex items-center gap-3 min-w-0">
+                                    <div className="flex min-w-0 items-center gap-3">
                                         {imagePreviewUrl && (
                                             <img
                                                 src={imagePreviewUrl}
                                                 alt="Pratinjau"
-                                                className="size-14 rounded-lg object-cover border border-slate-200 dark:border-slate-800"
+                                                className="size-14 rounded-lg border border-slate-200 object-cover dark:border-slate-800"
                                             />
                                         )}
                                         <div className="min-w-0 flex-1 text-left">
@@ -522,7 +593,10 @@ export default function Welcome() {
                                                 {selectedImage.name}
                                             </p>
                                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                                {formatFileSize(selectedImage.size)} • Siap dianalisis
+                                                {formatFileSize(
+                                                    selectedImage.size,
+                                                )}{' '}
+                                                • Siap dianalisis
                                             </p>
                                         </div>
                                     </div>
@@ -541,7 +615,9 @@ export default function Welcome() {
                             <div>
                                 <textarea
                                     value={inputText}
-                                    onChange={(e) => setInputText(e.target.value)}
+                                    onChange={(e) =>
+                                        setInputText(e.target.value)
+                                    }
                                     placeholder="Keterangan tambahan terkait gambar (opsional)..."
                                     rows={2}
                                     className="w-full rounded-xl border border-slate-200 bg-white/70 p-3 text-xs text-slate-900 transition placeholder:text-slate-400 focus:border-brand-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100"
@@ -554,7 +630,12 @@ export default function Welcome() {
                     <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200/60 bg-slate-50/60 px-3 py-2 text-[11px] text-slate-500 dark:border-slate-800/60 dark:bg-slate-900/40 dark:text-slate-400">
                         <Lock className="size-3.5 shrink-0 text-brand-500" />
                         <span>
-                            <strong className="text-slate-700 dark:text-slate-300">Jaga rahasia pribadi:</strong> Demi keamanan Anda, jangan tempel kode OTP, kata sandi, PIN, nomor kartu, atau nomor rekening bank di sini.
+                            <strong className="text-slate-700 dark:text-slate-300">
+                                Jaga rahasia pribadi:
+                            </strong>{' '}
+                            Demi keamanan Anda, jangan tempel kode OTP, kata
+                            sandi, PIN, nomor kartu, atau nomor rekening bank di
+                            sini.
                         </span>
                     </div>
 
@@ -573,7 +654,10 @@ export default function Welcome() {
                             variant="ghost"
                             size="sm"
                             onClick={handleClearAll}
-                            disabled={isLoading || (!inputText && !selectedImage && !result)}
+                            disabled={
+                                isLoading ||
+                                (!inputText && !selectedImage && !result)
+                            }
                         >
                             Reset
                         </Button>
@@ -602,7 +686,9 @@ export default function Welcome() {
 
                     {/* Results Display */}
                     {result && riskBadgeInfo && (
-                        <div className={`mt-6 rounded-2xl border p-6 transition-all duration-300 ${riskBadgeInfo.borderClass}`}>
+                        <div
+                            className={`mt-6 rounded-2xl border p-6 transition-all duration-300 ${riskBadgeInfo.borderClass}`}
+                        >
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-2.5">
                                     <Badge variant={riskBadgeInfo.variant} dot>
@@ -615,7 +701,10 @@ export default function Welcome() {
                                     )}
                                 </div>
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    Dianalisis oleh: {result.provider_used || result.provider_name || 'Guardian Engine'}
+                                    Dianalisis oleh:{' '}
+                                    {result.provider_used ||
+                                        result.provider_name ||
+                                        'Guardian Engine'}
                                 </div>
                             </div>
 
@@ -631,7 +720,10 @@ export default function Welcome() {
                                     </span>
                                     <ul className="mt-2 space-y-1.5">
                                         {flagsList.map((flag, idx) => (
-                                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                                            <li
+                                                key={idx}
+                                                className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300"
+                                            >
                                                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
                                                 <span>{flag}</span>
                                             </li>
@@ -648,7 +740,10 @@ export default function Welcome() {
                                     </span>
                                     <ul className="mt-2 space-y-1.5">
                                         {recsList.map((rec, idx) => (
-                                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                                            <li
+                                                key={idx}
+                                                className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300"
+                                            >
                                                 <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
                                                 <span>{rec}</span>
                                             </li>
@@ -679,14 +774,21 @@ export default function Welcome() {
             </section>
 
             {/* 3 Pillars Section (Hover Floating Cards) */}
-            <section id="pilar" ref={pillarsRef} className="mx-auto max-w-5xl px-6 pb-24">
+            <section
+                id="pilar"
+                ref={pillarsRef}
+                className="mx-auto max-w-5xl px-6 pb-24"
+            >
                 <div className="mb-10 text-center">
-                    <Badge variant="brand" className="mb-2">Tiga Pendekatan</Badge>
+                    <Badge variant="brand" className="mb-2">
+                        Tiga Pendekatan
+                    </Badge>
                     <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
                         Tiga Pilar Perlindungan Cekara
                     </h2>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        Ekosistem terintegrasi yang membekali masyarakat dari mengenali, melatih naluri, hingga bertindak nyata.
+                        Ekosistem terintegrasi yang membekali masyarakat dari
+                        mengenali, melatih naluri, hingga bertindak nyata.
                     </p>
                 </div>
 
@@ -701,7 +803,10 @@ export default function Welcome() {
                             >
                                 <div>
                                     <div className="flex size-11 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-brand-400/15 dark:text-brand-300">
-                                        <Icon className="size-5" strokeWidth={1.75} />
+                                        <Icon
+                                            className="size-5"
+                                            strokeWidth={1.75}
+                                        />
                                     </div>
                                     <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-slate-100">
                                         {pillar.title}

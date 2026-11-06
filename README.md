@@ -1,8 +1,8 @@
 # Cekara — Guardian di Ruang Digital 🛡️🇮🇩
 
-> **Platform Web Terintegrasi untuk Memberdayakan Anak Muda Indonesia Mengenali (*Recognize*), Belajar (*Learn*), dan Bertindak (*Act*) Melawan Penipuan Digital.**
+> **Platform Web Terintegrasi untuk Memberdayakan Anak Muda Indonesia Mengenali (_Recognize_), Belajar (_Learn_), dan Bertindak (_Act_) Melawan Penipuan Digital.**
 
-[![Tests](https://img.shields.io/badge/tests-525%2B%20passed%20(100%25)-emerald.svg)](tests/)
+[![Tests](<https://img.shields.io/badge/tests-525%2B%20passed%20(100%25)-emerald.svg>)](tests/)
 [![PHP](https://img.shields.io/badge/PHP-8.4-777BB4.svg?logo=php)](https://php.net)
 [![Laravel](https://img.shields.io/badge/Laravel-13.x-FF2D20.svg?logo=laravel)](https://laravel.com)
 [![Inertia](https://img.shields.io/badge/Inertia-v3%20React%2019-9553E9.svg)](https://inertiajs.com)
@@ -14,6 +14,7 @@
 ## 📌 Latar Belakang Masalah
 
 Setiap hari, jutaan anak muda di Indonesia berhadapan dengan ancaman kejahatan siber yang kian canggih:
+
 - Modus **Malware berkedok surat undangan pernikahan digital atau resi kurir paket (.APK)** yang menyadap SMS OTP m-banking.
 - Penipuan **lowongan kerja freelance fiktif** (tugas like video TikTok / Telegram) yang memeras deposit modal.
 - Akun tiruan (**impersonation / kloning akun**) yang menyamar sebagai teman akrab atau pejabat untuk meminjam uang darurat.
@@ -21,7 +22,7 @@ Setiap hari, jutaan anak muda di Indonesia berhadapan dengan ancaman kejahatan s
 
 Dalam dunia nyata, membedakan interaksi resmi dan manipulasi rekayasa sosial sangatlah sulit. Bahkan setelah menyadari dirinya menjadi target, banyak orang tidak tahu langkah konkret apa yang harus diambil untuk melindungi rekening atau membantu keluarga mereka agar tidak terjerumus ke lubang yang sama.
 
-**Cekara** hadir sebagai solusi komprehensif yang tidak hanya mendeteksi ancaman, tetapi juga **melatih ketajaman naluri (*instinct*)** dan **memandu tindakan darurat nyata** bagi anak muda untuk menjadi **Guardian** di ruang digital bagi dirinya sendiri, teman, dan keluarganya.
+**Cekara** hadir sebagai solusi komprehensif yang tidak hanya mendeteksi ancaman, tetapi juga **melatih ketajaman naluri (_instinct_)** dan **memandu tindakan darurat nyata** bagi anak muda untuk menjadi **Guardian** di ruang digital bagi dirinya sendiri, teman, dan keluarganya.
 
 ---
 
@@ -75,38 +76,44 @@ flowchart TD
 ## ✨ Fitur Unggulan
 
 ### 1. Deteksi Multi-Modal Berbasis AI & Aturan Terjelaskan (Recognize)
-- **Analisis Teks**: Mendeteksi pola bujuk rayu, desakan waktu (*urgency*), dan tawaran tidak masuk akal.
+
+- **Analisis Teks**: Mendeteksi pola bujuk rayu, desakan waktu (_urgency_), dan tawaran tidak masuk akal.
 - **Upload Screenshot Percakapan (`JPG / PNG` hingga 5MB)**: Menggunakan Vision LLM (Gemini Vision) dengan validasi berkas multi-lapis untuk menganalisis tangkapan layar chat WhatsApp, SMS, atau Instagram tanpa perlu menyalin teks manual.
 - **Pemindai Tautan Phishing (`UrlPhishingScanner`)**: Memeriksa typosquatting nama bank (contoh: `.vip`, `.top`), IP host langsung, punycode/homoglyph, dan URL redirection mencurigakan.
-- **Multi-Provider LLM Router**: Mendukung Google Gemini, OpenAI, Custom Router LLM API (OpenAI compatible), serta mesin *Heuristic Guardian* offline yang dapat diatur melalui panel admin (`/admin/llm-providers`) dengan kunci API terenkripsi.
+- **Multi-Provider LLM Router**: Mendukung Google Gemini, OpenAI, Custom Router LLM API (OpenAI compatible), serta mesin _Heuristic Guardian_ offline yang dapat diatur melalui panel admin (`/admin/llm-providers`) dengan kunci API terenkripsi.
 
 ### 2. Simulasi Interaktif Rekayasa Sosial (Learn)
+
 - **Skenario Kasus Nyata Indonesia**:
-  1. *Surat Undangan Pernikahan Digital (.APK)*
-  2. *Lowongan Kerja Freelance Like & Subscribe (Task Scam Telegram)*
-  3. *Peringatan Akun M-Banking Dibekukan (SMS Phishing)*
-  4. *Teman Dekat Pinjam Saldo Darurat via Kloning Akun Medsos*
-  5. *Pencairan Pinjaman Online Cepat Minta Biaya Admin di Muka*
-- **Alur 3 Langkah**: *Case* (tampilan chat realistis) $\rightarrow$ *Thinking* (pilihan keputusan pengguna) $\rightarrow$ *Feedback* (bedah trik manipulasi psikologis penipu).
-- **Guardian Rank Progression**: Peringkat keahlian digital mulai dari *Pemula Digital*, *Kadet Pengawas*, *Guardian Waspada*, hingga *Master Guardian*.
+    1. _Surat Undangan Pernikahan Digital (.APK)_
+    2. _Lowongan Kerja Freelance Like & Subscribe (Task Scam Telegram)_
+    3. _Peringatan Akun M-Banking Dibekukan (SMS Phishing)_
+    4. _Teman Dekat Pinjam Saldo Darurat via Kloning Akun Medsos_
+    5. _Pencairan Pinjaman Online Cepat Minta Biaya Admin di Muka_
+- **Alur 3 Langkah**: _Case_ (tampilan chat realistis) $\rightarrow$ _Thinking_ (pilihan keputusan pengguna) $\rightarrow$ _Feedback_ (bedah trik manipulasi psikologis penipu).
+- **Guardian Rank Progression**: Peringkat keahlian digital mulai dari _Pemula Digital_, _Kadet Pengawas_, _Guardian Waspada_, hingga _Master Guardian_.
 
 ### 3. Pusat Tanggap Darurat & Generator Peringatan (Act)
+
 - **Protokol Mitigasi Krisis (`/tanggap-darurat`)**:
-  - Langkah detik pertama jika terlanjur transfer uang (kontak bank resmi, lapor `cekrekening.id`, `patrolisiber.id`).
-  - Langkah jika terlanjur memasang berkas `.apk` (isolasi jaringan, safe mode, cabut hak akses admin perangkat, ganti password m-banking dari ponsel lain).
-  - Antisipasi jika foto KTP bocor ke komplotan pinjol ilegal.
+    - Langkah detik pertama jika terlanjur transfer uang (kontak bank resmi, lapor `cekrekening.id`, `patrolisiber.id`).
+    - Langkah jika terlanjur memasang berkas `.apk` (isolasi jaringan, safe mode, cabut hak akses admin perangkat, ganti password m-banking dari ponsel lain).
+    - Antisipasi jika foto KTP bocor ke komplotan pinjol ilegal.
 - **Checklist Interaktif Tersimpan**: Progres langkah penyelamatan dapat dicentang dan tersimpan di akun pengguna.
 - **WhatsApp Alert Generator**: Menghasilkan draf pesan peringatan yang santun dan rapi dengan tombol 1-klik bagikan langsung ke WhatsApp (`https://wa.me/?text=...`).
 
 ### 4. Radar Ancaman Komunitas (`/radar`)
-- Sistem peringatan dini (*early warning feed*) yang menyajikan modus penipuan baru yang dilaporkan warga.
-- Tombol validasi **"Saya Mengalami Ini"** (*upvote count*) untuk memetakan seberapa masif modus tersebut menyebar di berbagai kota di Indonesia.
+
+- Sistem peringatan dini (_early warning feed_) yang menyajikan modus penipuan baru yang dilaporkan warga.
+- Tombol validasi **"Saya Mengalami Ini"** (_upvote count_) untuk memetakan seberapa masif modus tersebut menyebar di berbagai kota di Indonesia.
 
 ### 5. Toolkit Guardian untuk Orang Tua & Guru (`/panduan-keluarga`)
-- **Lembar Panduan 3T (Tenang, Telepon, Tanya Anak)**: Format kartu visual yang mudah dipahami orang tua, ramah cetak (*print-friendly*), dan siap dibagikan ke WhatsApp keluarga.
+
+- **Lembar Panduan 3T (Tenang, Telepon, Tanya Anak)**: Format kartu visual yang mudah dipahami orang tua, ramah cetak (_print-friendly_), dan siap dibagikan ke WhatsApp keluarga.
 - **Kuis Kerentanan Keluarga (5 Menit)**: Asesmen interaktif 5 skenario sehari-hari untuk mengukur seberapa rentan anggota keluarga menjadi korban penipuan online.
 
 ### 6. Dashboard Khusus Pengguna & Auth Gate (`/dashboard`)
+
 - Status terpadu: Pangkat Guardian, skor akurasi, dan jumlah skenario yang diselesaikan.
 - **Recent Tabs**: Riwayat pemindaian pesan & gambar tersimpan lengkap dengan modal rincian indikator bahaya dan opsi hapus riwayat.
 - **Auth Gate**: Tamu bebas mencoba demo dan simulasi publik; riwayat scan permanen dan dashboard diproteksi login.
@@ -117,7 +124,7 @@ flowchart TD
 
 - **Backend**: Laravel 13, PHP 8.4, SQLite (development) / PostgreSQL / MySQL (production)
 - **Frontend SPA**: Inertia.js v3, React 19, TypeScript
-- **Styling**: Tailwind CSS v4 (*CSS-first `@theme`*), font Inter, Dark Mode instan anti-FOUC
+- **Styling**: Tailwind CSS v4 (_CSS-first `@theme`_), font Inter, Dark Mode instan anti-FOUC
 - **Routing & Types**: Laravel Wayfinder (auto-generated typed actions & routes)
 - **AI Engine**: Multi-Provider LLM Driver (Google Gemini, OpenAI, Custom Router API) & Heuristic Guardian Rule Engine
 - **Quality Assurance**: Pest PHP (525+ automated feature & unit tests), Laravel Pint code formatter
@@ -127,11 +134,13 @@ flowchart TD
 ## 🚀 Panduan Menjalankan Proyek (Local Setup)
 
 ### Prasyarat
+
 - PHP >= 8.4
 - Composer >= 2.x
 - Node.js >= 20.x & npm
 
 ### Langkah Instalasi
+
 ```bash
 # 1. Clone repositori
 git clone https://github.com/username/Cekara.git
@@ -167,10 +176,10 @@ Buka peramban di `http://localhost:8000`.
 
 Gunakan akun yang telah disiapkan melalui `DemoShowcaseSeeder`:
 
-| Peran | Email | Kata Sandi | Akses Utama |
-|---|---|---|---|
+| Peran                      | Email                | Kata Sandi | Akses Utama                                                                       |
+| -------------------------- | -------------------- | ---------- | --------------------------------------------------------------------------------- |
 | **User (Master Guardian)** | `guardian@cekara.id` | `password` | `/dashboard`, Recent Tabs riwayat scan, status Master Guardian, checklist darurat |
-| **Admin Pengelola** | `admin@cekara.id` | `password` | `/admin/llm-providers` (Konfigurasi Multi-Provider LLM & API Keys terenkripsi) |
+| **Admin Pengelola**        | `admin@cekara.id`    | `password` | `/admin/llm-providers` (Konfigurasi Multi-Provider LLM & API Keys terenkripsi)    |
 
 ---
 
@@ -197,12 +206,15 @@ vendor/bin/pint --format agent
 ## 🚢 Panduan Deployment Produksi
 
 ### Opsi A: Laravel Cloud
+
 1. Hubungkan repositori GitHub ini ke dashboard [Laravel Cloud](https://cloud.laravel.com/).
 2. Konfigurasikan variabel environment (`APP_KEY`, `DB_CONNECTION`, dsb.).
 3. Deploy instan dengan zero-downtime deployment.
 
 ### Opsi B: Docker
+
 Proyek ini dilengkapi dengan `Dockerfile` siap pakai:
+
 ```bash
 docker build -t cekara-app .
 docker run -d -p 8000:8000 --env-file .env cekara-app
@@ -213,4 +225,3 @@ docker run -d -p 8000:8000 --env-file .env cekara-app
 ## 🤝 Kontribusi & Lisensi
 
 Proyek ini dikembangkan di bawah lisensi [MIT License](LICENSE). Mari bersama menjadi **Guardian di Ruang Digital** untuk melindungi masa depan anak muda dan keluarga Indonesia!
-

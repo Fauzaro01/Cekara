@@ -65,7 +65,8 @@ export default function ProfileEdit({
                         Profil Akun
                     </h1>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        Kelola informasi akun dan pengaturan keamanan Cekara Anda.
+                        Kelola informasi akun dan pengaturan keamanan Cekara
+                        Anda.
                     </p>
                 </div>
 
@@ -77,11 +78,15 @@ export default function ProfileEdit({
                                 Informasi Profil
                             </h2>
                             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Perbarui informasi profil dan alamat email akun Anda.
+                                Perbarui informasi profil dan alamat email akun
+                                Anda.
                             </p>
                         </header>
 
-                        <form onSubmit={submitProfile} className="max-w-xl space-y-4">
+                        <form
+                            onSubmit={submitProfile}
+                            className="max-w-xl space-y-4"
+                        >
                             <div>
                                 <label
                                     htmlFor="profile_name"
@@ -95,7 +100,10 @@ export default function ProfileEdit({
                                     value={profileForm.data.name}
                                     className="mt-1"
                                     onChange={(e) =>
-                                        profileForm.setData('name', e.target.value)
+                                        profileForm.setData(
+                                            'name',
+                                            e.target.value,
+                                        )
                                     }
                                     required
                                 />
@@ -119,7 +127,10 @@ export default function ProfileEdit({
                                     value={profileForm.data.email}
                                     className="mt-1"
                                     onChange={(e) =>
-                                        profileForm.setData('email', e.target.value)
+                                        profileForm.setData(
+                                            'email',
+                                            e.target.value,
+                                        )
                                     }
                                     required
                                 />
@@ -130,11 +141,12 @@ export default function ProfileEdit({
                                 )}
                             </div>
 
-                            {mustVerifyEmail && user.email_verified_at === null && (
-                                <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                                    Alamat email Anda belum diverifikasi.
-                                </div>
-                            )}
+                            {mustVerifyEmail &&
+                                user.email_verified_at === null && (
+                                    <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                                        Alamat email Anda belum diverifikasi.
+                                    </div>
+                                )}
 
                             <div className="flex items-center gap-4">
                                 <Button
@@ -162,11 +174,15 @@ export default function ProfileEdit({
                                 Perbarui Kata Sandi
                             </h2>
                             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Pastikan akun Anda menggunakan kata sandi yang kuat dan aman.
+                                Pastikan akun Anda menggunakan kata sandi yang
+                                kuat dan aman.
                             </p>
                         </header>
 
-                        <form onSubmit={submitPassword} className="max-w-xl space-y-4">
+                        <form
+                            onSubmit={submitPassword}
+                            className="max-w-xl space-y-4"
+                        >
                             <div>
                                 <label
                                     htmlFor="current_password"
@@ -231,7 +247,9 @@ export default function ProfileEdit({
                                 <Input
                                     id="password_confirmation"
                                     type="password"
-                                    value={passwordForm.data.password_confirmation}
+                                    value={
+                                        passwordForm.data.password_confirmation
+                                    }
                                     className="mt-1"
                                     autoComplete="new-password"
                                     onChange={(e) =>
@@ -243,7 +261,10 @@ export default function ProfileEdit({
                                 />
                                 {passwordForm.errors.password_confirmation && (
                                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                                        {passwordForm.errors.password_confirmation}
+                                        {
+                                            passwordForm.errors
+                                                .password_confirmation
+                                        }
                                     </p>
                                 )}
                             </div>
@@ -274,7 +295,8 @@ export default function ProfileEdit({
                                 Hapus Akun
                             </h2>
                             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Setelah akun dihapus, seluruh sumber daya dan data di dalamnya akan dihapus secara permanen.
+                                Setelah akun dihapus, seluruh sumber daya dan
+                                data di dalamnya akan dihapus secara permanen.
                             </p>
                         </header>
 
@@ -287,9 +309,14 @@ export default function ProfileEdit({
                                 Hapus Akun
                             </Button>
                         ) : (
-                            <form onSubmit={deleteAccount} className="max-w-xl space-y-4">
+                            <form
+                                onSubmit={deleteAccount}
+                                className="max-w-xl space-y-4"
+                            >
                                 <p className="text-sm text-slate-700 dark:text-slate-300">
-                                    Masukkan kata sandi Anda untuk mengonfirmasi bahwa Anda ingin menghapus akun ini secara permanen.
+                                    Masukkan kata sandi Anda untuk mengonfirmasi
+                                    bahwa Anda ingin menghapus akun ini secara
+                                    permanen.
                                 </p>
 
                                 <div>
@@ -325,7 +352,9 @@ export default function ProfileEdit({
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => setConfirmingDeletion(false)}
+                                        onClick={() =>
+                                            setConfirmingDeletion(false)
+                                        }
                                     >
                                         Batal
                                     </Button>

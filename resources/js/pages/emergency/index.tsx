@@ -287,7 +287,7 @@ export default function EmergencyIndex({
                         formData.append('image', file);
                         formData.append(
                             'content',
-                            `Tangkapan layar langsung dari tab peramban pengguna: "${tabTitle}". Mohon lakukan audit keamanan siber: apakah halaman web ini memuat indikasi phishing, rekayasa sosial, manipulasi logo bank/e-wallet resmi, atau skema penipuan online?`,
+                            `Tangkapan layar langsung dari tab peramban pengguna: "${tabTitle}". Analisis letak bahaya kejahatan siber yang mengancam pengguna (seperti phishing, penipuan online/scam, judi online, rekayasa sosial, manipulasi institusi resmi, atau pemerasan) beserta cara menanggulanginya. Abaikan hal teknis konfigurasi website/developer di luar konteks kejahatan siber.`,
                         );
 
                         const response = await fetch('/chat/analyze', {
@@ -420,7 +420,7 @@ export default function EmergencyIndex({
                 formData.append('image', file);
                 formData.append(
                     'content',
-                    `Tangkapan layar halaman web: "${file.name}". Mohon analisis apakah memuat indikasi phishing atau penipuan.`,
+                    `Tangkapan layar halaman web: "${file.name}". Analisis letak bahaya kejahatan siber yang mengancam pengguna (seperti phishing, penipuan online/scam, judi online, atau pemerasan) beserta cara menanggulanginya. Abaikan hal teknis konfigurasi website/developer di luar konteks kejahatan siber.`,
                 );
 
                 const response = await fetch('/chat/analyze', {

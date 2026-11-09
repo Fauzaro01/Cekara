@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -123,6 +125,35 @@ test('email verification fails with 403 when hash or signature is invalid', func
     $this->get($invalidHashUrl)->assertForbidden();
     $this->post($invalidHashUrl)->assertForbidden();
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
+});
+
+test('resend mail transport sends verification email via Resend HTTP API', function () {
+    Http::fake([
+        'https://api.resend.com/emails' => Http::response([
+            'id' => 're_msg_123456',
+        ], 200),
+    ]);
+
+    config([
+        'mail.default' => 'resend',
+        'services.resend.key' => 're_test_api_key_12345',
+        'mail.from.address' => 'onboarding@resend.dev',
+        'mail.from.name' => 'Cekara',
+    ]);
+
+    $user = User::factory()->unverified()->create([
+        'name' => 'Fauzan Resend',
+        'email' => 'muhamadfauzan4750@gmail.com',
+    ]);
+
+    $user->sendEmailVerificationNotification();
+
+    Http::assertSent(function (Request $request) {
+        return $request->url() === 'https://api.resend.com/emails'
+            && $request->hasHeader('Authorization', 'Bearer re_test_api_key_12345')
+            && in_array('muhamadfauzan4750@gmail.com', $request['to'] ?? [], true)
+            && str_contains((string) ($request['html'] ?? ''), 'CEKARA');
+    });
 });
 
 test('registration fails when email is already registered', function () {

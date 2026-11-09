@@ -1,4 +1,4 @@
-import { useState, useEffect, type PropsWithChildren } from 'react';
+import { useState, useEffect, useRef, type PropsWithChildren } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     Home,
@@ -14,13 +14,15 @@ import {
     X,
     ExternalLink,
     FileText,
+    Shield,
     ShieldCheck,
     ChevronDown,
     ChevronUp,
+    ArrowUpRight,
 } from 'lucide-react';
-import { buttonClasses } from '@/components/ui/button';
 import OceanWaveDivider from '@/components/ocean-wave-divider';
 import AuthSwitchToggle from '@/components/auth-switch-toggle';
+import { ToastContainer } from '@/components/ui/toast';
 import type { Auth } from '@/types/auth';
 
 interface SharedProps {
@@ -32,41 +34,126 @@ export default function AppLayout({ children }: PropsWithChildren) {
     const { auth } = usePage<SharedProps>().props;
     const { url } = usePage();
     const user = auth?.user;
+    const isInitialMount = useRef(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
     const [isBottomBarOpen, setIsBottomBarOpen] = useState(true);
-    const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
-    const [termsModal, setTermsModal] = useState<'terms' | 'privacy' | null>(null);
+    const [accountDrawerOpen, setAccountDrawerOpen] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return (
+            sessionStorage.getItem('cekara_account_drawer_open') === 'true' ||
+            window.location.hash === '#akun'
+        );
+    });
+    const [termsModal, setTermsModal] = useState<'terms' | 'privacy' | null>(() => {
+        if (typeof window === 'undefined') return null;
+        const stored = sessionStorage.getItem('cekara_terms_modal');
+        if (stored === 'terms' || stored === 'privacy') return stored;
+        if (window.location.hash === '#terms') return 'terms';
+        if (window.location.hash === '#privacy') return 'privacy';
+        return null;
+    });
 
-    // Close drawers on route change
+    // Close drawers on route change (ignore initial mount/reload)
     useEffect(() => {
-        setSidebarMobileOpen(false);
-        setMobileMenuOpen(false);
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
         setAccountDrawerOpen(false);
+        setTermsModal(null);
+        setMobileMenuOpen(false);
     }, [url]);
+
+    // Keep sessionStorage and URL hash in sync with accountDrawerOpen
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (accountDrawerOpen) {
+            sessionStorage.setItem('cekara_account_drawer_open', 'true');
+            if (window.location.hash !== '#akun') {
+                window.history.replaceState(
+                    null,
+                    '',
+                    window.location.pathname + window.location.search + '#akun'
+                );
+            }
+        } else {
+            sessionStorage.removeItem('cekara_account_drawer_open');
+            if (window.location.hash === '#akun') {
+                window.history.replaceState(
+                    null,
+                    '',
+                    window.location.pathname + window.location.search
+                );
+            }
+        }
+    }, [accountDrawerOpen]);
+
+    // Keep sessionStorage and URL hash in sync with termsModal
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (termsModal) {
+            sessionStorage.setItem('cekara_terms_modal', termsModal);
+            if (window.location.hash !== `#${termsModal}`) {
+                window.history.replaceState(
+                    null,
+                    '',
+                    window.location.pathname + window.location.search + `#${termsModal}`
+                );
+            }
+        } else {
+            sessionStorage.removeItem('cekara_terms_modal');
+            if (window.location.hash === '#terms' || window.location.hash === '#privacy') {
+                window.history.replaceState(
+                    null,
+                    '',
+                    window.location.pathname + window.location.search
+                );
+            }
+        }
+    }, [termsModal]);
+
+    // Handle browser back/forward history navigation for modal hash
+    useEffect(() => {
+        const handlePopState = () => {
+            const hasAkunHash = window.location.hash === '#akun';
+            if (hasAkunHash !== accountDrawerOpen) {
+                setAccountDrawerOpen(hasAkunHash);
+            }
+
+            const currentHash = window.location.hash;
+            if (currentHash === '#terms' && termsModal !== 'terms') {
+                setTermsModal('terms');
+            } else if (currentHash === '#privacy' && termsModal !== 'privacy') {
+                setTermsModal('privacy');
+            } else if (!currentHash.includes('terms') && !currentHash.includes('privacy') && termsModal !== null) {
+                setTermsModal(null);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [accountDrawerOpen, termsModal]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 setTermsModal(null);
-                setSidebarMobileOpen(false);
                 setAccountDrawerOpen(false);
             }
         };
-        if (termsModal || sidebarMobileOpen || accountDrawerOpen) {
+        if (termsModal || accountDrawerOpen) {
             window.addEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'hidden';
             window.lenisInstance?.stop();
         } else {
-            document.body.style.overflow = '';
             window.lenisInstance?.start();
         }
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = '';
             window.lenisInstance?.start();
         };
-    }, [termsModal, sidebarMobileOpen, accountDrawerOpen]);
+    }, [termsModal, accountDrawerOpen]);
+
+    const isLandingPage = url === '/' || url.startsWith('/?');
 
     const isGuestActive = (path: string) => {
         if (path === '/') {
@@ -86,7 +173,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         { href: '/', label: 'Beranda', icon: Home },
         { href: '/simulasi', label: 'Belajar', icon: BookOpen },
         { href: '/tanggap-darurat', label: 'Bertindak', icon: LifeBuoy },
-        { href: '/radar', label: 'Komunitas', icon: Radio },
+        { href: '/komunitas', label: 'Komunitas', icon: Users },
         { href: '/panduan-keluarga', label: 'Panduan Keluarga', icon: Users },
     ];
 
@@ -106,9 +193,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
             badgeColor: 'bg-[#FFE27A] text-[#3B2A1E]',
         },
         {
-            href: '/radar',
-            label: 'Radar Komunitas',
-            icon: Radio,
+            href: '/komunitas',
+            label: 'Komunitas',
+            icon: Users,
             badge: 'Live',
             badgeColor: 'bg-[#FF9A3C] text-[#3B2A1E]',
         },
@@ -124,68 +211,69 @@ export default function AppLayout({ children }: PropsWithChildren) {
         },
     ];
 
-    // Slide-up Account & Menu Drawer for Logged-In User
+    // Account Drawer Modal
     const renderAccountDrawer = () => {
         if (!user || !accountDrawerOpen) return null;
+
         return (
             <div
-                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#3B2A1E]/50 animate-in fade-in duration-150"
                 role="dialog"
                 aria-modal="true"
+                aria-labelledby="account-drawer-title"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
             >
-                {/* Backdrop Overlay */}
                 <div
-                    className="fixed inset-0 bg-[#3B2A1E]/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+                    className="fixed inset-0"
                     onClick={() => setAccountDrawerOpen(false)}
                 />
 
-                {/* Sheet Modal */}
-                <div className="relative z-10 w-full max-w-md rounded-t-3xl sm:rounded-3xl border-t-2 sm:border-2 border-[#3B2A1E] bg-[#FFF8EC] p-6 shadow-[0px_-8px_30px_rgba(59,42,30,0.2)] sm:shadow-[6px_6px_0px_0px_#3B2A1E] animate-in slide-in-from-bottom duration-200">
-                    {/* Pull notch / handle on mobile */}
-                    <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-[#3B2A1E]/20 sm:hidden" />
-
-                    {/* Header */}
-                    <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] pb-4">
-                        <div className="flex items-center gap-2">
-                            <span className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
-                                Akun Guardian
-                            </span>
-                            <div className="flex items-center gap-1 rounded-xl border border-[#3B2A1E] bg-[#FFE27A] px-2 py-0.5 text-[10px] font-extrabold text-[#3B2A1E]">
-                                <ShieldCheck className="size-3" />
-                                <span>Anti-Scam</span>
+                <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] p-6 shadow-[6px_6px_0px_0px_#3B2A1E] z-10 animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150">
+                    {/* Header Profile */}
+                    <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] pb-4 mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="relative shrink-0">
+                                {user.avatar ? (
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.name}
+                                        className="size-12 rounded-full object-cover border-2 border-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]"
+                                    />
+                                ) : (
+                                    <div className="flex size-12 items-center justify-center rounded-full border-2 border-[#3B2A1E] bg-[#FFE27A] text-lg font-black text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="min-w-0">
+                                <h3
+                                    id="account-drawer-title"
+                                    className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E] truncate max-w-[200px]"
+                                >
+                                    {user.name}
+                                </h3>
+                                <p className="text-xs text-[#6B5646] font-medium truncate max-w-[200px]">
+                                    {user.email}
+                                </p>
                             </div>
                         </div>
                         <button
                             type="button"
                             onClick={() => setAccountDrawerOpen(false)}
-                            className="flex size-8 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1px_1px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition cursor-pointer"
-                            aria-label="Tutup Menu"
+                            className="flex size-8 cursor-pointer items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                            aria-label="Tutup menu akun"
                         >
                             <X className="size-4" strokeWidth={2.5} />
                         </button>
                     </div>
 
-                    {/* User Profile Card */}
-                    <div className="my-5 flex items-center gap-3.5 rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 shadow-[2px_2px_0px_0px_#3B2A1E]">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] font-extrabold text-lg text-[#3B2A1E]">
-                            {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="truncate text-base font-bold text-[#3B2A1E]">
-                                {user.name}
-                            </div>
-                            <div className="truncate text-xs font-semibold text-[#6B5646]">
-                                {user.email}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Navigation inside Drawer */}
+                    {/* Navigation links inside Drawer */}
                     <div className="space-y-2 mb-5">
                         <Link
                             href="/profile"
                             onClick={() => setAccountDrawerOpen(false)}
-                            className={`flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
+                            className={`group flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
                                 isAuthActive('/profile')
                                     ? 'border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
                                     : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
@@ -195,8 +283,48 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <User className="size-4.5" />
                                 <span>Pengaturan Profil</span>
                             </div>
-                            <span className="text-xs font-extrabold text-[#6B5646]">Buka →</span>
+                            <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
+                                Buka
+                                <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
+                            </span>
                         </Link>
+
+                        <Link
+                            href="/panduan-keluarga"
+                            onClick={() => setAccountDrawerOpen(false)}
+                            className={`group flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
+                                isAuthActive('/panduan-keluarga')
+                                    ? 'border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                    : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Users className="size-4.5" />
+                                <span>Panduan Literasi Keluarga</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
+                                Buka
+                                <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
+                            </span>
+                        </Link>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setAccountDrawerOpen(false);
+                                setTermsModal('privacy');
+                            }}
+                            className="group flex w-full items-center justify-between rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 py-2.5 text-sm font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition-all duration-150 hover:bg-[#FFE27A] cursor-pointer"
+                        >
+                            <div className="flex items-center gap-3">
+                                <ShieldCheck className="size-4.5" />
+                                <span>Pengaturan Privasi dan Keamanan</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
+                                Buka
+                                <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
+                            </span>
+                        </button>
 
                         {user.is_admin && (
                             <Link
@@ -230,6 +358,33 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <LogOut className="size-4" strokeWidth={2} />
                         <span>Keluar Akun</span>
                     </Link>
+
+                    {/* Footer Legal Links inside Drawer */}
+                    <div className="mt-4 pt-3 border-t-2 border-[#EFE3D0] flex items-center justify-end text-[11px] font-bold text-[#6B5646]">
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAccountDrawerOpen(false);
+                                    setTermsModal('terms');
+                                }}
+                                className="hover:text-[#E06812] transition cursor-pointer"
+                            >
+                                Ketentuan Layanan
+                            </button>
+                            <span>•</span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAccountDrawerOpen(false);
+                                    setTermsModal('privacy');
+                                }}
+                                className="hover:text-[#E06812] transition cursor-pointer"
+                            >
+                                Kebijakan Privasi
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -273,7 +428,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         {/* Navigation Dock */}
                         <nav
                             aria-label="Navigasi Guardian"
-                            className="pointer-events-auto flex w-full max-w-md items-center justify-around gap-1 rounded-2xl sm:rounded-3xl border-2 border-[#3B2A1E] bg-[#FFF8EC]/95 p-1.5 sm:p-2 shadow-[4px_4px_0px_0px_#3B2A1E] backdrop-blur-md animate-in slide-in-from-bottom-4 duration-200"
+                            className="pointer-events-auto flex w-full max-w-md items-center justify-around gap-1 sm:gap-2 rounded-2xl sm:rounded-3xl border-2 sm:border-3 border-[#3B2A1E] bg-[#FFF8EC]/95 p-1.5 sm:p-2 shadow-[4px_4px_0px_0px_#3B2A1E] backdrop-blur-md animate-in slide-in-from-bottom-4 duration-200"
                         >
                             {/* Dashboard */}
                             <Link
@@ -289,6 +444,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                     Dashboard
                                 </span>
                             </Link>
+
 
                             {/* Latihan Simulasi */}
                             <Link
@@ -308,24 +464,24 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 </span>
                             </Link>
 
-                            {/* Radar Komunitas */}
+                            {/* Komunitas */}
                             <Link
-                                href="/radar"
+                                href="/komunitas"
                                 className={`relative flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
-                                    isAuthActive('/radar')
+                                    isAuthActive('/komunitas')
                                         ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
                                         : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
                                 }`}
                             >
                                 <div className="relative">
-                                    <Radio className="size-5 shrink-0" strokeWidth={2.2} />
+                                    <Users className="size-5 shrink-0" strokeWidth={2.2} />
                                     <span className="absolute -top-1 -right-1.5 flex size-2">
                                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D4573A] opacity-75" />
                                         <span className="relative inline-flex size-2 rounded-full border border-[#3B2A1E] bg-[#D4573A]" />
                                     </span>
                                 </div>
                                 <span className="mt-0.5 text-[11px] font-bold leading-tight">
-                                    Radar
+                                    Komunitas
                                 </span>
                             </Link>
 
@@ -339,9 +495,17 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
                                 }`}
                             >
-                                <div className="flex size-5 items-center justify-center rounded-full border border-[#3B2A1E] bg-[#FFE27A] text-[10px] font-black text-[#3B2A1E]">
-                                    {user.name.charAt(0).toUpperCase()}
-                                </div>
+                                {user.avatar ? (
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.name}
+                                        className="size-5 rounded-full object-cover border border-[#3B2A1E]"
+                                    />
+                                ) : (
+                                    <div className="flex size-5 items-center justify-center rounded-full border border-[#3B2A1E] bg-[#FFE27A] text-[10px] font-black text-[#3B2A1E]">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                                 <span className="mt-0.5 text-[11px] font-bold leading-tight">
                                     Akun
                                 </span>
@@ -386,10 +550,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 </li>
                                 <li>
                                     <Link
-                                        href="/radar"
+                                        href="/komunitas"
                                         className="text-[#3B2A1E]/85 transition hover:text-[#E06812]"
                                     >
-                                        Radar Modus (Komunitas)
+                                        Komunitas Pemberantas Kejahatan
                                     </Link>
                                 </li>
                                 <li>
@@ -545,10 +709,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
         <>
             {termsModal && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#3B2A1E]/50 backdrop-blur-xs animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#3B2A1E]/50 animate-in fade-in duration-150"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="terms-modal-title"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
                 >
                     <div
                         className="fixed inset-0"
@@ -685,72 +851,20 @@ export default function AppLayout({ children }: PropsWithChildren) {
     );
 
     // =========================================================================
-    // CASE 1: LOGGED IN USER (Bottom Bar & Full-Width Modern Layout)
+    // CASE 1: LOGGED IN USER (Bottom Bar & Clean Full-Width Layout - ZERO Top Navbar)
     // =========================================================================
     if (user) {
         return (
             <div className="flex min-h-screen flex-col bg-[#FFF8EC] font-['Nunito',system-ui,sans-serif] text-[#3B2A1E]">
-                {/* Top Navigation Bar (Visible across all devices) */}
-                <header className="sticky top-0 z-30 flex h-16 sm:h-18 items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC]/95 px-4 sm:px-8 backdrop-blur-md">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 sm:gap-3">
-                        <img
-                            src="/logotr.png"
-                            alt="Logo Cekara"
-                            className="size-9 sm:size-10 object-contain"
-                        />
-                        <div>
-                            <span className="block font-['Fredoka',system-ui,sans-serif] text-xl sm:text-2xl font-bold tracking-tight text-[#3B2A1E]">
-                                CEKARA
-                            </span>
-                            <span className="hidden sm:block text-[11px] font-bold text-[#6B5646]">
-                                Cek dulu sebelum percaya
-                            </span>
-                        </div>
-                    </Link>
-
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                        {/* Guardian Anti-Scam Pill */}
-                        <div className="hidden sm:flex items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A]/60 px-3 py-1.5 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
-                            <ShieldCheck className="size-4 shrink-0 text-[#3B2A1E]" />
-                            <span>Guardian Anti-Scam</span>
-                        </div>
-
-                        {/* Quick Toggle Bottom Bar Button */}
-                        <button
-                            type="button"
-                            onClick={() => setIsBottomBarOpen(!isBottomBarOpen)}
-                            className="flex items-center gap-1.5 rounded-xl border-2 border-[#3B2A1E] bg-white px-3 py-2 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition cursor-pointer"
-                            title={isBottomBarOpen ? 'Sembunyikan Menu Bawah' : 'Tampilkan Menu Bawah'}
-                        >
-                            {isBottomBarOpen ? (
-                                <>
-                                    <ChevronDown className="size-4" strokeWidth={2.5} />
-                                    <span className="hidden md:inline">Tutup Bar</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ChevronUp className="size-4" strokeWidth={2.5} />
-                                    <span className="hidden md:inline">Buka Bar</span>
-                                </>
-                            )}
-                        </button>
-
-                        {/* Profile Avatar Trigger Button */}
-                        <button
-                            type="button"
-                            onClick={() => setAccountDrawerOpen(true)}
-                            className="flex size-10 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] text-sm font-black text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FF9A3C] transition cursor-pointer"
-                            title="Menu Akun & Profil"
-                        >
-                            {user.name.charAt(0).toUpperCase()}
-                        </button>
-                    </div>
-                </header>
-
-                {/* Main Content Area with Bottom Padding */}
-                <div className={`flex flex-1 flex-col min-w-0 transition-all duration-200 ${isBottomBarOpen ? 'pb-24 sm:pb-28' : 'pb-10'}`}>
+                {/* Main Content Area with Bottom Padding for floating dock */}
+                <div
+                    className={`flex flex-1 flex-col min-w-0 transition-all duration-200 ${
+                        isBottomBarOpen ? 'pb-24 sm:pb-28' : 'pb-10'
+                    }`}
+                >
                     <main className="flex-1 min-w-0">{children}</main>
-                    {renderFooter()}
+                    {/* Halaman in-app setelah login (dashboard, simulasi, komunitas, profil, dll) tidak menampilkan footer marketing */}
+                    {isLandingPage && renderFooter()}
                 </div>
 
                 {/* Account Drawer Modal */}
@@ -760,6 +874,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
                 {renderBottomBar()}
 
                 {renderTermsModal()}
+
+                <ToastContainer />
             </div>
         );
     }
@@ -888,6 +1004,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
             {renderFooter()}
 
             {renderTermsModal()}
+
+            <ToastContainer />
         </div>
     );
 }

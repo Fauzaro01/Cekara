@@ -48,10 +48,12 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        $successMessage = "Anda berhasil masuk sebagai {$user->name}";
+
         if ($request->filled('redirect')) {
-            return redirect($request->input('redirect'));
+            return redirect($request->input('redirect'))->with('success', $successMessage);
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false))->with('success', $successMessage);
     }
 }

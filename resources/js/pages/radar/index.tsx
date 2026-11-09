@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -24,6 +24,12 @@ import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import type { Auth } from '@/types/auth';
+
+interface SharedProps {
+    auth?: Auth;
+    [key: string]: unknown;
+}
 
 interface ThreatAlert {
     id: number;
@@ -67,6 +73,8 @@ export default function CommunityRadarIndex({
     alerts: initialAlerts,
     filters,
 }: Props) {
+    const { auth } = usePage<SharedProps>().props;
+    const user = auth?.user;
     const [alerts, setAlerts] = useState<ThreatAlert[]>(initialAlerts);
     const [selectedCategory, setSelectedCategory] = useState<string>(
         filters.category || 'all',
@@ -278,16 +286,18 @@ export default function CommunityRadarIndex({
                         )}
                     </div>
 
-                    {/* Right: Buat Laporan Baru Button on top & Sort controls below */}
+                    {/* Right: Buat Laporan Baru Button on top (Hanya untuk user setelah login) & Sort controls below */}
                     <div className="flex flex-col items-start sm:items-end gap-2.5">
-                        <button
-                            type="button"
-                            onClick={() => setIsReportModalOpen(true)}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl border-2 border-[#3B2A1E] bg-[#FF9A3C] px-4 py-2 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2.5px_2.5px_0px_0px_#3B2A1E] transition hover:bg-[#FFE27A] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#3B2A1E]"
-                        >
-                            <Plus className="size-4 shrink-0" strokeWidth={2.5} />
-                            <span>Buat Laporan Baru</span>
-                        </button>
+                        {user && (
+                            <button
+                                type="button"
+                                onClick={() => setIsReportModalOpen(true)}
+                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-2xl border-2 border-[#3B2A1E] bg-[#FF9A3C] px-4 py-2 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2.5px_2.5px_0px_0px_#3B2A1E] transition hover:bg-[#FFE27A] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#3B2A1E]"
+                            >
+                                <Plus className="size-4 shrink-0" strokeWidth={2.5} />
+                                <span>Buat Laporan Baru</span>
+                            </button>
+                        )}
 
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-[#6B5646]">
@@ -458,7 +468,7 @@ export default function CommunityRadarIndex({
             </section>
 
             {/* Modal Buat Laporan Baru */}
-            {isReportModalOpen && (
+            {user && isReportModalOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#3B2A1E]/50 backdrop-blur-xs animate-in fade-in duration-200"
                     role="dialog"

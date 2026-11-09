@@ -44,7 +44,14 @@ class HandleInertiaRequests extends Middleware
                     'name' => $request->user()->name,
                     'email' => $request->user()->email,
                     'is_admin' => $request->user()->isAdmin(),
+                    'avatar' => $request->user()->avatar ? asset('storage/' . $request->user()->avatar) : null,
                 ] : null,
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success') ?? ($request->session()->get('status') === 'profile-updated' ? 'Profil akun Anda berhasil diperbarui!' : null),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'message' => fn () => $request->session()->get('message'),
             ],
         ];
     }

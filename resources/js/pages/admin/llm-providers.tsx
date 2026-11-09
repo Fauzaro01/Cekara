@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
 
 export interface LlmProviderItem {
@@ -90,19 +91,16 @@ export default function LlmProvidersPage({
                 onSuccess: () => {
                     setProviderStates((prev) =>
                         prev.map((item) => ({
-                            ...item,
-                            is_active: item.id === id,
+                             ...item,
+                             is_active: item.id === id,
                         })),
                     );
-                    setStatusMessage(
-                        `Provider ${name} berhasil diaktifkan sebagai provider utama.`,
-                    );
+                    toast.success(`Provider ${name} berhasil diaktifkan sebagai provider utama.`);
+                    setStatusMessage(null);
                     setErrorMessage(null);
                 },
                 onError: () => {
-                    setErrorMessage(
-                        'Gagal mengaktifkan provider. Silakan coba lagi.',
-                    );
+                    toast.error('Gagal mengaktifkan provider. Silakan coba lagi.');
                     setStatusMessage(null);
                 },
             },
@@ -143,15 +141,12 @@ export default function LlmProvidersPage({
                                 : p,
                         ),
                     );
-                    setStatusMessage(
-                        `Konfigurasi provider ${item.name} berhasil disimpan.`,
-                    );
+                    toast.success(`Konfigurasi provider ${item.name} berhasil disimpan.`);
+                    setStatusMessage(null);
                     setErrorMessage(null);
                 },
                 onError: () => {
-                    setErrorMessage(
-                        `Gagal menyimpan konfigurasi provider ${item.name}. Silakan periksa kembali data Anda.`,
-                    );
+                    toast.error(`Gagal menyimpan konfigurasi provider ${item.name}. Silakan periksa kembali data Anda.`);
                     setStatusMessage(null);
                 },
                 onFinish: () => {

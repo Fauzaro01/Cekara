@@ -15,10 +15,11 @@ Route::inertia('/', 'welcome')->name('home');
 Route::get('/tanggap-darurat', [EmergencyActionController::class, 'index'])->name('emergency.index');
 Route::redirect('/act', '/tanggap-darurat');
 
-// Radar Ancaman Komunitas (Community Threat Radar)
-Route::get('/radar', [CommunityRadarController::class, 'index'])->name('radar.index');
-Route::post('/radar/{pattern}/upvote', [CommunityRadarController::class, 'upvote'])->name('radar.upvote');
-Route::post('/radar', [CommunityRadarController::class, 'store'])->name('radar.store');
+// Komunitas Pemberantas Kejahatan (Community Threat Radar)
+Route::get('/komunitas', [CommunityRadarController::class, 'index'])->name('radar.index');
+Route::post('/komunitas/{pattern}/upvote', [CommunityRadarController::class, 'upvote'])->name('radar.upvote');
+Route::post('/komunitas', [CommunityRadarController::class, 'store'])->name('radar.store');
+Route::redirect('/radar', '/komunitas');
 
 // Toolkit Guardian untuk Orang Tua & Guru (Family & School Guardian)
 Route::get('/panduan-keluarga', [FamilyGuardianController::class, 'index'])->name('family.index');

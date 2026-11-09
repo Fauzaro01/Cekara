@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             LlmProviderSeeder::class,
-            SimulationScenarioSeeder::class,
+            // SimulationScenarioSeeder::class, // Modul simulasi akan ditambahkan langsung oleh admin
         ]);
     }
 }

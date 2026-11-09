@@ -2,7 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\CommunityMessage;
+use App\Models\CommunityMessageReaction;
+use App\Models\CommunityRoom;
 use App\Models\ScamPatternContribution;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class CommunityRadarSeeder extends Seeder
@@ -59,7 +63,7 @@ class CommunityRadarSeeder extends Seeder
                 'platform' => 'WhatsApp Video Call',
                 'location' => 'Medan, Sumatera Utara',
                 'description' => 'Pelaku melakukan video call selama beberapa detik memperlihatkan wajah kerabat (hasil rekaman video medsos yang dimanipulasi AI) dengan alasan sinyal buruk, lalu mematikan panggilan dan beralih ke chat teks meminjam uang secara mendesak.',
-                'evidence_text' => 'Tadi liat kan gue lagi di bandara koper ketahan? Sinyal putus-putus nih bro, tolong transferin 2 juta dulu ke temen gue, ntar nyampe rumah gue ganti.',
+                'evidence_text' => 'Tadi liat gue lagi di bandara koper ketahan? Sinyal putus-putus nih bro, tolong transferin 2 juta dulu ke temen gue, ntar nyampe rumah gue ganti.',
                 'is_verified' => true,
                 'upvotes_count' => 97,
             ],
@@ -80,6 +84,112 @@ class CommunityRadarSeeder extends Seeder
                 ['title' => $pattern['title']],
                 $pattern
             );
+        }
+
+        $moderator = User::firstOrCreate(
+            ['email' => 'moderator@cekara.id'],
+            [
+                'name' => 'Tim Kurator Guardian',
+                'password' => 'password123',
+                'is_admin' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        $memberOne = User::firstOrCreate(
+            ['email' => 'rina.waspada@cekara.id'],
+            [
+                'name' => 'Rina Pratiwi',
+                'password' => 'password123',
+                'is_admin' => false,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        $memberTwo = User::firstOrCreate(
+            ['email' => 'budi.santoso@cekara.id'],
+            [
+                'name' => 'Budi Santoso',
+                'password' => 'password123',
+                'is_admin' => false,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        $roomOne = CommunityRoom::updateOrCreate(
+            ['slug' => 'waspada-modus-apk-kurir-undangan-tilang'],
+            [
+                'user_id' => $moderator->id,
+                'title' => 'Waspada Modus File .APK (Kurir Paket, Undangan Nikah & Surat Tilang)',
+                'category' => 'apk_malware',
+                'description' => 'Ruang diskusi real-time untuk berbagi tangkapan layar, nomor pengirim, dan cara memulihkan HP yang tidak sengaja menginstal file .APK berbahaya.',
+                'is_pinned' => true,
+            ]
+        );
+
+        if ($roomOne->messages()->count() === 0) {
+            $msg1 = CommunityMessage::create([
+                'community_room_id' => $roomOne->id,
+                'user_id' => $moderator->id,
+                'body' => "Halo rekan-rekan **Komunitas Guardian Cekara**! 🛡️\n\nDi ruang diskusi ini Anda dapat:\n- Mengirim pesan berformat **Markdown** (`**tebal**`, `*miring*`, `` `kode` ``, kutipan `>`, dan daftar)\n- Mengunggah **gambar bukti tangkapan layar** chat/SMS mencurigakan\n- Memberikan **Like (👍)** atau **Reaksi Emoji** langsung dari tombol cepat maupun **ketik emoji dari keyboard perangkat Anda** (`Win + .` atau keyboard HP)\n\n> **Tips Darurat:** Jika telanjur mengklik file `.apk`, segera matikan Wi-Fi & Data Seluler (aktifkan *Airplane Mode*) sebelum menghapus aplikasi tersebut!",
+            ]);
+
+            $msg2 = CommunityMessage::create([
+                'community_room_id' => $roomOne->id,
+                'user_id' => $memberOne->id,
+                'body' => "Baru saja pagi ini ibu saya dapat WA dari nomor tidak dikenal mengirimkan file:\n` Foto_Resi_JNE_Reguler.apk `\n\nUntung langsung saya cek di **Mesin Pemindai Cekara** dan muncul peringatan **BAHAYA KRITIS**. Jangan pernah buka file dengan akhiran `.apk` dari WhatsApp!",
+            ]);
+
+            CommunityMessageReaction::firstOrCreate([
+                'community_message_id' => $msg1->id,
+                'user_id' => $memberOne->id,
+                'emoji' => '👍',
+            ]);
+            CommunityMessageReaction::firstOrCreate([
+                'community_message_id' => $msg1->id,
+                'user_id' => $memberTwo->id,
+                'emoji' => '🛡️',
+            ]);
+            CommunityMessageReaction::firstOrCreate([
+                'community_message_id' => $msg2->id,
+                'user_id' => $moderator->id,
+                'emoji' => '👍',
+            ]);
+            CommunityMessageReaction::firstOrCreate([
+                'community_message_id' => $msg2->id,
+                'user_id' => $memberTwo->id,
+                'emoji' => '🔥',
+            ]);
+        }
+
+        $roomTwo = CommunityRoom::updateOrCreate(
+            ['slug' => 'verifikasi-rekening-dan-tautan-phishing-perbankan'],
+            [
+                'user_id' => $memberTwo->id,
+                'title' => 'Diskusi Tautan Phishing Perbankan & Perubahan Tarif Transfer Rp150.000/Bulan',
+                'category' => 'phishing_banking',
+                'description' => 'Bahas temuan domain palsu yang meniru situs internet banking dan modus surat perubahan tarif transaksi BI-FAST.',
+                'is_pinned' => false,
+            ]
+        );
+
+        if ($roomTwo->messages()->count() === 0) {
+            $msg3 = CommunityMessage::create([
+                'community_room_id' => $roomTwo->id,
+                'user_id' => $memberTwo->id,
+                'body' => "**Peringatan Modus Perubahan Tarif Bank!** ⚠️\n\nBanyak beredar pesan WhatsApp berisi gambar surat resmi palsu soal perubahan tarif transfer dari `Rp 6.500` menjadi `Rp 150.000/bulan` otomatis dipotong kecuali mengisi formulir pembatalan.\n\n```text\nCiri situs palsu:\n1. Domain berakhiran .my.id, .cfd, .top, atau .site\n2. Meminta PIN, Password, dan Kode OTP SMS\n```",
+            ]);
+
+            CommunityMessageReaction::firstOrCreate([
+                'community_message_id' => $msg3->id,
+                'user_id' => $moderator->id,
+                'emoji' => '👍',
+            ]);
+            CommunityMessageReaction::firstOrCreate([
+                'community_message_id' => $msg3->id,
+                'user_id' => $memberOne->id,
+                'emoji' => '⚠️',
+            ]);
         }
     }
 }

@@ -115,4 +115,24 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(EmergencyChecklistProgress::class);
     }
+
+    /**
+     * Get the community discussion rooms created by this user.
+     *
+     * @return HasMany<CommunityRoom, $this>
+     */
+    public function communityRooms(): HasMany
+    {
+        return $this->hasMany(CommunityRoom::class);
+    }
+
+    /**
+     * Get the community messages sent by this user.
+     *
+     * @return HasMany<CommunityMessage, $this>
+     */
+    public function communityMessages(): HasMany
+    {
+        return $this->hasMany(CommunityMessage::class);
+    }
 }

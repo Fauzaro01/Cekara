@@ -16,10 +16,18 @@ Route::inertia('/', 'welcome')->name('home');
 Route::get('/tanggap-darurat', [EmergencyActionController::class, 'index'])->name('emergency.index');
 Route::redirect('/act', '/tanggap-darurat');
 
-// Radar Ancaman Komunitas (Community Threat Radar)
+// Radar Ancaman Komunitas (Community Threat Radar & Real-Time Discussion Rooms)
 Route::get('/radar', [CommunityRadarController::class, 'index'])->name('radar.index');
+Route::get('/radar/sync', [CommunityRadarController::class, 'sync'])->name('radar.sync');
+Route::get('/radar/rooms/{room}/messages', [CommunityRadarController::class, 'roomMessages'])->name('radar.rooms.messages');
 Route::post('/radar/{pattern}/upvote', [CommunityRadarController::class, 'upvote'])->name('radar.upvote');
 Route::post('/radar', [CommunityRadarController::class, 'store'])->name('radar.store');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/radar/rooms', [CommunityRadarController::class, 'storeRoom'])->name('radar.rooms.store');
+    Route::post('/radar/rooms/{room}/messages', [CommunityRadarController::class, 'storeMessage'])->name('radar.rooms.messages.store');
+    Route::post('/radar/messages/{message}/reactions', [CommunityRadarController::class, 'toggleReaction'])->name('radar.messages.reactions.toggle');
+});
 
 // Toolkit Guardian untuk Orang Tua & Guru (Family & School Guardian)
 Route::get('/panduan-keluarga', [FamilyGuardianController::class, 'index'])->name('family.index');

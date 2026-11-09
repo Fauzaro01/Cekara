@@ -6,6 +6,7 @@ use App\Http\Controllers\CommunityRadarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmergencyActionController;
 use App\Http\Controllers\FamilyGuardianController;
+use App\Http\Controllers\ScanController;
 use App\Http\Controllers\SimulationController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,9 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::post('/chat/analyze', [ChatController::class, 'analyze'])->name('chat.analyze');
     Route::post('/api/chat/analyze', [ChatController::class, 'analyze'])->name('api.chat.analyze');
 });
+
+// Public Shareable Scan Investigation Results
+Route::get('/scans/{public_id}', [ScanController::class, 'show'])->name('scans.show');
 
 // Admin LLM Provider Management Routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

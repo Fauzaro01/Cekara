@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -17,6 +17,9 @@ import {
     Check,
     X,
     Loader2,
+    UploadCloud,
+    Copy,
+    Share2,
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import VantaDotsBackground from '@/components/vanta-dots-background';
@@ -31,6 +34,9 @@ interface ScanResult {
     suspiciousPoints: string[];
     explanation: string;
     recommendedActions: string[];
+    publicId?: string;
+    shareUrl?: string;
+    score?: number;
 }
 
 interface WelcomeSimulationOption {
@@ -397,6 +403,12 @@ export default function Welcome() {
     const [selectedImageName, setSelectedImageName] = useState<string | null>(
         null,
     );
+    const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+    const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [imageError, setImageError] = useState<string | null>(null);
+    const [copiedShareLink, setCopiedShareLink] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [inputUrl, setInputUrl] = useState('');
 
     // Status alur interaksi: 'idle' | 'loading' | 'result'
@@ -404,6 +416,69 @@ export default function Welcome() {
         'idle',
     );
     const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+
+    const handleFileSelect = (file: File) => {
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        const validExts = /\.(jpe?g|png|webp)$/i;
+        if (!validTypes.includes(file.type) && !validExts.test(file.name)) {
+            setImageError('Format berkas harus berupa JPG, JPEG, PNG, atau WebP.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setImageError('Ukuran berkas gambar maksimal adalah 5 MB.');
+            return;
+        }
+        setImageError(null);
+        if (imagePreviewUrl) {
+            URL.revokeObjectURL(imagePreviewUrl);
+        }
+        setSelectedImageFile(file);
+        setSelectedImageName(file.name);
+        const url = URL.createObjectURL(file);
+        setImagePreviewUrl(url);
+    };
+
+    const resetImage = () => {
+        if (imagePreviewUrl) {
+            URL.revokeObjectURL(imagePreviewUrl);
+        }
+        setSelectedImageFile(null);
+        setSelectedImageName(null);
+        setImagePreviewUrl(null);
+        setImageError(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (imagePreviewUrl) {
+                URL.revokeObjectURL(imagePreviewUrl);
+            }
+        };
+    }, [imagePreviewUrl]);
 
     // Mini simulasi di landing page (tersimpan di browser agar tidak hilang saat reload)
     const [activeCaseIndex, setActiveCaseIndex] = useState<number>(() => {
@@ -543,6 +618,7 @@ export default function Welcome() {
 
     // Contoh cepat untuk dicoba langsung oleh pelajar
     const loadSample = (type: 'task_scam' | 'apk_kurir' | 'giveaway') => {
+        resetImage();
         if (type === 'task_scam') {
             setActiveTab('text');
             setInputText(
@@ -563,97 +639,133 @@ export default function Welcome() {
         setScanResult(null);
     };
 
-    // Simulasi aksi pemeriksaan cerdas
+    // Aksi pemeriksaan komprehensif (mendukung Teks, Gambar/Screenshot, dan Tautan Web)
     const handleRunCheck = async (e: React.FormEvent) => {
         e.preventDefault();
 
         let hasContent = false;
-        if (activeTab === 'text' && inputText.trim().length > 0)
+        if (activeTab === 'text' && inputText.trim().length >= 3)
             hasContent = true;
-        if (activeTab === 'image' && selectedImageName) hasContent = true;
-        if (activeTab === 'link' && inputUrl.trim().length > 0)
+        if (activeTab === 'image' && selectedImageFile) hasContent = true;
+        if (activeTab === 'link' && inputUrl.trim().length >= 3)
             hasContent = true;
 
-        if (!hasContent) return;
+        if (!hasContent) {
+            if (activeTab === 'text' && inputText.trim().length > 0 && inputText.trim().length < 3) {
+                alert('Isi pesan minimal 3 karakter.');
+            } else if (activeTab === 'link' && inputUrl.trim().length > 0 && inputUrl.trim().length < 3) {
+                alert('Isi tautan URL minimal 3 karakter.');
+            } else if (activeTab === 'image' && !selectedImageFile) {
+                setImageError('Silakan pilih atau unggah berkas gambar terlebih dahulu.');
+            }
+            return;
+        }
 
         setScanState('loading');
 
-        // Mencoba kirim ke endpoint backend jika text tersedia
-        if (activeTab === 'text' && inputText.trim().length > 0) {
-            try {
-                const csrfMeta = document.querySelector(
-                    'meta[name="csrf-token"]',
+        try {
+            const csrfMeta = document.querySelector(
+                'meta[name="csrf-token"]',
+            );
+            const csrfToken = csrfMeta
+                ? csrfMeta.getAttribute('content')
+                : '';
+
+            const formData = new FormData();
+            if (activeTab === 'text') {
+                formData.append('content', inputText.trim());
+            } else if (activeTab === 'link') {
+                formData.append('content', inputUrl.trim());
+            } else if (activeTab === 'image' && selectedImageFile) {
+                formData.append('image', selectedImageFile);
+                formData.append(
+                    'content',
+                    'Tangkapan layar untuk dianalisis indikasi penipuan digital.',
                 );
-                const csrfToken = csrfMeta
-                    ? csrfMeta.getAttribute('content')
-                    : '';
-
-                const response = await fetch('/chat/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
-                    },
-                    body: JSON.stringify({ message: inputText }),
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const rawLevel = String(
-                        data.risk_level || 'medium',
-                    ).toLowerCase();
-                    const level: RiskLevel =
-                        rawLevel.includes('high') || rawLevel.includes('tinggi')
-                            ? 'high'
-                            : rawLevel.includes('low') ||
-                                rawLevel.includes('undetected') ||
-                                rawLevel.includes('rendah')
-                              ? 'undetected'
-                              : 'medium';
-
-                    const badgeLabel =
-                        level === 'high'
-                            ? 'Hati-hati, ini mencurigakan'
-                            : level === 'medium'
-                              ? 'Yuk cek dulu'
-                              : 'Belum ketemu tanda bahaya, tapi tetap cek ya';
-
-                    setScanResult({
-                        level,
-                        badgeLabel,
-                        headline:
-                            data.summary ||
-                            'Hasil analisis pola pesan mencurigakan.',
-                        suspiciousPoints:
-                            Array.isArray(data.red_flags) &&
-                            data.red_flags.length > 0
-                                ? data.red_flags
-                                : [
-                                      'Pola pesan mengandung desakan waktu atau penawaran yang tidak lazim.',
-                                  ],
-                        explanation:
-                            data.recommendation ||
-                            'Periksa kembali kontak pengirim sebelum mengklik tautan atau mengirim data pribadi.',
-                        recommendedActions:
-                            Array.isArray(data.recommendations) &&
-                            data.recommendations.length > 0
-                                ? data.recommendations
-                                : [
-                                      'Jangan transfer uang dalam jumlah berapa pun.',
-                                      'Jangan klik tautan atau instal berkas mencurigakan.',
-                                      'Laporkan nomor pengirim ke kanal pengaduan resmi.',
-                                  ],
-                    });
-                    setScanState('result');
-                    return;
-                }
-            } catch {
-                // Fallback ke analisis lokal
             }
+
+            const response = await fetch('/chat/analyze', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    Accept: 'application/json',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                const json = await response.json();
+                const data = json.data || json;
+                const rawLevel = String(
+                    data.risk_level || data.riskLevel || 'medium',
+                ).toLowerCase();
+                const level: RiskLevel =
+                    rawLevel.includes('high') || rawLevel.includes('tinggi') || rawLevel.includes('danger')
+                        ? 'high'
+                        : rawLevel.includes('low') ||
+                            rawLevel.includes('undetected') ||
+                            rawLevel.includes('rendah')
+                          ? 'undetected'
+                          : 'medium';
+
+                const badgeLabel =
+                    level === 'high'
+                        ? 'Hati-hati, ini mencurigakan'
+                        : level === 'medium'
+                          ? 'Yuk cek dulu'
+                          : 'Belum ketemu tanda bahaya, tapi tetap cek ya';
+
+                const publicId = data.public_id || json.public_id;
+                const shareUrl =
+                    data.share_url ||
+                    json.share_url ||
+                    (publicId
+                        ? `${window.location.origin}/scans/${publicId}`
+                        : undefined);
+
+                setScanResult({
+                    level,
+                    badgeLabel,
+                    headline:
+                        data.summary ||
+                        'Hasil analisis pola pesan mencurigakan.',
+                    suspiciousPoints:
+                        Array.isArray(data.red_flags) &&
+                        data.red_flags.length > 0
+                            ? data.red_flags
+                            : Array.isArray(data.redFlags) &&
+                                data.redFlags.length > 0
+                              ? data.redFlags
+                              : [
+                                    'Pola pesan mengandung desakan waktu atau penawaran yang tidak lazim.',
+                                ],
+                    explanation:
+                        data.recommendation ||
+                        (Array.isArray(data.recommendations) &&
+                            data.recommendations[0]) ||
+                        'Periksa kembali kontak pengirim sebelum mengklik tautan atau mengirim data pribadi.',
+                    recommendedActions:
+                        Array.isArray(data.recommendations) &&
+                        data.recommendations.length > 0
+                            ? data.recommendations
+                            : [
+                                  'Jangan transfer uang dalam jumlah berapa pun.',
+                                  'Jangan klik tautan atau instal berkas mencurigakan.',
+                                  'Laporkan nomor pengirim ke kanal pengaduan resmi.',
+                              ],
+                    publicId,
+                    shareUrl,
+                    score: typeof data.score === 'number' ? data.score : undefined,
+                });
+                setScanState('result');
+                return;
+            }
+        } catch (err) {
+            console.error('Network analysis error, falling back to local heuristic:', err);
         }
 
-        // Fallback heuristik edukatif cepat
+        // Fallback heuristik edukatif cepat jika offline/gangguan
         setTimeout(() => {
             if (activeTab === 'text') {
                 const lower = inputText.toLowerCase();
@@ -745,6 +857,7 @@ export default function Welcome() {
     const resetScan = () => {
         setScanState('idle');
         setScanResult(null);
+        setCopiedShareLink(false);
     };
 
     return (
@@ -923,49 +1036,95 @@ export default function Welcome() {
 
                                 {activeTab === 'image' && (
                                     <div className="mb-4">
-                                        <label className="mb-2 block text-sm font-bold text-[#3B2A1E]">
-                                            Unggah tangkapan layar (struk
-                                            transfer, bukti chat, profil):
-                                        </label>
-                                        <div
-                                            className="cursor-pointer rounded-2xl border-2 border-dashed border-[#8ECDF0] bg-[#FFF8EC]/40 p-6 text-center transition-colors hover:bg-[#FFE27A]/20 sm:p-8"
-                                            onClick={() =>
-                                                setSelectedImageName(
-                                                    'bukti_transfer_palsu.png',
-                                                )
-                                            }
+                                        <label
+                                            htmlFor="screenshot-file-input"
+                                            className="mb-2 block text-sm font-bold text-[#3B2A1E]"
                                         >
-                                            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-[#8ECDF0]">
-                                                <svg
-                                                    className="h-6 w-6 text-[#3B2A1E]"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    aria-hidden="true"
-                                                >
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                    <polyline points="17 8 12 3 7 8" />
-                                                    <line
-                                                        x1="12"
-                                                        y1="3"
-                                                        x2="12"
-                                                        y2="15"
-                                                    />
-                                                </svg>
+                                            Unggah tangkapan layar (struk transfer, bukti chat, profil):
+                                        </label>
+
+                                        <input
+                                            id="screenshot-file-input"
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/jpg,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleFileSelect(file);
+                                            }}
+                                        />
+
+                                        {imagePreviewUrl ? (
+                                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF8EC]/60 p-4 sm:p-5">
+                                                <div className="flex flex-col sm:flex-row items-center gap-4">
+                                                    <div className="relative overflow-hidden rounded-xl border-2 border-[#3B2A1E] bg-white shadow-sm max-h-48">
+                                                        <img
+                                                            src={imagePreviewUrl}
+                                                            alt="Pratinjau tangkapan layar"
+                                                            className="max-h-48 w-auto object-contain"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 text-center sm:text-left">
+                                                        <p className="text-sm font-bold text-[#3B2A1E] break-all">
+                                                            {selectedImageName}
+                                                        </p>
+                                                        {selectedImageFile && (
+                                                            <p className="text-xs text-[#6B5646] mt-0.5">
+                                                                Ukuran: {(selectedImageFile.size / 1024).toFixed(1)} KB
+                                                            </p>
+                                                        )}
+                                                        <div className="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => fileInputRef.current?.click()}
+                                                                className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border-2 border-[#3B2A1E] bg-white px-3.5 py-2 text-xs font-bold text-[#3B2A1E] hover:bg-[#FFE27A] transition-colors"
+                                                            >
+                                                                <UploadCloud className="h-4 w-4 text-[#3B2A1E]" />
+                                                                <span>Ganti Foto</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={resetImage}
+                                                                className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border-2 border-[#3B2A1E] bg-[#FFF8EC] px-3.5 py-2 text-xs font-bold text-[#A8412A] hover:bg-[#FFE27A] transition-colors"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                                <span>Hapus</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <p className="mb-1 text-sm font-bold text-[#3B2A1E]">
-                                                {selectedImageName
-                                                    ? `Berkas terpilih: ${selectedImageName}`
-                                                    : 'Klik untuk pilih foto atau tarik berkas ke sini'}
-                                            </p>
-                                            <p className="text-xs text-[#6B5646]">
-                                                Mendukung format JPG atau PNG
-                                                (Maksimal 5 MB)
-                                            </p>
-                                        </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => fileInputRef.current?.click()}
+                                                onDragOver={handleDragOver}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={handleDrop}
+                                                className={`cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:p-8 ${
+                                                    isDragging
+                                                        ? 'border-[#FF9A3C] bg-[#FFE27A]/30'
+                                                        : 'border-[#8ECDF0] bg-[#FFF8EC]/40 hover:bg-[#FFE27A]/20'
+                                                }`}
+                                            >
+                                                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-[#8ECDF0]">
+                                                    <UploadCloud className="h-6 w-6 text-[#3B2A1E]" />
+                                                </div>
+                                                <p className="mb-1 text-sm font-bold text-[#3B2A1E]">
+                                                    Klik untuk pilih foto atau tarik berkas ke sini
+                                                </p>
+                                                <p className="text-xs text-[#6B5646]">
+                                                    Mendukung format JPG, JPEG, PNG, atau WebP (Maksimal 5 MB)
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {imageError && (
+                                            <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#D4573A] bg-[#FFF8EC] p-3 text-xs font-bold text-[#A8412A]">
+                                                <AlertTriangle className="h-4 w-4 shrink-0 text-[#A8412A]" />
+                                                <span>{imageError}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -1193,6 +1352,79 @@ export default function Welcome() {
                                                 )}
                                             </div>
                                         </div>
+
+                                        {/* Bagian Aksi & Berbagi Hasil */}
+                                        {scanResult.shareUrl && (
+                                            <div className="mt-5 rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 sm:p-5">
+                                                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-[#3B2A1E]">
+                                                    Bagikan atau Simpan Hasil Pemeriksaan:
+                                                </span>
+                                                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                                                    <input
+                                                        type="text"
+                                                        readOnly
+                                                        value={scanResult.shareUrl}
+                                                        className="flex-1 rounded-xl border-2 border-[#3B2A1E] bg-[#FFF8EC] px-3 py-2 text-xs font-mono text-[#3B2A1E] select-all focus:outline-none"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            if (!scanResult.shareUrl) return;
+                                                            try {
+                                                                await navigator.clipboard.writeText(scanResult.shareUrl);
+                                                                setCopiedShareLink(true);
+                                                                setTimeout(() => setCopiedShareLink(false), 2500);
+                                                            } catch (err) {
+                                                                console.error('Clipboard copy failed:', err);
+                                                            }
+                                                        }}
+                                                        className="flex h-11 min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 text-xs font-bold text-[#3B2A1E] transition-colors hover:bg-[#FF9A3C] active:translate-y-0.5"
+                                                    >
+                                                        {copiedShareLink ? (
+                                                            <>
+                                                                <Check className="h-4 w-4 text-[#3B2A1E]" />
+                                                                <span>Tersalin!</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Copy className="h-4 w-4 text-[#3B2A1E]" />
+                                                                <span>Salin Link Hasil</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (!scanResult.shareUrl) return;
+                                                            const message =
+                                                                `*Peringatan Keamanan CEKARA*\n\n` +
+                                                                `Status: *${scanResult.badgeLabel}*\n` +
+                                                                `Ringkasan: "${scanResult.headline}"\n\n` +
+                                                                `Lihat rincian hasil investigasi di sini:\n${scanResult.shareUrl}\n\n` +
+                                                                `_Cek dulu sebelum percaya bersama Cekara._`;
+                                                            const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                                                            window.open(waUrl, '_blank', 'noopener,noreferrer');
+                                                        }}
+                                                        className="flex h-11 min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#8ECDF0] px-4 text-xs font-bold text-[#3B2A1E] transition-colors hover:bg-[#78bfe6] active:translate-y-0.5"
+                                                    >
+                                                        <Share2 className="h-4 w-4 text-[#3B2A1E]" />
+                                                        <span>Bagikan ke WhatsApp</span>
+                                                    </button>
+                                                </div>
+
+                                                {scanResult.publicId && (
+                                                    <div className="mt-3 pt-3 border-t border-[#EFE3D0] flex justify-end">
+                                                        <Link
+                                                            href={`/scans/${scanResult.publicId}`}
+                                                            className="inline-flex min-h-[44px] items-center gap-2 text-xs font-bold text-[#3B2A1E] hover:text-[#FF9A3C] hover:underline"
+                                                        >
+                                                            <span>Buka Laporan Investigasi Lengkap</span>
+                                                            <ArrowRight className="h-3.5 w-3.5 text-[#FF9A3C]" />
+                                                        </Link>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Catatan Transparansi Produk */}
                                         <p className="mt-4 border-t border-[#EFE3D0] pt-4 text-xs text-[#6B5646]">

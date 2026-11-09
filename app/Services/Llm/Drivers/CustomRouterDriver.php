@@ -48,13 +48,35 @@ SYS;
             $headers = array_merge($headers, $this->provider->custom_headers);
         }
 
+        $userContent = $content;
+
+        if (! empty($context['image']['data']) && ! empty($context['image']['mime_type'])) {
+            $mimeType = $context['image']['mime_type'];
+            $base64 = $context['image']['data'];
+            $dataUri = "data:{$mimeType};base64,{$base64}";
+            $promptText = trim($content) !== '' ? $content : 'Tangkapan layar percakapan terlampir untuk dianalisis indikasi penipuan digital.';
+
+            $userContent = [
+                [
+                    'type' => 'text',
+                    'text' => $promptText,
+                ],
+                [
+                    'type' => 'image_url',
+                    'image_url' => [
+                        'url' => $dataUri,
+                    ],
+                ],
+            ];
+        }
+
         $response = Http::withHeaders($headers)
-            ->timeout(10)
+            ->timeout(15)
             ->post($endpoint, [
                 'model' => $model,
                 'messages' => [
                     ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $content],
+                    ['role' => 'user', 'content' => $userContent],
                 ],
                 'temperature' => 0.2,
             ]);

@@ -39,14 +39,36 @@ Format balasan HARUS JSON murni dengan format:
 }
 SYS;
 
+        $userContent = $content;
+
+        if (! empty($context['image']['data']) && ! empty($context['image']['mime_type'])) {
+            $mimeType = $context['image']['mime_type'];
+            $base64 = $context['image']['data'];
+            $dataUri = "data:{$mimeType};base64,{$base64}";
+            $promptText = trim($content) !== '' ? $content : 'Tangkapan layar percakapan terlampir untuk dianalisis indikasi penipuan digital.';
+
+            $userContent = [
+                [
+                    'type' => 'text',
+                    'text' => $promptText,
+                ],
+                [
+                    'type' => 'image_url',
+                    'image_url' => [
+                        'url' => $dataUri,
+                    ],
+                ],
+            ];
+        }
+
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
-        ])->timeout(10)->post($endpoint, [
+        ])->timeout(15)->post($endpoint, [
             'model' => $model,
             'messages' => [
                 ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user', 'content' => $content],
+                ['role' => 'user', 'content' => $userContent],
             ],
             'response_format' => ['type' => 'json_object'],
             'temperature' => 0.2,

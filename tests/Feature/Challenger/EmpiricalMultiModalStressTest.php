@@ -369,7 +369,7 @@ describe('Section 4: Payload Matrix Permutations', function () {
 */
 
 describe('Section 5: Auth vs Guest Scan Persistence Verification', function () {
-    test('guest: image scan produces analysis without persisting rows to scans table', function () {
+    test('guest: image scan produces analysis and persists row with user_id null and public storage', function () {
         $file = UploadedFile::fake()->image('guest_screenshot.png', 500, 500);
 
         $this->assertDatabaseCount('scans', 0);
@@ -379,14 +379,17 @@ describe('Section 5: Auth vs Guest Scan Persistence Verification', function () {
         ]);
 
         $response->assertOk();
-        $this->assertDatabaseCount('scans', 0);
+        $this->assertDatabaseCount('scans', 1);
 
-        // Verify no permanent file stored for guest
+        $scan = Scan::first();
+        expect($scan->user_id)->toBeNull();
+        expect($scan->public_id)->not->toBeEmpty();
+
         $storedFiles = Storage::disk('public')->allFiles('scans');
-        expect(count($storedFiles))->toBe(0);
+        expect(count($storedFiles))->toBe(1);
     });
 
-    test('guest: text-only scan produces analysis without persisting rows to scans table', function () {
+    test('guest: text-only scan produces analysis and persists row with user_id null', function () {
         $this->assertDatabaseCount('scans', 0);
 
         $response = $this->postJson('/chat/analyze', [
@@ -394,10 +397,14 @@ describe('Section 5: Auth vs Guest Scan Persistence Verification', function () {
         ]);
 
         $response->assertOk();
-        $this->assertDatabaseCount('scans', 0);
+        $this->assertDatabaseCount('scans', 1);
+
+        $scan = Scan::first();
+        expect($scan->user_id)->toBeNull();
+        expect($scan->public_id)->not->toBeEmpty();
     });
 
-    test('guest: phishing URL scan produces analysis without persisting rows to scans table', function () {
+    test('guest: phishing URL scan produces analysis and persists row with user_id null', function () {
         $this->assertDatabaseCount('scans', 0);
 
         $response = $this->postJson('/chat/analyze', [
@@ -406,7 +413,11 @@ describe('Section 5: Auth vs Guest Scan Persistence Verification', function () {
 
         $response->assertOk();
         expect(strtolower($response->json('data.risk_level')))->toBeIn(['high', 'danger', 'tinggi']);
-        $this->assertDatabaseCount('scans', 0);
+        $this->assertDatabaseCount('scans', 1);
+
+        $scan = Scan::first();
+        expect($scan->user_id)->toBeNull();
+        expect($scan->public_id)->not->toBeEmpty();
     });
 
     test('auth: authenticated user image scan persists exactly 1 row to scans table with user_id', function () {

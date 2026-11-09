@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
+ * @property string|null $public_id
  * @property int|null $user_id
  * @property string $scan_type
  * @property string $content
@@ -27,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
+    'public_id',
     'user_id',
     'scan_type',
     'content',
@@ -44,6 +47,18 @@ class Scan extends Model
 {
     /** @use HasFactory<ScanFactory> */
     use HasFactory;
+
+    /**
+     * Bootstrap the model and its events.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Scan $scan): void {
+            if (empty($scan->public_id)) {
+                $scan->public_id = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.

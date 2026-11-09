@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ProfileController;
@@ -17,6 +18,22 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 });
+
+// Email Verification Routes (accessible during registration & verification flow)
+Route::get('verify-email', [EmailVerificationController::class, 'notice'])
+    ->name('verification.notice');
+
+Route::post('email/verification-notification', [EmailVerificationController::class, 'send'])
+    ->middleware('throttle:6,1')
+    ->name('verification.send');
+
+Route::get('verify-email/{id}/{hash}', [EmailVerificationController::class, 'showVerifyPage'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
+
+Route::post('verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.confirm');
 
 Route::middleware('auth')->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])

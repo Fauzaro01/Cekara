@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,13 +43,25 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        if (! Auth::validate($this->only('email', 'password'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
+
+        $user = User::where('email', $this->input('email'))->first();
+
+        if ($user && ! $user->hasVerifiedEmail()) {
+            session(['verification_email' => $user->email]);
+
+            throw ValidationException::withMessages([
+                'email' => 'Alamat email Anda belum diverifikasi. Silakan buka email yang telah kami kirimkan dan tekan tombol verifikasi terlebih dahulu.',
+            ]);
+        }
+
+        Auth::attempt($this->only('email', 'password'), $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
     }

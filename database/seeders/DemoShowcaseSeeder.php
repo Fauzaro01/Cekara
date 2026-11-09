@@ -30,6 +30,7 @@ class DemoShowcaseSeeder extends Seeder
                 'name' => 'Admin Guardian Cekara',
                 'password' => Hash::make('password'),
                 'is_admin' => true,
+                'email_verified_at' => now(),
             ]
         );
 
@@ -40,6 +41,7 @@ class DemoShowcaseSeeder extends Seeder
                 'name' => 'Fauzar (Master Guardian)',
                 'password' => Hash::make('password'),
                 'is_admin' => false,
+                'email_verified_at' => now(),
             ]
         );
 
@@ -50,6 +52,7 @@ class DemoShowcaseSeeder extends Seeder
                 'name' => 'Budi Santoso (Guardian Muda)',
                 'password' => Hash::make('password'),
                 'is_admin' => false,
+                'email_verified_at' => now(),
             ]
         );
 

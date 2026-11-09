@@ -50,8 +50,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/llm-providers/{provider}/activate', [LlmProviderController::class, 'activate'])->name('llm-providers.activate');
 });
 
-// Authenticated User Routes (Auth Gate)
-Route::middleware('auth')->group(function () {
+// Authenticated User Routes (Auth & Email Verified Gate)
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::delete('/scans/{id}', [DashboardController::class, 'destroyScan'])
         ->whereNumber('id')

@@ -91,9 +91,19 @@ export default function Login({ status }: LoginProps) {
                                 required
                             />
                             {errors.email && (
-                                <p className="mt-1 text-sm font-medium text-red-600">
-                                    {errors.email}
-                                </p>
+                                <div className="mt-1 space-y-1.5">
+                                    <p className="text-sm font-medium text-red-600">
+                                        {errors.email}
+                                    </p>
+                                    {errors.email.includes('belum diverifikasi') && (
+                                        <Link
+                                            href="/verify-email"
+                                            className="inline-block text-xs font-bold text-[#E06812] hover:underline"
+                                        >
+                                            Belum menerima email? Kirim ulang tautan verifikasi &rarr;
+                                        </Link>
+                                    )}
+                                </div>
                             )}
                         </div>
 

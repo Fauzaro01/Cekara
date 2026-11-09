@@ -11,7 +11,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-label={isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
             title={isDark ? 'Mode Terang' : 'Mode Gelap'}
             className={cn(
-                'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                'inline-flex h-11 min-h-[44px] w-11 cursor-pointer items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] transition-colors hover:bg-[#FFE27A] focus-visible:ring-2 focus-visible:ring-[#3B2A1E] focus-visible:outline-none',
                 className,
             )}
         >
@@ -25,7 +25,7 @@ export function ThemeToggle({ className }: { className?: string }) {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="size-4"
+                    className="size-5"
                 >
                     <circle cx="12" cy="12" r="4" />
                     <path d="M12 2v2" />
@@ -47,7 +47,7 @@ export function ThemeToggle({ className }: { className?: string }) {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="size-4"
+                    className="size-5"
                 >
                     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
                 </svg>

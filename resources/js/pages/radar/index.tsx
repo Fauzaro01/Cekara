@@ -10,10 +10,7 @@ import {
     Layers,
     MapPin,
     MessageCircle,
-    Plus,
-    Radio,
     Search,
-    Send,
     Share2,
     ShieldAlert,
     Sparkles,
@@ -22,9 +19,8 @@ import {
     X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 
 interface ThreatAlert {
@@ -53,7 +49,7 @@ interface Props {
         sort: string;
         search: string;
     };
-    stats: Stats;
+    stats?: Stats;
 }
 
 const categories = [
@@ -68,7 +64,6 @@ const categories = [
 export default function CommunityRadarIndex({
     alerts: initialAlerts,
     filters,
-    stats,
 }: Props) {
     const [alerts, setAlerts] = useState<ThreatAlert[]>(initialAlerts);
     const [selectedCategory, setSelectedCategory] = useState<string>(
@@ -79,17 +74,7 @@ export default function CommunityRadarIndex({
     );
     const [sortBy, setSortBy] = useState<string>(filters.sort || 'trending');
     const [upvotedIds, setUpvotedIds] = useState<number[]>([]);
-    const [isReporting, setIsReporting] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
-
-    // Form states
-    const [formTitle, setFormTitle] = useState('');
-    const [formCategory, setFormCategory] = useState('apk_malware');
-    const [formPlatform, setFormPlatform] = useState('WhatsApp');
-    const [formLocation, setFormLocation] = useState('');
-    const [formDescription, setFormDescription] = useState('');
-    const [formEvidence, setFormEvidence] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const getXsrfToken = () => {
         if (typeof document === 'undefined') {
@@ -133,48 +118,6 @@ export default function CommunityRadarIndex({
         }
     };
 
-    const handleReportSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
-        try {
-            const res = await fetch('/radar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-XSRF-TOKEN': getXsrfToken(),
-                },
-                body: JSON.stringify({
-                    title: formTitle,
-                    category: formCategory,
-                    platform: formPlatform,
-                    location: formLocation,
-                    description: formDescription,
-                    evidence_text: formEvidence,
-                }),
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                setNotification(data.message);
-                setFormTitle('');
-                setFormLocation('');
-                setFormDescription('');
-                setFormEvidence('');
-                setIsReporting(false);
-            } else {
-                setNotification(data.message || 'Gagal mengirim laporan.');
-            }
-        } catch {
-            setNotification('Terjadi kendala jaringan saat mengirim laporan.');
-        } finally {
-            setIsSubmitting(false);
-            setTimeout(() => setNotification(null), 5000);
-        }
-    };
-
     const filteredAlerts = alerts
         .filter((item) => {
             if (
@@ -207,79 +150,20 @@ export default function CommunityRadarIndex({
             <Head title="Radar Ancaman Komunitas - Cekara" />
 
             {/* Hero Section */}
-            <section className="relative overflow-hidden border-b border-slate-200/80 bg-linear-to-b from-slate-50/80 to-white py-12 dark:border-slate-800 dark:from-slate-900/40 dark:to-slate-950">
+            <section className="relative overflow-hidden bg-[#FFF8EC] pt-8 pb-4 sm:pt-12 sm:pb-6">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="brand">
-                                    <Radio className="mr-1 size-3" />
-                                    Sistem Peringatan Dini
-                                </Badge>
-                                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                    <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
-                                    Live Community Radar
-                                </span>
-                            </div>
-                            <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
+                            <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
                                 Radar Ancaman Komunitas
                             </h1>
-                            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#6B5646] sm:text-base">
                                 Pantau modus kejahatan siber terkini di
                                 Indonesia. Laporan nyata yang dikurasi dan
                                 divalidasi langsung oleh komunitas Guardian
                                 untuk melindungi ruang digital bersama.
                             </p>
                         </div>
-
-                        <Button
-                            variant="primary"
-                            onClick={() => setIsReporting(!isReporting)}
-                            className="shrink-0 shadow-sm"
-                        >
-                            {isReporting ? (
-                                <>
-                                    <X className="mr-1.5 size-4" />
-                                    Tutup Formulir
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="mr-1.5 size-4" />
-                                    Laporkan Modus Baru
-                                </>
-                            )}
-                        </Button>
-                    </div>
-
-                    {/* Stats Highlights */}
-                    <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                        <Card variant="floating" className="p-4">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Modus Terverifikasi
-                            </span>
-                            <div className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-slate-100">
-                                {stats.total_alerts} Pola
-                            </div>
-                        </Card>
-                        <Card variant="floating" className="p-4">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Konfirmasi Warga
-                            </span>
-                            <div className="mt-1 text-2xl font-extrabold text-brand-600 dark:text-brand-400">
-                                {stats.total_confirmed_cases}+ Korban
-                            </div>
-                        </Card>
-                        <Card
-                            variant="floating"
-                            className="col-span-2 p-4 sm:col-span-1"
-                        >
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Platform Paling Rawan
-                            </span>
-                            <div className="mt-1 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-                                {stats.top_targeted_platform}
-                            </div>
-                        </Card>
                     </div>
                 </div>
             </section>
@@ -294,205 +178,46 @@ export default function CommunityRadarIndex({
                 </div>
             )}
 
-            {/* Report Form Modal / Collapse */}
-            {isReporting && (
-                <section className="mx-auto max-w-5xl px-6 pt-6">
-                    <Card
-                        variant="glass"
-                        className="border-brand-200/80 bg-brand-50/20 p-6 sm:p-8 dark:border-brand-900/50 dark:bg-brand-950/20"
-                    >
-                        <div className="flex items-center gap-2">
-                            <Badge variant="brand">Formulir Pelaporan</Badge>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                                Pola Baru
-                            </span>
-                        </div>
-                        <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">
-                            Laporkan Temuan Modus Penipuan Baru
-                        </h2>
-                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                            Laporan Anda akan dianalisis dan diterbitkan pada
-                            Radar Komunitas agar masyarakat luas lebih waspada.
-                        </p>
-
-                        <form
-                            onSubmit={handleReportSubmit}
-                            className="mt-6 space-y-4"
-                        >
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                                        Judul / Nama Modus *
-                                    </label>
-                                    <Input
-                                        value={formTitle}
-                                        onChange={(e) =>
-                                            setFormTitle(e.target.value)
-                                        }
-                                        placeholder="Contoh: Modus QRIS Tempelan di Kafe XYZ"
-                                        required
-                                        className="mt-1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                                        Kota / Wilayah Kejadian
-                                    </label>
-                                    <Input
-                                        value={formLocation}
-                                        onChange={(e) =>
-                                            setFormLocation(e.target.value)
-                                        }
-                                        placeholder="Contoh: Bandung, Jawa Barat"
-                                        className="mt-1"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                                        Kategori *
-                                    </label>
-                                    <select
-                                        value={formCategory}
-                                        onChange={(e) =>
-                                            setFormCategory(e.target.value)
-                                        }
-                                        className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
-                                    >
-                                        <option value="apk_malware">
-                                            Malware APK
-                                        </option>
-                                        <option value="phishing_banking">
-                                            Phishing Bank
-                                        </option>
-                                        <option value="fake_job">
-                                            Lowongan Palsu
-                                        </option>
-                                        <option value="social_engineering">
-                                            Rekayasa Sosial
-                                        </option>
-                                        <option value="fake_giveaway">
-                                            Undian Palsu
-                                        </option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                                        Platform / Media *
-                                    </label>
-                                    <select
-                                        value={formPlatform}
-                                        onChange={(e) =>
-                                            setFormPlatform(e.target.value)
-                                        }
-                                        className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
-                                    >
-                                        <option value="WhatsApp">
-                                            WhatsApp
-                                        </option>
-                                        <option value="Telegram">
-                                            Telegram
-                                        </option>
-                                        <option value="Instagram">
-                                            Instagram
-                                        </option>
-                                        <option value="SMS / Telepon">
-                                            SMS / Telepon
-                                        </option>
-                                        <option value="QRIS Fisik / Offline">
-                                            QRIS Fisik / Offline
-                                        </option>
-                                        <option value="Situs Web Phishing">
-                                            Situs Web Phishing
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                                    Kronologi & Cara Kerja Penipuan *
-                                </label>
-                                <textarea
-                                    value={formDescription}
-                                    onChange={(e) =>
-                                        setFormDescription(e.target.value)
-                                    }
-                                    placeholder="Jelaskan secara singkat bagaimana pelaku mendekati korban dan apa yang mereka minta..."
-                                    rows={3}
-                                    required
-                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                                    Bukti Pesan / Teks Percakapan (Opsional)
-                                </label>
-                                <textarea
-                                    value={formEvidence}
-                                    onChange={(e) =>
-                                        setFormEvidence(e.target.value)
-                                    }
-                                    placeholder="Kutipan pesan teks atau ciri khas nomor pengirim..."
-                                    rows={2}
-                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 font-mono text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => setIsReporting(false)}
-                                >
-                                    Batal
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={isSubmitting}
-                                >
-                                    <Send className="mr-1.5 size-3.5" />
-                                    {isSubmitting
-                                        ? 'Mengirim...'
-                                        : 'Kirim Laporan Modus'}
-                                </Button>
-                            </div>
-                        </form>
-                    </Card>
-                </section>
-            )}
-
             {/* Filter & Search Bar */}
             <section className="mx-auto max-w-5xl px-6 pt-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     {/* Search */}
-                    <div className="relative max-w-xs flex-1">
-                        <Search className="absolute top-2.5 left-3 size-4 text-slate-400" />
-                        <Input
+                    <div className="relative w-full sm:max-w-sm">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                            <Search className="size-4 text-[#6B5646]" />
+                        </div>
+                        <input
+                            type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari kata kunci atau kota..."
-                            className="pl-9"
+                            className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white pl-10 pr-9 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] transition-all focus:border-[#FF9A3C] focus:bg-[#FFFDF9] focus:outline-none focus:ring-2 focus:ring-[#FF9A3C]/40"
                         />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#6B5646]/70 hover:text-[#3B2A1E] transition-colors cursor-pointer"
+                                title="Hapus pencarian"
+                            >
+                                <X className="size-4" />
+                            </button>
+                        )}
                     </div>
 
                     {/* Sort */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs font-bold text-[#6B5646]">
                             Urutkan:
                         </span>
-                        <div className="flex rounded-xl border border-slate-200/80 bg-slate-100/70 p-1 dark:border-slate-800 dark:bg-slate-900/60">
+                        <div className="flex rounded-xl border-2 border-[#EFE3D0] bg-white p-1">
                             <button
                                 type="button"
                                 onClick={() => setSortBy('trending')}
-                                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all ${
+                                className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
                                     sortBy === 'trending'
-                                        ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-800 dark:text-slate-100'
-                                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                                        ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
+                                        : 'text-[#6B5646] hover:text-[#3B2A1E]'
                                 }`}
                             >
                                 Paling Marak
@@ -500,10 +225,10 @@ export default function CommunityRadarIndex({
                             <button
                                 type="button"
                                 onClick={() => setSortBy('latest')}
-                                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all ${
+                                className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
                                     sortBy === 'latest'
-                                        ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-800 dark:text-slate-100'
-                                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                                        ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
+                                        : 'text-[#6B5646] hover:text-[#3B2A1E]'
                                 }`}
                             >
                                 Terbaru
@@ -513,16 +238,16 @@ export default function CommunityRadarIndex({
                 </div>
 
                 {/* Category Pills */}
-                <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+                <div className="mt-4 flex flex-wrap gap-2 border-b-2 border-[#EFE3D0] pb-4">
                     {categories.map((c) => (
                         <button
                             key={c.key}
                             type="button"
                             onClick={() => setSelectedCategory(c.key)}
-                            className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition-all ${
+                            className={`cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
                                 selectedCategory === c.key
-                                    ? 'bg-brand-600 text-white shadow-xs dark:bg-brand-500'
-                                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                                    ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                    : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/40 hover:text-[#3B2A1E]'
                             }`}
                         >
                             {c.label}

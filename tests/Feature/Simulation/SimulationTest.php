@@ -43,10 +43,19 @@ test('authenticated user sees their guardian stats on simulations index', functi
     );
 });
 
-test('can view a specific simulation scenario', function () {
+test('guest is redirected to login when accessing simulation scenario', function () {
     $scenario = SimulationScenario::first();
 
     $response = $this->get(route('simulations.show', $scenario->slug));
+
+    $response->assertRedirect(route('login'));
+});
+
+test('authenticated user can view a specific simulation scenario', function () {
+    $user = User::factory()->create();
+    $scenario = SimulationScenario::first();
+
+    $response = $this->actingAs($user)->get(route('simulations.show', $scenario->slug));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -59,9 +68,10 @@ test('can view a specific simulation scenario', function () {
 });
 
 test('submitting a safe decision evaluates correctly and saves attempt', function () {
+    $user = User::factory()->create();
     $scenario = SimulationScenario::where('slug', 'surat-undangan-pernikahan-digital-apk')->first();
 
-    $response = $this->postJson(route('simulations.submit', $scenario->slug), [
+    $response = $this->actingAs($user)->postJson(route('simulations.submit', $scenario->slug), [
         'selected_option' => 'B',
         'feedback_notes' => 'Nomor asing mengirim file APK mencurigakan.',
     ]);
@@ -77,6 +87,7 @@ test('submitting a safe decision evaluates correctly and saves attempt', functio
     ]);
 
     $this->assertDatabaseHas('simulation_attempts', [
+        'user_id' => $user->id,
         'simulation_scenario_id' => $scenario->id,
         'selected_option' => 'B',
         'is_safe' => true,
@@ -85,9 +96,10 @@ test('submitting a safe decision evaluates correctly and saves attempt', functio
 });
 
 test('submitting a dangerous decision gives low score and warning explanation', function () {
+    $user = User::factory()->create();
     $scenario = SimulationScenario::where('slug', 'surat-undangan-pernikahan-digital-apk')->first();
 
-    $response = $this->postJson(route('simulations.submit', $scenario->slug), [
+    $response = $this->actingAs($user)->postJson(route('simulations.submit', $scenario->slug), [
         'selected_option' => 'A',
     ]);
 
@@ -103,9 +115,10 @@ test('submitting a dangerous decision gives low score and warning explanation', 
 });
 
 test('submitting non-existent option returns validation error 422', function () {
+    $user = User::factory()->create();
     $scenario = SimulationScenario::first();
 
-    $response = $this->postJson(route('simulations.submit', $scenario->slug), [
+    $response = $this->actingAs($user)->postJson(route('simulations.submit', $scenario->slug), [
         'selected_option' => 'Z',
     ]);
 
@@ -146,4 +159,20 @@ test('contributing scam pattern validates required fields', function () {
 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['title', 'category', 'platform', 'description']);
+});
+
+test('logging in with redirect parameter redirects directly to simulation scenario', function () {
+    $user = User::factory()->create([
+        'password' => bcrypt('password123'),
+    ]);
+    $scenario = SimulationScenario::first();
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password123',
+        'redirect' => "/simulasi/{$scenario->slug}",
+    ]);
+
+    $response->assertRedirect("/simulasi/{$scenario->slug}");
+    $this->assertAuthenticatedAs($user);
 });

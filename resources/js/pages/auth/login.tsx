@@ -11,18 +11,30 @@ interface LoginProps {
 }
 
 export default function Login({ status }: LoginProps) {
+    const urlParams =
+        typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search)
+            : null;
+    const redirectParam = urlParams?.get('redirect') || '';
+
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
         remember: false,
+        redirect: redirectParam,
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        post('/login', {
-            onFinish: () => reset('password'),
-        });
+        post(
+            redirectParam
+                ? `/login?redirect=${encodeURIComponent(redirectParam)}`
+                : '/login',
+            {
+                onFinish: () => reset('password'),
+            },
+        );
     };
 
     return (
@@ -39,6 +51,12 @@ export default function Login({ status }: LoginProps) {
                             Masuk ke akun guardian Cekara Anda
                         </p>
                     </div>
+
+                    {redirectParam && (
+                        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
+                            Silakan masuk terlebih dahulu untuk memulai sesi latihan simulasi Anda.
+                        </div>
+                    )}
 
                     {status && (
                         <div className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -130,7 +148,11 @@ export default function Login({ status }: LoginProps) {
                         <div className="text-center text-sm text-slate-600 dark:text-slate-400">
                             Belum punya akun?{' '}
                             <Link
-                                href="/register"
+                                href={
+                                    redirectParam
+                                        ? `/register?redirect=${encodeURIComponent(redirectParam)}`
+                                        : '/register'
+                                }
                                 className="font-medium text-brand-600 hover:underline dark:text-brand-400"
                             >
                                 Daftar

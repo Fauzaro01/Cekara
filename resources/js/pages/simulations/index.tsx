@@ -1,23 +1,6 @@
 import { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import {
-    AlertTriangle,
-    Award,
-    Briefcase,
-    CheckCircle2,
-    CreditCard,
-    Gamepad2,
-    GraduationCap,
-    HelpCircle,
-    Landmark,
-    Layers,
-    MessageSquare,
-    Send,
-    Shield,
-    ShieldAlert,
-    Sparkles,
-    Users,
-} from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ArrowRight, CheckCircle2, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -51,25 +34,22 @@ interface Props {
     userStats: UserStats;
 }
 
-const categoryIcons: Record<string, typeof Layers> = {
-    all: Layers,
-    apk_malware: ShieldAlert,
-    fake_job: Briefcase,
-    phishing_banking: Landmark,
-    social_engineering: Users,
-    loan_scam: CreditCard,
-};
-
-const categoryLabels: Record<string, string> = {
-    all: 'Semua Kategori',
-    apk_malware: 'Malware APK',
-    fake_job: 'Lowongan Palsu',
-    phishing_banking: 'Phishing Bank',
-    social_engineering: 'Rekayasa Sosial',
-    loan_scam: 'Pinjol Ilegal',
-};
+const categories = [
+    { key: 'all', label: 'Semua Kategori' },
+    { key: 'apk_malware', label: 'Malware APK' },
+    { key: 'phishing_banking', label: 'Phishing Bank' },
+    { key: 'fake_job', label: 'Lowongan Palsu' },
+    { key: 'social_engineering', label: 'Rekayasa Sosial' },
+    { key: 'fake_giveaway', label: 'Undian Palsu' },
+];
 
 export default function SimulationIndex({ scenarios, userStats }: Props) {
+    const { auth } = usePage<{
+        auth?: {
+            user?: { id: number; name: string; email: string } | null;
+        };
+    }>().props;
+    const user = auth?.user;
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [isSubmittingContribution, setIsSubmittingContribution] =
         useState(false);
@@ -88,7 +68,18 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
         if (selectedCategory === 'all') {
             return true;
         }
-        return s.category === selectedCategory;
+        if (s.category === selectedCategory) {
+            return true;
+        }
+        if (selectedCategory === 'social_engineering') {
+            return [
+                'social_engineering',
+                'ai_deepfake',
+                'qris_fraud',
+                'loan_scam',
+            ].includes(s.category);
+        }
+        return false;
     });
 
     const getXsrfToken = () => {
@@ -147,106 +138,30 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
         }
     };
 
-    const getDifficultyBadge = (difficulty: string) => {
-        switch (difficulty) {
-            case 'mudah':
-                return (
-                    <Badge variant="safe" withDot>
-                        Mudah
-                    </Badge>
-                );
-            case 'sulit':
-                return (
-                    <Badge variant="danger" withDot>
-                        Sulit
-                    </Badge>
-                );
-            default:
-                return (
-                    <Badge variant="warn" withDot>
-                        Sedang
-                    </Badge>
-                );
-        }
-    };
-
     return (
         <AppLayout>
             <Head title="Simulasi Interaktif Rekayasa Sosial - Cekara" />
 
             {/* Hero Section */}
-            <section className="relative overflow-hidden border-b border-slate-200/80 bg-linear-to-b from-slate-50/80 to-white py-12 dark:border-slate-800 dark:from-slate-900/40 dark:to-slate-950">
+            <section className="relative overflow-hidden bg-[#FFF8EC] pt-10 pb-2 sm:pt-12 sm:pb-3">
                 <div className="mx-auto max-w-5xl px-6">
-                    <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                        <div className="max-w-2xl">
-                            <Badge
-                                variant="brand"
-                                className="mb-3 px-2.5 py-0.5"
-                            >
-                                <GraduationCap className="mr-1 size-3" />
-                                Pilar Belajar (Learn)
-                            </Badge>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
-                                Simulasi Interaktif Rekayasa Sosial
-                            </h1>
-                            <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-400">
-                                Latih kemampuan mengambil keputusan Anda
-                                menghadapi skenario penipuan digital nyata di
-                                Indonesia. Kenali manipulasi psikologis penipu
-                                sebelum Anda menjadi korban berikutnya.
-                            </p>
-                        </div>
-
-                        {/* Guardian Stats Box */}
-                        <Card
-                            variant="floating"
-                            className="flex flex-col gap-3 p-5 sm:min-w-64"
-                        >
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 dark:border-slate-800">
-                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    Pangkat Guardian
-                                </span>
-                                <Badge variant="brand">
-                                    <Award className="mr-1 size-3" />
-                                    {userStats.guardian_rank}
-                                </Badge>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-500 dark:text-slate-400">
-                                    Penyelesaian
-                                </span>
-                                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                    {userStats.completed_count} dari{' '}
-                                    {userStats.total_scenarios} Skenario
-                                </span>
-                            </div>
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                <div
-                                    className="h-full rounded-full bg-linear-to-r from-brand-500 to-indigo-500 transition-all duration-500"
-                                    style={{
-                                        width: `${(userStats.completed_count / (userStats.total_scenarios || 1)) * 100}%`,
-                                    }}
-                                />
-                            </div>
-                            {userStats.completed_count > 0 && (
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-slate-500 dark:text-slate-400">
-                                        Rata-rata Skor
-                                    </span>
-                                    <span className="flex items-center gap-1 font-semibold text-safe">
-                                        <CheckCircle2 className="size-3" />
-                                        {userStats.average_score} / 100
-                                    </span>
-                                </div>
-                            )}
-                        </Card>
+                    <div className="max-w-3xl">
+                        <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
+                            Simulasi Interaktif Rekayasa Sosial
+                        </h1>
+                        <p className="mt-3 text-sm leading-relaxed text-[#6B5646] sm:text-base">
+                            Latih kemampuan mengambil keputusan Anda menghadapi
+                            skenario penipuan digital nyata di Indonesia. Kenali
+                            manipulasi psikologis penipu sebelum Anda menjadi
+                            korban berikutnya.
+                        </p>
                     </div>
                 </div>
             </section>
 
             {/* Notification / Toast Message */}
             {contributionStatus && (
-                <div className="mx-auto max-w-5xl px-6 pt-6">
+                <div className="mx-auto max-w-5xl px-6 pt-4">
                     <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/80 p-4 text-sm text-brand-900 dark:border-brand-900/50 dark:bg-brand-950/40 dark:text-brand-200">
                         <CheckCircle2 className="size-4 shrink-0 text-brand-600 dark:text-brand-400" />
                         <span>{contributionStatus}</span>
@@ -255,30 +170,22 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
             )}
 
             {/* Filter Categories */}
-            <section className="mx-auto max-w-5xl px-6 pt-8">
-                <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-4 dark:border-slate-800">
-                    {Object.entries(categoryLabels).map(
-                        ([catKey, catLabel]) => {
-                            const IconComponent =
-                                categoryIcons[catKey] || Layers;
-                            const isSelected = selectedCategory === catKey;
-                            return (
-                                <button
-                                    key={catKey}
-                                    type="button"
-                                    onClick={() => setSelectedCategory(catKey)}
-                                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-medium transition-all ${
-                                        isSelected
-                                            ? 'bg-brand-600 text-white shadow-sm dark:bg-brand-500'
-                                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-                                    }`}
-                                >
-                                    <IconComponent className="size-3.5" />
-                                    {catLabel}
-                                </button>
-                            );
-                        },
-                    )}
+            <section className="mx-auto max-w-5xl px-6 pt-4 sm:pt-6">
+                <div className="flex flex-wrap gap-2 border-b-2 border-[#EFE3D0] pb-4">
+                    {categories.map((c) => (
+                        <button
+                            key={c.key}
+                            type="button"
+                            onClick={() => setSelectedCategory(c.key)}
+                            className={`cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                                selectedCategory === c.key
+                                    ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                    : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/40 hover:text-[#3B2A1E]'
+                            }`}
+                        >
+                            {c.label}
+                        </button>
+                    ))}
                 </div>
             </section>
 
@@ -292,9 +199,8 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                             className="flex flex-col justify-between p-6 transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 dark:hover:border-brand-700"
                         >
                             <div>
-                                <div className="flex items-center justify-between gap-2">
-                                    {getDifficultyBadge(scenario.difficulty)}
-                                    {scenario.has_attempted && (
+                                {scenario.has_attempted && (
+                                    <div className="mb-3 flex items-center justify-end">
                                         <Badge
                                             variant={
                                                 scenario.is_safe
@@ -308,20 +214,20 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                                                 : 'Terkecoh'}{' '}
                                             ({scenario.latest_score})
                                         </Badge>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
 
-                                <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-slate-100">
+                                <h3 className="text-base font-bold text-[#3B2A1E]">
                                     {scenario.title}
                                 </h3>
 
-                                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-[#6B5646]">
                                     {scenario.context_description}
                                 </p>
 
-                                <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                <div className="mt-4 flex items-center gap-2 text-xs text-[#6B5646]">
                                     <span>Pengirim:</span>
-                                    <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                                    <span className="truncate font-semibold text-[#3B2A1E]">
                                         {scenario.sender_name}
                                     </span>
                                 </div>
@@ -329,17 +235,23 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
 
                             <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800">
                                 <Link
-                                    href={`/simulasi/${scenario.slug}`}
-                                    className={`w-full ${buttonClasses(
+                                    href={
+                                        user
+                                            ? `/simulasi/${scenario.slug}`
+                                            : `/login?redirect=${encodeURIComponent(`/simulasi/${scenario.slug}`)}`
+                                    }
+                                    className={`group w-full ${buttonClasses(
                                         scenario.has_attempted
                                             ? 'outline'
                                             : 'primary',
                                     )}`}
                                 >
-                                    <Gamepad2 className="mr-1.5 size-4" />
-                                    {scenario.has_attempted
-                                        ? 'Ulangi Simulasi'
-                                        : 'Mulai Latihan'}
+                                    <span>
+                                        {scenario.has_attempted
+                                            ? 'Ulangi Simulasi'
+                                            : 'Mulai Latihan'}
+                                    </span>
+                                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                                 </Link>
                             </div>
                         </Card>
@@ -361,19 +273,10 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                 >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="brand">
-                                    <Sparkles className="mr-1 size-3" />
-                                    Dataset Loop Komunitas
-                                </Badge>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    Pola Nyata dari Guardian
-                                </span>
-                            </div>
-                            <h2 className="mt-2.5 text-xl font-bold text-slate-900 dark:text-slate-100">
+                            <h2 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] sm:text-2xl">
                                 Punya Temuan Modus Penipuan Baru?
                             </h2>
-                            <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-400">
+                            <p className="mt-2 max-w-xl text-xs leading-relaxed text-[#6B5646] sm:text-sm">
                                 Bantu lindungi sesama anak muda Indonesia.
                                 Sumbangan contoh pesan mencurigakan yang Anda
                                 temukan akan dikurasi sebagai dataset untuk
@@ -423,21 +326,16 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                                             }
                                             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
                                         >
-                                            <option value="apk_malware">
-                                                Malware APK
-                                            </option>
-                                            <option value="fake_job">
-                                                Lowongan Palsu
-                                            </option>
-                                            <option value="phishing_banking">
-                                                Phishing Bank
-                                            </option>
-                                            <option value="social_engineering">
-                                                Rekayasa Sosial
-                                            </option>
-                                            <option value="loan_scam">
-                                                Pinjol Ilegal
-                                            </option>
+                                            {categories
+                                                .filter((c) => c.key !== 'all')
+                                                .map((c) => (
+                                                    <option
+                                                        key={c.key}
+                                                        value={c.key}
+                                                    >
+                                                        {c.label}
+                                                    </option>
+                                                ))}
                                         </select>
                                     </div>
                                     <div>

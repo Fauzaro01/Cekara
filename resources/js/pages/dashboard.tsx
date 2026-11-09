@@ -11,14 +11,18 @@ import {
     Image as ImageIcon,
     Link2,
     MessageSquare,
+    Plus,
+    Send,
     Shield,
     ShieldAlert,
     Trash2,
+    X,
     Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import type { Auth } from '@/types/auth';
 
@@ -80,6 +84,70 @@ export default function Dashboard({
         'all' | 'text' | 'image' | 'url'
     >('all');
     const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // Threat report modal state & form
+    const [isReporting, setIsReporting] = useState(false);
+    const [notification, setNotification] = useState<string | null>(null);
+    const [formTitle, setFormTitle] = useState('');
+    const [formCategory, setFormCategory] = useState('apk_malware');
+    const [formPlatform, setFormPlatform] = useState('WhatsApp');
+    const [formLocation, setFormLocation] = useState('');
+    const [formDescription, setFormDescription] = useState('');
+    const [formEvidence, setFormEvidence] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const getXsrfToken = () => {
+        if (typeof document === 'undefined') {
+            return '';
+        }
+        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    };
+
+    const handleReportSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const res = await fetch('/radar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-XSRF-TOKEN': getXsrfToken(),
+                },
+                body: JSON.stringify({
+                    title: formTitle,
+                    category: formCategory,
+                    platform: formPlatform,
+                    location: formLocation || null,
+                    description: formDescription,
+                    evidence_text: formEvidence || null,
+                }),
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setNotification(data.message);
+                setIsReporting(false);
+                setFormTitle('');
+                setFormLocation('');
+                setFormDescription('');
+                setFormEvidence('');
+                setTimeout(() => setNotification(null), 6000);
+            } else {
+                setNotification(
+                    data.message ||
+                        'Gagal mengirim laporan. Pastikan semua kolom terisi dengan benar.',
+                );
+            }
+        } catch {
+            setNotification('Terjadi kendala jaringan saat mengirim laporan.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const filteredScans = useMemo(() => {
         if (activeTab === 'all') {
@@ -184,17 +252,41 @@ export default function Dashboard({
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <Link
-                                href="/#cek-pesan"
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsReporting(true)}
                                 className={`${buttonClasses('primary')} shadow-sm`}
                             >
-                                <Zap className="mr-1.5 size-4 text-brand-200" />
+                                <Plus className="mr-1.5 size-4" />
+                                Laporkan Modus Baru
+                            </button>
+                            <Link
+                                href="/#cek-pesan"
+                                className={`${buttonClasses('outline')} shadow-sm`}
+                            >
+                                <Zap className="mr-1.5 size-4 text-brand-500" />
                                 Analisis Pesan
                             </Link>
                         </div>
                     </div>
                 </div>
+
+                {/* Notification Toast */}
+                {notification && (
+                    <div className="mb-8 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#3B2A1E] bg-[#8ECDF0] p-4 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="size-4 shrink-0 text-[#3B2A1E]" />
+                            <span>{notification}</span>
+                        </div>
+                        <Link
+                            href="/radar"
+                            className="shrink-0 rounded-xl border-2 border-[#3B2A1E] bg-[#FFF8EC] px-3 py-1.5 text-xs font-bold text-[#3B2A1E] shadow-[1px_1px_0px_0px_#3B2A1E] transition hover:bg-[#FFE27A]"
+                        >
+                            Buka Radar Komunitas
+                        </Link>
+                    </div>
+                )}
 
                 {/* Guardian Metrics (4 Cards Grid) */}
                 <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -671,6 +763,187 @@ export default function Dashboard({
                     </div>
                 )}
             </div>
+
+            {/* Modal Laporkan Modus Baru */}
+            {isReporting && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="fixed inset-0 bg-[#3B2A1E]/50 backdrop-blur-xs transition-opacity"
+                        onClick={() => !isSubmitting && setIsReporting(false)}
+                    />
+                    <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] p-6 shadow-[6px_6px_0px_0px_#3B2A1E] sm:p-8">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <Badge variant="brand">
+                                    Formulir Pelaporan • Radar Komunitas
+                                </Badge>
+                                <h2 className="mt-2 font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] sm:text-2xl">
+                                    Laporkan Temuan Modus Penipuan Baru
+                                </h2>
+                                <p className="mt-1 text-xs text-[#6B5646] sm:text-sm">
+                                    Laporan dari akun Anda akan dianalisis dan diterbitkan pada Radar Komunitas agar masyarakat luas lebih waspada.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsReporting(false)}
+                                className="rounded-xl border-2 border-transparent p-1.5 text-[#6B5646] transition hover:border-[#3B2A1E] hover:bg-[#FFE27A] hover:text-[#3B2A1E]"
+                            >
+                                <X className="size-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleReportSubmit} className="mt-6 space-y-4">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-xs font-bold text-[#3B2A1E]">
+                                        Judul / Nama Modus *
+                                    </label>
+                                    <Input
+                                        value={formTitle}
+                                        onChange={(e) =>
+                                            setFormTitle(e.target.value)
+                                        }
+                                        placeholder="Contoh: Modus QRIS Tempelan di Kafe XYZ"
+                                        required
+                                        className="mt-1 border-2 border-[#3B2A1E] bg-white font-medium focus:ring-[#3B2A1E]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-[#3B2A1E]">
+                                        Kota / Wilayah Kejadian
+                                    </label>
+                                    <Input
+                                        value={formLocation}
+                                        onChange={(e) =>
+                                            setFormLocation(e.target.value)
+                                        }
+                                        placeholder="Contoh: Bandung, Jawa Barat"
+                                        className="mt-1 border-2 border-[#3B2A1E] bg-white font-medium focus:ring-[#3B2A1E]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-xs font-bold text-[#3B2A1E]">
+                                        Kategori *
+                                    </label>
+                                    <select
+                                        value={formCategory}
+                                        onChange={(e) =>
+                                            setFormCategory(e.target.value)
+                                        }
+                                        className="mt-1 h-10 w-full rounded-xl border-2 border-[#3B2A1E] bg-white px-3 text-xs font-semibold text-[#3B2A1E] focus:outline-none focus:ring-2 focus:ring-[#3B2A1E]"
+                                    >
+                                        <option value="apk_malware">
+                                            Malware APK
+                                        </option>
+                                        <option value="phishing_banking">
+                                            Phishing Bank
+                                        </option>
+                                        <option value="fake_job">
+                                            Lowongan Palsu
+                                        </option>
+                                        <option value="social_engineering">
+                                            Rekayasa Sosial
+                                        </option>
+                                        <option value="fake_giveaway">
+                                            Undian Palsu
+                                        </option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-[#3B2A1E]">
+                                        Platform / Media *
+                                    </label>
+                                    <select
+                                        value={formPlatform}
+                                        onChange={(e) =>
+                                            setFormPlatform(e.target.value)
+                                        }
+                                        className="mt-1 h-10 w-full rounded-xl border-2 border-[#3B2A1E] bg-white px-3 text-xs font-semibold text-[#3B2A1E] focus:outline-none focus:ring-2 focus:ring-[#3B2A1E]"
+                                    >
+                                        <option value="WhatsApp">
+                                            WhatsApp
+                                        </option>
+                                        <option value="Telegram">
+                                            Telegram
+                                        </option>
+                                        <option value="Instagram">
+                                            Instagram
+                                        </option>
+                                        <option value="SMS / Telepon">
+                                            SMS / Telepon
+                                        </option>
+                                        <option value="QRIS Fisik / Offline">
+                                            QRIS Fisik / Offline
+                                        </option>
+                                        <option value="Situs Web Phishing">
+                                            Situs Web Phishing
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-[#3B2A1E]">
+                                    Kronologi & Cara Kerja Penipuan *
+                                </label>
+                                <textarea
+                                    value={formDescription}
+                                    onChange={(e) =>
+                                        setFormDescription(e.target.value)
+                                    }
+                                    placeholder="Jelaskan secara singkat bagaimana pelaku mendekati korban dan apa yang mereka minta..."
+                                    rows={3}
+                                    required
+                                    className="mt-1 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white p-3 text-xs font-medium text-[#3B2A1E] focus:outline-none focus:ring-2 focus:ring-[#3B2A1E]"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-[#3B2A1E]">
+                                    Bukti Pesan / Teks Percakapan (Opsional)
+                                </label>
+                                <textarea
+                                    value={formEvidence}
+                                    onChange={(e) =>
+                                        setFormEvidence(e.target.value)
+                                    }
+                                    placeholder="Kutipan pesan teks atau ciri khas nomor pengirim..."
+                                    rows={2}
+                                    className="mt-1 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white p-3 font-mono text-xs text-[#3B2A1E] focus:outline-none focus:ring-2 focus:ring-[#3B2A1E]"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReporting(false)}
+                                    className={buttonClasses('outline')}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className={buttonClasses('primary')}
+                                >
+                                    <Send className="mr-1.5 size-3.5" />
+                                    {isSubmitting
+                                        ? 'Mengirim...'
+                                        : 'Kirim Laporan Modus'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

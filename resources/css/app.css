@@ -6,38 +6,12 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans:
-        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-heading: 'Fredoka', system-ui, -apple-system, sans-serif;
     --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
-
-    /* Full modern Sky-Brand scale in OKLCH */
-    --color-brand-50: oklch(0.977 0.015 236);
-    --color-brand-100: oklch(0.951 0.028 236);
-    --color-brand-200: oklch(0.901 0.058 232);
-    --color-brand-300: oklch(0.825 0.098 233);
-    --color-brand-400: oklch(0.745 0.138 235);
-    --color-brand-500: oklch(0.665 0.165 238);
-    --color-brand-600: oklch(0.575 0.16 241);
-    --color-brand-700: oklch(0.49 0.138 243);
-    --color-brand-800: oklch(0.41 0.112 245);
-    --color-brand-900: oklch(0.32 0.082 247);
-    --color-brand-950: oklch(0.22 0.055 249);
-
-    /* Semantic status accents */
-    --color-danger: oklch(0.577 0.245 27);
-    --color-safe: oklch(0.627 0.194 149);
-    --color-warn: oklch(0.769 0.188 70);
-
-    /* Spatial layout tokens */
-    --radius-card: 0.875rem;
-    --radius-pill: 9999px;
-
-    /* Hairline & Diffused Floating Shadows */
-    --shadow-hairline: 0 0 0 1px rgb(15 23 42 / 0.06);
-    --shadow-floating:
-        0 16px 36px -12px rgb(15 23 42 / 0.08), 0 0 0 1px rgb(15 23 42 / 0.04);
+    --font-sans:
+        'Inter', 'Nunito', system-ui, -apple-system, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
 
     /* Palet Es Jeruk dan Krem */
     --color-cream: #fff8ec;
@@ -48,6 +22,33 @@
     --color-brown-milk: #6b5646;
     --color-terracotta: #d4573a;
     --color-terracotta-dark: #a8412a;
+
+    /* Brand Scale mapped to Cekara warm citrus palette */
+    --color-brand-50: #fff8ec;
+    --color-brand-100: #ffebd4;
+    --color-brand-200: #fed4a9;
+    --color-brand-300: #fdb872;
+    --color-brand-400: #ff9a3c;
+    --color-brand-500: #f58220;
+    --color-brand-600: #e06812;
+    --color-brand-700: #ba4f10;
+    --color-brand-800: #943e14;
+    --color-brand-900: #783514;
+    --color-brand-950: #3b2a1e;
+
+    /* Semantic status accents */
+    --color-danger: #d4573a;
+    --color-safe: #8ecdf0;
+    --color-warn: #ffe27a;
+
+    /* Spatial layout tokens */
+    --radius-card: 20px;
+    --radius-pill: 9999px;
+
+    /* Hairline & Diffused Floating Shadows */
+    --shadow-hairline: 0 0 0 1px rgb(15 23 42 / 0.06);
+    --shadow-floating:
+        0 16px 36px -12px rgb(15 23 42 / 0.08), 0 0 0 1px rgb(15 23 42 / 0.04);
 }
 
 :root {
@@ -71,98 +72,72 @@
     --target-touch-min: 44px;
 }
 
+html {
+    background-color: #fff8ec;
+    scroll-behavior: auto !important;
+}
+
+body {
+    background-color: #fff8ec !important;
+    color: #3b2a1e !important;
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Fredoka', system-ui, -apple-system, sans-serif !important;
+}
+
 @layer base {
     body {
-        @apply bg-slate-50/40 text-slate-900 antialiased selection:bg-brand-500/20 selection:text-brand-900 dark:bg-slate-950 dark:text-slate-100 dark:selection:bg-brand-500/30 dark:selection:text-brand-100;
-        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+        background-color: #fff8ec;
+        color: #3b2a1e;
     }
 
     * {
-        @apply border-slate-200 dark:border-slate-800;
+        border-color: #efe3d0;
     }
 }
 
-/* Glassmorphism & Spatial Depth Utilities */
+/* Flat & Warm Sticker Style Card Utilities */
 .glass-panel {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-.dark .glass-panel {
-    background: rgba(15, 23, 42, 0.65);
-    border: 1px solid rgba(30, 41, 59, 0.8);
+    background: #ffffff;
+    border: 2px solid #3b2a1e;
+    border-radius: 20px;
+    box-shadow: 4px 4px 0px 0px #3b2a1e;
 }
 
 .glass-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow:
-        0 10px 30px -10px rgba(15, 23, 42, 0.05),
-        0 0 0 1px rgba(15, 23, 42, 0.05);
+    background: #ffffff;
+    border: 2px solid #3b2a1e;
+    border-radius: 20px;
+    box-shadow: 4px 4px 0px 0px #3b2a1e;
 }
 
-.dark .glass-card {
-    background: rgba(15, 23, 42, 0.55);
-    box-shadow:
-        0 12px 32px -10px rgba(0, 0, 0, 0.4),
-        0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-/* Floating Card Hover Effect */
 .floating-card {
+    background: #ffffff;
+    border: 2px solid #3b2a1e;
+    border-radius: 20px;
+    box-shadow: 4px 4px 0px 0px #3b2a1e;
     transition:
-        transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .floating-card:hover {
-    transform: translateY(-3px);
-    box-shadow:
-        0 20px 40px -15px rgba(15, 23, 42, 0.1),
-        0 0 0 1px rgba(56, 189, 248, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 4px 6px 0px 0px #3b2a1e;
 }
 
-.dark .floating-card:hover {
-    transform: translateY(-3px);
-    box-shadow:
-        0 20px 40px -15px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(56, 189, 248, 0.3);
-}
-
-/* Subtle Hero Mesh Gradient */
+/* Subtle warm background accents */
 .hero-glow-bg {
     position: relative;
     overflow: hidden;
-}
-
-.hero-glow-bg::before {
-    content: '';
-    position: absolute;
-    top: -20%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 800px;
-    height: 500px;
-    background: radial-gradient(
-        circle,
-        rgba(56, 189, 248, 0.15) 0%,
-        rgba(14, 165, 233, 0.05) 45%,
-        transparent 70%
-    );
-    pointer-events: none;
-    z-index: 0;
-}
-
-.dark .hero-glow-bg::before {
-    background: radial-gradient(
-        circle,
-        rgba(56, 189, 248, 0.12) 0%,
-        rgba(14, 165, 233, 0.03) 50%,
-        transparent 75%
-    );
+    background-color: #fff8ec;
 }
 
 /* Accessibility: Safe reduced motion */

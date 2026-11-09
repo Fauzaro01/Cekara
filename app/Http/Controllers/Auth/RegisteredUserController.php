@@ -48,6 +48,10 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        if ($request->filled('redirect')) {
+            return redirect($request->input('redirect'));
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 }

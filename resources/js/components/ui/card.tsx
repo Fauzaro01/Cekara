@@ -11,16 +11,20 @@ export function Card({
     ...props
 }: CardProps) {
     const variantStyles = {
-        default: 'border border-slate-200/90 bg-white shadow-sm dark:border-slate-800/90 dark:bg-slate-900/60',
-        glass: 'glass-card border border-white/40 dark:border-slate-800/80',
-        floating: 'floating-card border border-slate-200/90 bg-white shadow-sm dark:border-slate-800/90 dark:bg-slate-900/60',
-        subtle: 'border border-slate-100 bg-slate-50/60 dark:border-slate-800/50 dark:bg-slate-900/30',
+        default:
+            'border-2 border-[#3B2A1E] bg-white rounded-[20px] p-6 shadow-[4px_4px_0px_0px_#3B2A1E]',
+        glass:
+            'border-2 border-[#3B2A1E] bg-[#FFF8EC] rounded-[20px] p-6 shadow-[4px_4px_0px_0px_#3B2A1E]',
+        floating:
+            'border-2 border-[#3B2A1E] bg-white rounded-[20px] p-6 shadow-[4px_4px_0px_0px_#3B2A1E] hover:translate-y-[-2px] transition-transform',
+        subtle:
+            'border-2 border-[#EFE3D0] bg-[#FFF8EC] rounded-[20px] p-6',
     };
 
     return (
         <div
             className={cn(
-                'rounded-card p-6 transition-colors',
+                'transition-colors',
                 variantStyles[variant],
                 className,
             )}

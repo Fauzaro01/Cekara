@@ -6,19 +6,31 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 
 export default function Register() {
+    const urlParams =
+        typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search)
+            : null;
+    const redirectParam = urlParams?.get('redirect') || '';
+
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
+        redirect: redirectParam,
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        post('/register', {
-            onFinish: () => reset('password', 'password_confirmation'),
-        });
+        post(
+            redirectParam
+                ? `/register?redirect=${encodeURIComponent(redirectParam)}`
+                : '/register',
+            {
+                onFinish: () => reset('password', 'password_confirmation'),
+            },
+        );
     };
 
     return (
@@ -35,6 +47,12 @@ export default function Register() {
                             Buat akun guardian Cekara Anda
                         </p>
                     </div>
+
+                    {redirectParam && (
+                        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
+                            Silakan daftar terlebih dahulu untuk memulai sesi latihan simulasi Anda.
+                        </div>
+                    )}
 
                     <form onSubmit={submit} className="space-y-4">
                         <div>
@@ -156,7 +174,11 @@ export default function Register() {
                         <div className="text-center text-sm text-slate-600 dark:text-slate-400">
                             Sudah memiliki akun?{' '}
                             <Link
-                                href="/login"
+                                href={
+                                    redirectParam
+                                        ? `/login?redirect=${encodeURIComponent(redirectParam)}`
+                                        : '/login'
+                                }
                                 className="font-medium text-brand-600 hover:underline dark:text-brand-400"
                             >
                                 Masuk

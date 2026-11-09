@@ -171,17 +171,16 @@ test('tier 4: public guest access is fully preserved without forced authenticati
     $simulationsResponse = $this->get('/simulasi');
     $simulationsResponse->assertOk();
 
-    // 3. Guest can access individual simulation scenario
+    // 3. Guest is redirected to login when trying to access individual simulation scenario
     $scenarioResponse = $this->get("/simulasi/{$scenario->slug}");
-    $scenarioResponse->assertOk();
+    $scenarioResponse->assertRedirect(route('login'));
 
-    // 4. Guest can submit simulation decision
+    // 4. Guest is unauthorized to submit simulation decision without login
     $submitResponse = $this->postJson("/simulasi/{$scenario->slug}/submit", [
         'selected_option' => 'B',
         'feedback_notes' => 'Tamu mengidentifikasi bahaya APK.',
     ]);
-    $submitResponse->assertOk();
-    $submitResponse->assertJson(['success' => true]);
+    $submitResponse->assertStatus(401);
 
     // 5. Guest can read Emergency Response playbooks (if M2 route exists)
     if (Route::has('emergency.index')) {

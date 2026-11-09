@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { Head } from '@inertiajs/react';
 import {
-    AlertCircle,
     AlertTriangle,
     ArrowRight,
     ArrowRightLeft,
-    Check,
     CheckCircle2,
-    Clock,
     Copy,
-    CreditCard,
-    ExternalLink,
+    Eye,
+    Globe,
+    Loader2,
     MessageCircle,
-    PhoneCall,
+    Monitor,
     RotateCcw,
+    Scan,
     Share2,
     ShieldAlert,
-    Smartphone,
-    Sparkles,
+    ShieldCheck,
+    UploadCloud,
+    X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
@@ -62,31 +62,41 @@ interface WhatsAppPreset {
 }
 
 interface Props {
-    scenarios: Scenario[];
-    whatsappPresets: WhatsAppPreset[];
-    userProgress: Record<string, Record<string, boolean>>;
-    isGuest: boolean;
+    scenarios?: Scenario[];
+    whatsappPresets?: WhatsAppPreset[];
+    userProgress?: Record<string, Record<string, boolean>>;
+    isGuest?: boolean;
 }
 
 type AudienceTone = 'family' | 'community' | 'public';
+type EmergencyTab = 'live_tab' | 'whatsapp';
+
+interface TabScanResult {
+    riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+    score: number;
+    summary: string;
+    redFlags: string[];
+    recommendations: string[];
+    providerName?: string;
+    model?: string;
+    capturedAt: string;
+    tabTitle?: string;
+    imagePreviewUrl?: string;
+}
 
 export default function EmergencyIndex({
-    scenarios = [],
     whatsappPresets = [],
-    userProgress = {},
-    isGuest = true,
 }: Props) {
-    const [activeTab, setActiveTab] = useState<'checklist' | 'whatsapp'>(
-        'checklist',
-    );
-    const [selectedScenarioKey, setSelectedScenarioKey] = useState<string>(
-        scenarios[0]?.key ?? 'apk_malware',
-    );
+    const [activeTab, setActiveTab] = useState<EmergencyTab>('live_tab');
 
-    // Local checklist progress state (initialized from server props)
-    const [checkedItems, setCheckedItems] =
-        useState<Record<string, Record<string, boolean>>>(userProgress);
-    const [isResetting, setIsResetting] = useState(false);
+    // AI Live Tab Inspector State
+    const [isCapturing, setIsCapturing] = useState<boolean>(false);
+    const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+    const [scanError, setScanError] = useState<string | null>(null);
+    const [tabScanResult, setTabScanResult] = useState<TabScanResult | null>(null);
+    const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     // WhatsApp Form State
@@ -115,136 +125,9 @@ export default function EmergencyIndex({
         }
     }, [selectedPresetCategory, whatsappPresets]);
 
-    // Read XSRF token for secure mutation
-    const getXsrfToken = () => {
-        if (typeof document === 'undefined') {
-            return '';
-        }
-        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    };
-
     const showToast = (message: string) => {
         setToastMessage(message);
         setTimeout(() => setToastMessage(null), 3500);
-    };
-
-    // Current selected scenario
-    const currentScenario = useMemo(() => {
-        return (
-            scenarios.find((s) => s.key === selectedScenarioKey) ?? scenarios[0]
-        );
-    }, [scenarios, selectedScenarioKey]);
-
-    // Progress metrics for current scenario
-    const currentScenarioProgress = useMemo(() => {
-        if (!currentScenario || !currentScenario.steps) {
-            return { completed: 0, total: 0, percentage: 0 };
-        }
-        const scenarioChecked = checkedItems[currentScenario.key] || {};
-        const completed = currentScenario.steps.filter(
-            (s) => scenarioChecked[s.key],
-        ).length;
-        const total = currentScenario.steps.length;
-        const percentage =
-            total > 0 ? Math.round((completed / total) * 100) : 0;
-        return { completed, total, percentage };
-    }, [currentScenario, checkedItems]);
-
-    // Toggle checklist step
-    const handleToggleStep = async (stepKey: string) => {
-        if (!currentScenario) {
-            return;
-        }
-
-        const scenarioKey = currentScenario.key;
-        const currentScenarioState = checkedItems[scenarioKey] || {};
-        const willBeCompleted = !currentScenarioState[stepKey];
-
-        // Optimistic UI update
-        setCheckedItems((prev) => ({
-            ...prev,
-            [scenarioKey]: {
-                ...prev[scenarioKey],
-                [stepKey]: willBeCompleted,
-            },
-        }));
-
-        // If authenticated, persist to server
-        if (!isGuest) {
-            try {
-                const response = await fetch(
-                    '/tanggap-darurat/checklist/toggle',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
-                            'X-XSRF-TOKEN': getXsrfToken(),
-                        },
-                        body: JSON.stringify({
-                            scenario_key: scenarioKey,
-                            step_key: stepKey,
-                            is_completed: willBeCompleted,
-                        }),
-                    },
-                );
-
-                if (!response.ok) {
-                    showToast('Gagal menyinkronkan status ke akun.');
-                }
-            } catch {
-                showToast('Gagal menghubungi server.');
-            }
-        }
-    };
-
-    // Reset current scenario progress
-    const handleResetCurrentScenario = async () => {
-        if (!currentScenario) {
-            return;
-        }
-
-        const scenarioKey = currentScenario.key;
-        setIsResetting(true);
-
-        // Clear local state
-        setCheckedItems((prev) => ({
-            ...prev,
-            [scenarioKey]: {},
-        }));
-
-        if (!isGuest) {
-            try {
-                const response = await fetch(
-                    '/tanggap-darurat/checklist/reset',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
-                            'X-XSRF-TOKEN': getXsrfToken(),
-                        },
-                        body: JSON.stringify({
-                            scenario_key: scenarioKey,
-                        }),
-                    },
-                );
-
-                if (response.ok) {
-                    showToast(
-                        'Progres checklist untuk skenario ini berhasil direset.',
-                    );
-                }
-            } catch {
-                showToast('Gagal mereset progres di server.');
-            } finally {
-                setIsResetting(false);
-            }
-        } else {
-            setIsResetting(false);
-            showToast('Checklist sesi tamu berhasil dibersihkan.');
-        }
     };
 
     // Format WhatsApp Message with proper Markdown & Tone
@@ -303,9 +186,280 @@ export default function EmergencyIndex({
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    // Switch to WhatsApp tab with preselected category
-    const handleSwitchToWhatsAppWithCategory = (category: string) => {
-        setSelectedPresetCategory(category);
+    // Capture & Analyze Browser Tab via getDisplayMedia (Option 1)
+    const handleCaptureAndAnalyzeTab = async () => {
+        if (typeof window === 'undefined') return;
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            setScanError(
+                'Peramban atau gawai Anda saat ini belum mendukung izin tangkapan tab langsung. Silakan gunakan tombol "Unggah Screenshot Manual" di bawah ini.',
+            );
+            return;
+        }
+
+        setScanError(null);
+        setIsCapturing(true);
+
+        try {
+            // Minta izin ke browser untuk memilih Tab
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    displaySurface: 'browser',
+                },
+                audio: false,
+            });
+
+            const videoTrack = stream.getVideoTracks()[0];
+            const tabTitle = videoTrack?.label || 'Tab Browser Aktif';
+
+            // Elemen video sementara di memori untuk capture frame
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.muted = true;
+            await video.play();
+
+            // Tunggu 300ms agar frame video stabil
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+
+            // Hentikan stream segera demi privasi pengguna
+            stream.getTracks().forEach((track) => track.stop());
+
+            const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+            setCapturedPreview(previewUrl);
+            setIsCapturing(false);
+            setIsAnalyzing(true);
+
+            // Convert canvas ke blob untuk dikirim ke API
+            canvas.toBlob(
+                async (blob) => {
+                    if (!blob) {
+                        setIsAnalyzing(false);
+                        setScanError('Gagal memproses tangkapan layar tab.');
+                        return;
+                    }
+
+                    try {
+                        const csrfMeta = document.querySelector(
+                            'meta[name="csrf-token"]',
+                        );
+                        const csrfToken = csrfMeta
+                            ? csrfMeta.getAttribute('content')
+                            : '';
+
+                        const formData = new FormData();
+                        const file = new File([blob], 'tab_snapshot.jpg', {
+                            type: 'image/jpeg',
+                        });
+                        formData.append('image', file);
+                        formData.append(
+                            'content',
+                            `Tangkapan layar langsung dari tab peramban pengguna: "${tabTitle}". Mohon lakukan audit keamanan siber: apakah halaman web ini memuat indikasi phishing, rekayasa sosial, manipulasi logo bank/e-wallet resmi, atau skema penipuan online?`,
+                        );
+
+                        const response = await fetch('/chat/analyze', {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                                ...(csrfToken
+                                    ? { 'X-CSRF-TOKEN': csrfToken }
+                                    : {}),
+                            },
+                            body: formData,
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(
+                                'Layanan analisis AI sedang sibuk, silakan coba beberapa saat lagi.',
+                            );
+                        }
+
+                        const json = await response.json();
+                        const data = json.data || json;
+
+                        const rawLevel = String(
+                            data.riskLevel || data.risk_level || 'HIGH',
+                        ).toUpperCase();
+                        const riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' =
+                            rawLevel.includes('HIGH') ||
+                            rawLevel.includes('TINGGI') ||
+                            rawLevel.includes('DANGER')
+                                ? 'HIGH'
+                                : rawLevel.includes('LOW') ||
+                                    rawLevel.includes('RENDAH') ||
+                                    rawLevel.includes('AMAN')
+                                  ? 'LOW'
+                                  : 'MEDIUM';
+
+                        setTabScanResult({
+                            riskLevel,
+                            score:
+                                typeof data.score === 'number'
+                                    ? data.score
+                                    : riskLevel === 'HIGH'
+                                      ? 85
+                                      : 45,
+                            summary:
+                                data.summary ||
+                                'Halaman web ini terindikasi memiliki pola atau elemen manipulatif yang tidak lazim.',
+                            redFlags: Array.isArray(data.redFlags)
+                                ? data.redFlags
+                                : data.red_flags || [],
+                            recommendations: Array.isArray(data.recommendations)
+                                ? data.recommendations
+                                : [],
+                            providerName:
+                                data.providerName || data.provider_used,
+                            model: data.model || data.model_used,
+                            capturedAt: new Date().toLocaleTimeString('id-ID', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            }),
+                            tabTitle,
+                            imagePreviewUrl: previewUrl,
+                        });
+                        showToast(
+                            'Audit tab berhasil diselesaikan oleh AI Agent!',
+                        );
+                    } catch (err: any) {
+                        setScanError(
+                            err.message || 'Gagal menganalisis tab.',
+                        );
+                    } finally {
+                        setIsAnalyzing(false);
+                    }
+                },
+                'image/jpeg',
+                0.85,
+            );
+        } catch (err: any) {
+            setIsCapturing(false);
+            setIsAnalyzing(false);
+            if (
+                err.name === 'NotAllowedError' ||
+                err.name === 'PermissionDeniedError'
+            ) {
+                showToast('Izin berbagi tab dibatalkan.');
+            } else {
+                setScanError(
+                    'Tidak dapat mengakses tab: ' +
+                        (err.message || 'Izin ditolak'),
+                );
+            }
+        }
+    };
+
+    const handleManualImageUpload = (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setScanError(null);
+        setIsAnalyzing(true);
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const previewUrl = reader.result as string;
+            setCapturedPreview(previewUrl);
+
+            try {
+                const csrfMeta = document.querySelector(
+                    'meta[name="csrf-token"]',
+                );
+                const csrfToken = csrfMeta
+                    ? csrfMeta.getAttribute('content')
+                    : '';
+
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append(
+                    'content',
+                    `Tangkapan layar halaman web: "${file.name}". Mohon analisis apakah memuat indikasi phishing atau penipuan.`,
+                );
+
+                const response = await fetch('/chat/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        Accept: 'application/json',
+                        ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                    },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Layanan analisis AI sedang sibuk.');
+                }
+
+                const json = await response.json();
+                const data = json.data || json;
+
+                const rawLevel = String(
+                    data.riskLevel || data.risk_level || 'HIGH',
+                ).toUpperCase();
+                const riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' =
+                    rawLevel.includes('HIGH') || rawLevel.includes('TINGGI')
+                        ? 'HIGH'
+                        : rawLevel.includes('LOW') || rawLevel.includes('RENDAH')
+                          ? 'LOW'
+                          : 'MEDIUM';
+
+                setTabScanResult({
+                    riskLevel,
+                    score: typeof data.score === 'number' ? data.score : 80,
+                    summary:
+                        data.summary ||
+                        'Hasil analisis tangkapan layar berkas.',
+                    redFlags: Array.isArray(data.redFlags)
+                        ? data.redFlags
+                        : data.red_flags || [],
+                    recommendations: Array.isArray(data.recommendations)
+                        ? data.recommendations
+                        : [],
+                    providerName: data.providerName || data.provider_used,
+                    model: data.model || data.model_used,
+                    capturedAt: new Date().toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    }),
+                    tabTitle: file.name,
+                    imagePreviewUrl: previewUrl,
+                });
+                showToast('Audit screenshot berhasil diselesaikan!');
+            } catch (err: any) {
+                setScanError(err.message || 'Gagal menganalisis gambar.');
+            } finally {
+                setIsAnalyzing(false);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleTransferToWhatsApp = () => {
+        if (!tabScanResult) return;
+        setWaScamTitle(tabScanResult.tabTitle || 'Situs Phishing / Halaman Palsu');
+        setWaImpersonated('Situs / Layanan Mengatasnamakan Pihak Resmi');
+        setWaDetails(
+            `${tabScanResult.summary}\n\nIndikasi Bahaya Ditemukan:\n- ${
+                tabScanResult.redFlags.length
+                    ? tabScanResult.redFlags.join('\n- ')
+                    : 'Manipulasi visual halaman'
+            }`,
+        );
+        setWaAdvice(
+            tabScanResult.recommendations.length
+                ? tabScanResult.recommendations.join('\n- ')
+                : 'Tutup segera tab tersebut dan jangan pernah memasukkan kode OTP atau password.',
+        );
         setActiveTab('whatsapp');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -325,10 +479,6 @@ export default function EmergencyIndex({
             <div className="mx-auto max-w-5xl px-6 py-10">
                 {/* Header Section */}
                 <div className="mb-8">
-                    <div className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-rose-600 uppercase dark:text-rose-400">
-                        <span className="flex size-2 animate-pulse rounded-full bg-rose-500" />
-                        Pilar Bertindak (Action Center)
-                    </div>
                     <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
                         Pusat Tanggap Darurat & Peringatan Keluarga
                     </h1>
@@ -342,443 +492,313 @@ export default function EmergencyIndex({
 
                 {/* Primary Tabs */}
                 <div className="mb-8 border-b border-slate-200/80 dark:border-slate-800">
-                    <div className="flex gap-4 sm:gap-8">
+                    <div className="flex flex-wrap gap-4 sm:gap-8">
                         <button
                             type="button"
-                            onClick={() => setActiveTab('checklist')}
+                            onClick={() => setActiveTab('live_tab')}
                             className={cn(
-                                'flex items-center gap-2 border-b-2 pb-4 text-sm font-semibold transition-all',
-                                activeTab === 'checklist'
-                                    ? 'border-rose-600 text-rose-600 dark:border-rose-400 dark:text-rose-400'
-                                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200',
+                                'border-b-2 pb-4 text-sm font-bold transition-all cursor-pointer',
+                                activeTab === 'live_tab'
+                                    ? 'border-[#FF9A3C] text-[#E06812]'
+                                    : 'border-transparent text-slate-500 hover:text-slate-800',
                             )}
                         >
-                            <ShieldAlert className="size-4.5" />
-                            Panduan Langkah Darurat (Checklist)
+                            Investigasi Tab Langsung (AI Live Agent)
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab('whatsapp')}
                             className={cn(
-                                'flex items-center gap-2 border-b-2 pb-4 text-sm font-semibold transition-all',
+                                'border-b-2 pb-4 text-sm font-bold transition-all cursor-pointer',
                                 activeTab === 'whatsapp'
-                                    ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200',
+                                    ? 'border-[#FF9A3C] text-[#E06812]'
+                                    : 'border-transparent text-slate-500 hover:text-slate-800',
                             )}
                         >
-                            <MessageCircle className="size-4.5" />
                             Generator Pesan Peringatan WhatsApp
                         </button>
                     </div>
                 </div>
 
-                {/* TAB 1: EMERGENCY CHECKLIST */}
-                {activeTab === 'checklist' && (
-                    <div className="space-y-8">
-                        {/* Guest Banner */}
-                        {isGuest && (
-                            <div className="flex flex-col gap-4 rounded-2xl border border-amber-300/60 bg-amber-50/80 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/30">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                                    <div>
-                                        <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                                            Mode Akses Tamu (Simulasi Lokal)
-                                        </p>
-                                        <p className="mt-0.5 text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/80">
-                                            Anda dapat membaca panduan dan
-                                            mencentang langkah secara interaktif
-                                            di sesi ini. Masuk akun agar
-                                            checklist tanggap darurat Anda
-                                            tersimpan permanen.
-                                        </p>
-                                    </div>
+                {/* TAB: AI LIVE TAB INSPECTOR */}
+                {activeTab === 'live_tab' && (
+                    <div className="space-y-6">
+                        {/* Hero Introduction Card */}
+                        <div className="rounded-3xl border-2 border-[#3B2A1E] bg-[#FFF8EC] p-6 sm:p-8 shadow-[4px_4px_0px_0px_#3B2A1E]">
+                            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="space-y-2 max-w-2xl">
+                                    <h2 className="font-['Fredoka',system-ui,sans-serif] text-2xl sm:text-3xl font-bold text-[#3B2A1E]">
+                                        Sedang Buka Web yang Mencurigakan? Biarkan AI Memeriksanya!
+                                    </h2>
+                                    <p className="text-xs sm:text-sm text-[#6B5646] leading-relaxed">
+                                        Pilih tab browser yang sedang kamu ragukan (toko online aneh, tawaran undian berhadiah, formulir klaim bansos, atau situs yang meniru bank). AI Agent Cekara akan mengambil tangkapan layar aman dari tab tersebut dan mendeteksi apakah itu jebakan penipuan (*phishing*).
+                                    </p>
                                 </div>
-                                <Link
-                                    href="/login"
-                                    className={cn(
-                                        buttonClasses('primary'),
-                                        'shrink-0 text-xs whitespace-nowrap shadow-xs',
-                                    )}
-                                >
-                                    Masuk Akun{' '}
-                                    <ArrowRight className="ml-1 size-3.5" />
-                                </Link>
+
+                                <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+                                    <button
+                                        type="button"
+                                        disabled={isCapturing || isAnalyzing}
+                                        onClick={handleCaptureAndAnalyzeTab}
+                                        className="inline-flex items-center justify-center gap-2.5 rounded-2xl border-2 border-[#3B2A1E] bg-[#FF9A3C] px-6 py-3.5 text-sm font-bold text-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] transition hover:-translate-y-0.5 hover:bg-[#ff8f27] active:translate-y-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isCapturing ? (
+                                            <>
+                                                <Loader2 className="size-4.5 animate-spin" />
+                                                <span>Menghubungkan Tab...</span>
+                                            </>
+                                        ) : isAnalyzing ? (
+                                            <>
+                                                <Loader2 className="size-4.5 animate-spin" />
+                                                <span>AI Sedang Menganalisis...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Monitor className="size-4.5" />
+                                                <span>Pilih & Periksa Tab Browser</span>
+                                            </>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#3B2A1E] bg-white px-4 py-2.5 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition hover:bg-[#FFF8EC] cursor-pointer"
+                                    >
+                                        <UploadCloud className="size-4 text-[#6B5646]" />
+                                        <span>Atau Unggah Screenshot Manual</span>
+                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/jpg"
+                                        onChange={handleManualImageUpload}
+                                        className="hidden"
+                                    />
+                                </div>
                             </div>
-                        )}
 
-                        {/* Scenario Selector Pills */}
-                        <div>
-                            <label className="mb-3 block text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-                                Pilih Skenario Insiden:
-                            </label>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                {scenarios.map((scenario) => {
-                                    const isSelected =
-                                        scenario.key === selectedScenarioKey;
-                                    const scenarioProgress =
-                                        checkedItems[scenario.key] || {};
-                                    const completedCount =
-                                        scenario.steps.filter(
-                                            (s) => scenarioProgress[s.key],
-                                        ).length;
-
-                                    return (
-                                        <button
-                                            key={scenario.key}
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedScenarioKey(
-                                                    scenario.key,
-                                                )
-                                            }
-                                            className={cn(
-                                                'flex flex-col rounded-2xl border p-4 text-left transition-all duration-200',
-                                                isSelected
-                                                    ? 'border-rose-500 bg-rose-50/50 shadow-xs ring-1 ring-rose-500/30 dark:border-rose-500/80 dark:bg-rose-950/20'
-                                                    : 'border-slate-200/80 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-slate-700',
-                                            )}
-                                        >
-                                            <div className="mb-2 flex w-full items-center justify-between">
-                                                <span
-                                                    className={cn(
-                                                        'rounded-full border px-2.5 py-0.5 text-[11px] font-bold',
-                                                        scenario.key ===
-                                                            'apk_malware'
-                                                            ? 'border-rose-200 bg-rose-100 text-rose-800 dark:border-rose-900 dark:bg-rose-950/70 dark:text-rose-300'
-                                                            : scenario.key ===
-                                                                'fraud_transfer'
-                                                              ? 'border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-900 dark:bg-amber-950/70 dark:text-amber-300'
-                                                              : 'border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-300',
-                                                    )}
-                                                >
-                                                    {scenario.severity_label}
-                                                </span>
-                                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                                                    {completedCount}/
-                                                    {scenario.steps.length}{' '}
-                                                    selesai
-                                                </span>
-                                            </div>
-
-                                            <h3 className="text-sm leading-snug font-bold text-slate-900 dark:text-slate-100">
-                                                {scenario.title}
-                                            </h3>
-                                            <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-                                                {scenario.subtitle}
-                                            </p>
-                                        </button>
-                                    );
-                                })}
+                            {/* Privacy Notice Banner */}
+                            <div className="mt-6 flex items-center gap-2.5 rounded-2xl border border-[#EFE3D0] bg-white px-4 py-2.5 text-xs text-[#6B5646]">
+                                <ShieldCheck className="size-4 text-[#2E7D32] shrink-0" />
+                                <span>
+                                    <strong>Privasi 100% Aman:</strong> Koneksi tab hanya mengambil 1 kali tangkapan layar sesaat untuk dianalisis dan langsung diputuskan. Cekara tidak pernah merekam aktivitas penjelajahan pribadimu.
+                                </span>
                             </div>
                         </div>
 
-                        {/* Selected Scenario Detail & Checklist */}
-                        {currentScenario && (
-                            <div className="space-y-6">
-                                {/* Scenario Banner & Progress */}
-                                <Card variant="floating" className="p-6">
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                        <div className="space-y-1.5">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <Badge variant="danger" withDot>
-                                                    {
-                                                        currentScenario.severity_label
-                                                    }
-                                                </Badge>
-                                                <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                    <Clock className="size-3.5 text-slate-400" />
-                                                    Waktu Kritis:{' '}
-                                                    <strong className="text-slate-800 dark:text-slate-200">
-                                                        {
-                                                            currentScenario.golden_time
-                                                        }
-                                                    </strong>
-                                                </span>
-                                            </div>
-                                            <h2 className="pt-1 text-xl font-extrabold text-slate-900 sm:text-2xl dark:text-slate-100">
-                                                {currentScenario.title}
-                                            </h2>
-                                            <p className="max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                                {currentScenario.summary}
-                                            </p>
-                                        </div>
+                        {/* Error Message */}
+                        {scanError && (
+                            <div className="rounded-2xl border-2 border-[#D84315] bg-[#FBE9E7] p-4 text-xs sm:text-sm font-semibold text-[#D84315] shadow-[2px_2px_0px_0px_#D84315] flex items-center gap-3">
+                                <AlertTriangle className="size-5 shrink-0 text-[#D84315]" />
+                                <span className="flex-1">{scanError}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setScanError(null)}
+                                    className="text-xs font-bold underline hover:opacity-80 cursor-pointer"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        )}
 
-                                        <div className="flex shrink-0 items-center gap-2 self-start">
-                                            <Button
-                                                variant="outline"
-                                                onClick={
-                                                    handleResetCurrentScenario
-                                                }
-                                                disabled={
-                                                    isResetting ||
-                                                    currentScenarioProgress.completed ===
-                                                        0
-                                                }
-                                                className="h-9 px-3 text-xs text-slate-600 dark:text-slate-300"
-                                            >
-                                                <RotateCcw className="mr-1.5 size-3.5" />
-                                                Reset Checklist
-                                            </Button>
-                                        </div>
-                                    </div>
+                        {/* Loading State Animation */}
+                        {isAnalyzing && (
+                            <div className="rounded-3xl border-2 border-[#3B2A1E] bg-white p-8 text-center shadow-[4px_4px_0px_0px_#3B2A1E]">
+                                <div className="inline-flex size-16 items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A] shadow-[2px_2px_0px_0px_#3B2A1E] mb-4">
+                                    <Loader2 className="size-8 text-[#3B2A1E] animate-spin" />
+                                </div>
+                                <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E]">
+                                    AI Agent Sedang Menginvestigasi Tab...
+                                </h3>
+                                <p className="mt-2 text-xs sm:text-sm text-[#6B5646] max-w-md mx-auto leading-relaxed">
+                                    Memeriksa struktur visual, tipografi, domain tersembunyi, serta pola manipulasi psikologis penipuan siber.
+                                </p>
+                            </div>
+                        )}
 
-                                    {/* Progress Bar */}
-                                    <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800/80">
-                                        <div className="mb-2 flex items-center justify-between text-xs font-medium">
-                                            <span className="text-slate-700 dark:text-slate-300">
-                                                Langkah Tindakan Terselesaikan:
+                        {/* Result Section */}
+                        {tabScanResult && !isAnalyzing && (
+                            <div className="rounded-3xl border-2 border-[#3B2A1E] bg-white p-6 sm:p-8 shadow-[4px_4px_0px_0px_#3B2A1E] space-y-6">
+                                {/* Header Result with Risk Badge */}
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#EFE3D0] pb-5">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-[#6B5646]">
+                                                Hasil Audit Tab:
                                             </span>
-                                            <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                                                {
-                                                    currentScenarioProgress.completed
-                                                }{' '}
-                                                dari{' '}
-                                                {currentScenarioProgress.total}{' '}
-                                                (
-                                                {
-                                                    currentScenarioProgress.percentage
-                                                }
-                                                %)
+                                            <span className="text-xs font-semibold text-[#6B5646]">
+                                                {tabScanResult.tabTitle} • {tabScanResult.capturedAt}
                                             </span>
                                         </div>
-                                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                            <div
-                                                className="h-full rounded-full bg-linear-to-r from-rose-500 to-emerald-500 transition-all duration-300"
-                                                style={{
-                                                    width: `${currentScenarioProgress.percentage}%`,
-                                                }}
-                                            />
-                                        </div>
+                                        <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl sm:text-2xl font-bold text-[#3B2A1E]">
+                                            {tabScanResult.riskLevel === 'HIGH'
+                                                ? '🚨 Hati-hati! Tab Ini Terindikasi Sangat Berbahaya'
+                                                : tabScanResult.riskLevel === 'MEDIUM'
+                                                  ? '⚠️ Waspada! Terdapat Pola Mencurigakan di Tab Ini'
+                                                  : '🛡️ Tab Ini Terindikasi Normal & Aman'}
+                                        </h3>
                                     </div>
-                                </Card>
 
-                                {/* Step Cards */}
-                                <div className="space-y-4">
-                                    {currentScenario.steps.map((step) => {
-                                        const isChecked =
-                                            !!checkedItems[
-                                                currentScenario.key
-                                            ]?.[step.key];
-
-                                        return (
-                                            <div
-                                                key={step.key}
-                                                className={cn(
-                                                    'group relative rounded-2xl border p-5 transition-all duration-200',
-                                                    isChecked
-                                                        ? 'border-emerald-300/80 bg-emerald-50/30 dark:border-emerald-800/50 dark:bg-emerald-950/10'
-                                                        : 'border-slate-200/80 bg-white shadow-xs hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-slate-700',
-                                                )}
-                                            >
-                                                <div className="flex items-start gap-4">
-                                                    {/* Custom Checkbox */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleToggleStep(
-                                                                step.key,
-                                                            )
-                                                        }
-                                                        className={cn(
-                                                            'mt-1 flex size-6 shrink-0 items-center justify-center rounded-lg border text-white transition-all focus:ring-2 focus:ring-rose-500 focus:outline-none',
-                                                            isChecked
-                                                                ? 'border-emerald-600 bg-emerald-600 shadow-xs dark:border-emerald-500 dark:bg-emerald-500'
-                                                                : 'border-slate-300 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800',
-                                                        )}
-                                                        aria-label={`Tandai langkah ${step.order}`}
-                                                    >
-                                                        {isChecked && (
-                                                            <Check className="size-4 stroke-[3]" />
-                                                        )}
-                                                    </button>
-
-                                                    {/* Content */}
-                                                    <div className="flex-1 space-y-2">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                                                Langkah{' '}
-                                                                {step.order}
-                                                            </span>
-                                                            <span
-                                                                className={cn(
-                                                                    'rounded-full border px-2.5 py-0.5 text-xs font-semibold',
-                                                                    step.urgency ===
-                                                                        'Kritis'
-                                                                        ? 'border-rose-200 bg-rose-100 text-rose-800 dark:border-rose-900 dark:bg-rose-950/70 dark:text-rose-300'
-                                                                        : step.urgency ===
-                                                                            'Segera'
-                                                                          ? 'border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-900 dark:bg-amber-950/70 dark:text-amber-300'
-                                                                          : 'border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-300',
-                                                                )}
-                                                            >
-                                                                {step.urgency}
-                                                            </span>
-                                                        </div>
-
-                                                        <h4
-                                                            onClick={() =>
-                                                                handleToggleStep(
-                                                                    step.key,
-                                                                )
-                                                            }
-                                                            className={cn(
-                                                                'cursor-pointer text-base font-bold text-slate-900 transition-colors dark:text-slate-100',
-                                                                isChecked &&
-                                                                    'text-emerald-900 dark:text-emerald-200',
-                                                            )}
-                                                        >
-                                                            {step.title}
-                                                        </h4>
-
-                                                        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                                            {step.instruction}
-                                                        </p>
-
-                                                        {/* Callout box */}
-                                                        {step.callout && (
-                                                            <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                                                                <strong className="font-semibold text-slate-900 dark:text-slate-100">
-                                                                    Tips
-                                                                    Cepat:{' '}
-                                                                </strong>
-                                                                {step.callout}
-                                                            </div>
-                                                        )}
-
-                                                        {/* Action Buttons & Links */}
-                                                        <div className="flex flex-wrap items-center gap-3 pt-1">
-                                                            {step.action_type ===
-                                                                'phone' &&
-                                                                step.action_target && (
-                                                                    <a
-                                                                        href={
-                                                                            step.action_target
-                                                                        }
-                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-rose-700"
-                                                                    >
-                                                                        <PhoneCall className="size-3.5" />
-                                                                        Hubungi
-                                                                        Call
-                                                                        Center
-                                                                        Sekarang
-                                                                    </a>
-                                                                )}
-
-                                                            {step.action_type ===
-                                                                'ussd' &&
-                                                                step.action_target && (
-                                                                    <a
-                                                                        href={
-                                                                            step.action_target
-                                                                        }
-                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-amber-700"
-                                                                    >
-                                                                        <Smartphone className="size-3.5" />
-                                                                        Jalankan
-                                                                        Kode
-                                                                        USSD
-                                                                        (##002#)
-                                                                    </a>
-                                                                )}
-
-                                                            {step.action_type ===
-                                                                'link' &&
-                                                                step.action_target && (
-                                                                    <a
-                                                                        href={
-                                                                            step.action_target
-                                                                        }
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700"
-                                                                    >
-                                                                        <ExternalLink className="size-3.5" />
-                                                                        Kunjungi
-                                                                        Portal
-                                                                        Resmi
-                                                                    </a>
-                                                                )}
-
-                                                            {step.links &&
-                                                                step.links
-                                                                    .length >
-                                                                    0 && (
-                                                                    <div className="flex flex-wrap items-center gap-2">
-                                                                        {step.links.map(
-                                                                            (
-                                                                                link,
-                                                                                idx,
-                                                                            ) => (
-                                                                                <a
-                                                                                    key={
-                                                                                        idx
-                                                                                    }
-                                                                                    href={
-                                                                                        link.url
-                                                                                    }
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
-                                                                                >
-                                                                                    <span>
-                                                                                        {
-                                                                                            link.label
-                                                                                        }
-                                                                                    </span>
-                                                                                    <ExternalLink className="size-3" />
-                                                                                </a>
-                                                                            ),
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    {/* Risk Score Pill */}
+                                    <div
+                                        className={cn(
+                                            'inline-flex shrink-0 items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] px-4 py-2 font-bold shadow-[2px_2px_0px_0px_#3B2A1E]',
+                                            tabScanResult.riskLevel === 'HIGH'
+                                                ? 'bg-[#FBE9E7] text-[#D84315]'
+                                                : tabScanResult.riskLevel === 'MEDIUM'
+                                                  ? 'bg-[#FFF8E7] text-[#BA4F10]'
+                                                  : 'bg-[#E8F5E9] text-[#2E7D32]',
+                                        )}
+                                    >
+                                        <span className="text-xs">Tingkat Risiko:</span>
+                                        <span className="text-base font-extrabold">{tabScanResult.score}%</span>
+                                    </div>
                                 </div>
 
-                                {/* Cross-tab CTA: Warn family via WhatsApp */}
-                                <Card
-                                    variant="glass"
-                                    className="border-emerald-500/30 bg-emerald-50/50 p-6 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                                >
-                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div className="space-y-1">
-                                            <h4 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                                                <MessageCircle className="size-5 text-emerald-600 dark:text-emerald-400" />
-                                                Perlu memperingatkan keluarga
-                                                atau kerabat sekarang?
-                                            </h4>
-                                            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                                                Jangan biarkan sindikat
-                                                menghubungi orang terdekat Anda.
-                                                Buat template pesan WhatsApp
-                                                resmi yang sudah terformat rapi
-                                                dengan 1 klik.
+                                {/* Content Grid: Snapshot Preview & Evaluation Details */}
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                                    {/* Left: Captured Snapshot Preview */}
+                                    {tabScanResult.imagePreviewUrl && (
+                                        <div className="lg:col-span-5 space-y-2">
+                                            <span className="text-xs font-bold text-[#6B5646]">
+                                                Tangkapan Layar Tab yang Diperiksa:
+                                            </span>
+                                            <div className="overflow-hidden rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF8EC] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                                <img
+                                                    src={tabScanResult.imagePreviewUrl}
+                                                    alt="Snapshot Tab Browser"
+                                                    className="w-full max-h-72 object-cover object-top"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Right: AI Analysis Details */}
+                                    <div className={cn(tabScanResult.imagePreviewUrl ? 'lg:col-span-7' : 'lg:col-span-12', 'space-y-4')}>
+                                        {/* Summary Box */}
+                                        <div className="rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF8EC] p-4 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                            <span className="block text-[11px] font-bold text-[#E64A19] uppercase tracking-wider mb-1">
+                                                Ringkasan Analisis AI
+                                            </span>
+                                            <p className="text-xs sm:text-sm text-[#3B2A1E] leading-relaxed font-semibold">
+                                                {tabScanResult.summary}
                                             </p>
                                         </div>
-                                        <Button
-                                            onClick={() =>
-                                                handleSwitchToWhatsAppWithCategory(
-                                                    currentScenario.key,
-                                                )
-                                            }
-                                            className="h-10 bg-emerald-600 px-4 text-xs whitespace-nowrap text-white shadow-sm hover:bg-emerald-700"
-                                        >
-                                            Buat Pesan WhatsApp{' '}
-                                            <ArrowRight className="ml-1 size-3.5" />
-                                        </Button>
+
+                                        {/* Red Flags if any */}
+                                        {tabScanResult.redFlags && tabScanResult.redFlags.length > 0 && (
+                                            <div className="rounded-2xl border border-red-200 bg-red-50/60 p-4">
+                                                <h4 className="text-xs font-bold text-[#D84315] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                    <AlertTriangle className="size-4" />
+                                                    <span>Tanda-Tanda Bahaya (*Red Flags*):</span>
+                                                </h4>
+                                                <ul className="space-y-1.5">
+                                                    {tabScanResult.redFlags.map((flag, idx) => (
+                                                        <li key={idx} className="flex items-start gap-2 text-xs text-[#3B2A1E]">
+                                                            <span className="mt-1 size-1.5 rounded-full bg-[#D84315] shrink-0" />
+                                                            <span>{flag}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {/* Recommendations */}
+                                        {tabScanResult.recommendations && tabScanResult.recommendations.length > 0 && (
+                                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+                                                <h4 className="text-xs font-bold text-[#2E7D32] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                                    <CheckCircle2 className="size-4" />
+                                                    <span>Rekomendasi Tindakan Cepat:</span>
+                                                </h4>
+                                                <ul className="space-y-1.5">
+                                                    {tabScanResult.recommendations.map((rec, idx) => (
+                                                        <li key={idx} className="flex items-start gap-2 text-xs text-[#3B2A1E]">
+                                                            <span className="mt-1 size-1.5 rounded-full bg-[#2E7D32] shrink-0" />
+                                                            <span>{rec}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
-                                </Card>
+                                </div>
+
+                                {/* Next Action Buttons */}
+                                <div className="border-t border-[#EFE3D0] pt-5 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        {tabScanResult.riskLevel !== 'LOW' && (
+                                            <button
+                                                type="button"
+                                                onClick={handleTransferToWhatsApp}
+                                                className="inline-flex items-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2.5 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] transition hover:-translate-y-0.5 hover:bg-[#ffd952] cursor-pointer"
+                                            >
+                                                <MessageCircle className="size-4 text-[#2E7D32]" />
+                                                <span>Sebarkan Peringatan ke WhatsApp Keluarga</span>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setTabScanResult(null);
+                                            setCapturedPreview(null);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6B5646] hover:text-[#3B2A1E] hover:underline cursor-pointer"
+                                    >
+                                        <RotateCcw className="size-3.5" />
+                                        <span>Periksa Tab Lainnya</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3 Panduan Cepat Investigasi Tab */}
+                        {!tabScanResult && !isAnalyzing && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                    <span className="flex size-7 items-center justify-center rounded-lg border-2 border-[#3B2A1E] bg-[#FFE27A] text-xs font-extrabold text-[#3B2A1E] mb-2.5">
+                                        1
+                                    </span>
+                                    <h4 className="font-['Fredoka',system-ui,sans-serif] text-sm font-bold text-[#3B2A1E]">
+                                        Buka Tab yang Dicurigai
+                                    </h4>
+                                    <p className="mt-1 text-xs text-[#6B5646] leading-relaxed">
+                                        Pastikan tab situs web yang ingin diperiksa sudah aktif terbuka di jendela peramban kamu.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                    <span className="flex size-7 items-center justify-center rounded-lg border-2 border-[#3B2A1E] bg-[#8ECDF0] text-xs font-extrabold text-[#3B2A1E] mb-2.5">
+                                        2
+                                    </span>
+                                    <h4 className="font-['Fredoka',system-ui,sans-serif] text-sm font-bold text-[#3B2A1E]">
+                                        Izinkan Berbagi Tab
+                                    </h4>
+                                    <p className="mt-1 text-xs text-[#6B5646] leading-relaxed">
+                                        Pilih opsi "Tab Chrome / Edge" pada jendela pop-up browser, lalu pilih tab tersebut.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                    <span className="flex size-7 items-center justify-center rounded-lg border-2 border-[#3B2A1E] bg-[#FF9A3C] text-xs font-extrabold text-[#3B2A1E] mb-2.5">
+                                        3
+                                    </span>
+                                    <h4 className="font-['Fredoka',system-ui,sans-serif] text-sm font-bold text-[#3B2A1E]">
+                                        Terima Analisis AI
+                                    </h4>
+                                    <p className="mt-1 text-xs text-[#6B5646] leading-relaxed">
+                                        AI Agent mendeteksi manipulasi visual, indikasi phishing, dan panduan tindakan yang wajib diambil.
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* TAB 2: WHATSAPP ALERT GENERATOR */}
+                {/* TAB: WHATSAPP ALERT GENERATOR */}
                 {activeTab === 'whatsapp' && (
                     <div className="space-y-8">
                         {/* Intro banner */}

@@ -53,15 +53,15 @@ class FamilyGuardianController extends Controller
             ],
             [
                 'id' => 4,
-                'title' => 'Undian Berhadiah & Promo Sembako Murah Tak Masuk Akal',
-                'category' => 'Uang Muka Fiktif',
-                'summary' => 'Iming-iming hadiah mobil atau tebus murah sembako dengan syarat mentransfer biaya admin di awal.',
+                'title' => 'Transfer Dana Nyasar Pinjol Ilegal & Teror Kontak',
+                'category' => 'Pinjol Ilegal',
+                'summary' => 'Tiba-tiba masuk uang ke rekening tanpa mengajukan pinjaman, lalu diteror bunga ratusan persen dan ancaman sebar data.',
                 'red_flags' => [
-                    'Menang undian padahal tidak pernah mendaftar program apapun.',
-                    'Meminta uang muka untuk pencairan hadiah atau biaya kurir.',
-                    'Rekening tujuan menggunakan rekening perorangan pribadi.',
+                    'Menerima saldo masuk dari rekening PT Fintech yang tidak pernah Anda daftari.',
+                    'Muncul pesan teror menuntut pelunasan 2x lipat dalam tempo 3-4 hari.',
+                    'Peneror memaksa pengembalian uang dikirim ke nomor rekening perorangan pribadi.',
                 ],
-                'action_rule' => 'Abaikan dan hapus. Undian resmi tidak pernah memungut biaya transfer di muka kepada pemenang.',
+                'action_rule' => 'Jangan gunakan uang tersebut. Jangan transfer ke rekening pribadi penagih. Segera buat laporan resmi ke bank dan OJK 157.',
             ],
             [
                 'id' => 5,
@@ -80,27 +80,27 @@ class FamilyGuardianController extends Controller
         $quizQuestions = [
             [
                 'id' => 1,
-                'question' => 'Anda menerima pesan WhatsApp dari nomor baru berfoto anak Anda, mengabarkan HP-nya hilang dan meminta transfer uang kos 1 juta ke rekening temannya. Tindakan Anda?',
+                'question' => 'Anda menerima pesan WhatsApp dari nomor baru berfoto anak Anda (atau terdengar rekaman AI mirip suaranya) mengabarkan HP-nya hilang dan minta transfer uang darurat ke rekening temannya. Tindakan Anda?',
                 'options' => [
                     ['id' => 'A', 'text' => 'Langsung transfer karena kasihan anak sedang kesulitan di perantauan.', 'score' => 0],
-                    ['id' => 'B', 'text' => 'Telepon suara ke nomor lama anak atau hubungi kerabat/teman satu kosnya terlebih dahulu.', 'score' => 20],
+                    ['id' => 'B', 'text' => 'Telepon suara ke nomor lama anak atau gunakan "Kata Sandi Rahasia Keluarga" untuk verifikasi.', 'score' => 20],
                     ['id' => 'C', 'text' => 'Balas chat menanyakan kenapa bisa hilang.', 'score' => 10],
                 ],
             ],
             [
                 'id' => 2,
-                'question' => 'Muncul SMS menyatakan ada kiriman paket dari kurir, dan ada lampiran file Lihat_Foto_Barang.apk. Apa yang Anda lakukan?',
+                'question' => 'Muncul pesan WhatsApp kurir atau surat tilang ETLE kepolisian dengan lampiran berkas Surat_Tilang_ETLE.apk (format .APK). Apa yang Anda lakukan?',
                 'options' => [
-                    ['id' => 'A', 'text' => 'Hapus pesan dan jangan pernah klik file tersebut karena berekstensi .APK (aplikasi berbahaya).', 'score' => 20],
-                    ['id' => 'B', 'text' => 'Klik buka file untuk mengecek barang apa yang dikirim kurir.', 'score' => 0],
-                    ['id' => 'C', 'text' => 'Kirim file tersebut ke grup WhatsApp keluarga menanyakan ini paket siapa.', 'score' => 5],
+                    ['id' => 'A', 'text' => 'Hapus pesan dan jangan pernah klik file tersebut karena berekstensi .APK (aplikasi pencuri SMS OTP perbankan).', 'score' => 20],
+                    ['id' => 'B', 'text' => 'Klik buka dan pasang file untuk mengecek barang atau bukti pelanggaran kendaraan.', 'score' => 0],
+                    ['id' => 'C', 'text' => 'Kirim file tersebut ke grup WhatsApp keluarga menanyakan ini paket/tilang siapa.', 'score' => 5],
                 ],
             ],
             [
                 'id' => 3,
                 'question' => 'Seseorang menelepon mengaku dari Customer Service Bank Anda menyatakan kartu ATM diblokir, lalu meminta Anda membacakan 6 digit kode angka yang masuk di SMS. Tindakan Anda?',
                 'options' => [
-                    ['id' => 'A', 'text' => 'Tolak memberikan kode tersebut dan segera matikan telepon karena itu kode OTP rahasia.', 'score' => 20],
+                    ['id' => 'A', 'text' => 'Tolak memberikan kode tersebut dan segera matikan telepon karena itu kode OTP rahasia perbankan.', 'score' => 20],
                     ['id' => 'B', 'text' => 'Bacakan kodenya agar kartu ATM tidak jadi diblokir.', 'score' => 0],
                     ['id' => 'C', 'text' => 'Minta petugas tersebut menyebutkan nomor rekening Anda dulu baru Anda beri kodenya.', 'score' => 5],
                 ],
@@ -116,9 +116,9 @@ class FamilyGuardianController extends Controller
             ],
             [
                 'id' => 5,
-                'question' => 'Saat ingin membayar infak masjid atau belanja di warung, Anda melihat stiker barcode QRIS tertimpa stiker baru yang sedikit miring dengan nama toko yang aneh. Tindakan Anda?',
+                'question' => 'Saat ingin membayar di kafe atau infak masjid, Anda melihat stiker barcode QRIS tertimpa stiker baru yang sedikit miring dengan nama merchant penerima yang aneh. Tindakan Anda?',
                 'options' => [
-                    ['id' => 'A', 'text' => 'Konfirmasi ke kasir atau pengurus masjid apakah QRIS tersebut asli sebelum memindai.', 'score' => 20],
+                    ['id' => 'A', 'text' => 'Konfirmasi ke kasir atau pengurus apakah QRIS tersebut asli sebelum memindai (waspada QRIS tertimpa).', 'score' => 20],
                     ['id' => 'B', 'text' => 'Langsung scan dan bayar tanpa memeriksa nama penerima yang muncul di layar HP.', 'score' => 0],
                     ['id' => 'C', 'text' => 'Foto kodenya dan bayar nanti di rumah.', 'score' => 5],
                 ],

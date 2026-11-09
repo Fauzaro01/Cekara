@@ -3,15 +3,15 @@ import { cn } from '@/lib/utils';
 
 const variants = {
     neutral:
-        'border-slate-200 bg-slate-100/80 text-slate-700 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300',
+        'border-2 border-[#3B2A1E] bg-[#FFF8EC] text-[#3B2A1E]',
     brand:
-        'border-brand-200/90 bg-brand-50/80 text-brand-700 dark:border-brand-800/60 dark:bg-brand-950/40 dark:text-brand-300',
+        'border-2 border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E]',
     danger:
-        'border-rose-200/80 bg-rose-50/80 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300',
+        'border-2 border-[#3B2A1E] bg-[#D4573A] text-white',
     warn:
-        'border-amber-200/80 bg-amber-50/80 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300',
+        'border-2 border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]',
     safe:
-        'border-emerald-200/80 bg-emerald-50/80 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300',
+        'border-2 border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E]',
 } as const;
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
@@ -31,17 +31,17 @@ export function Badge({
     const showDot = dot || withDot;
 
     const dotColors = {
-        neutral: 'bg-slate-400',
-        brand: 'bg-brand-500',
-        danger: 'bg-rose-500',
-        warn: 'bg-amber-500',
-        safe: 'bg-emerald-500',
+        neutral: 'bg-[#6B5646]',
+        brand: 'bg-[#3B2A1E]',
+        danger: 'bg-white',
+        warn: 'bg-[#3B2A1E]',
+        safe: 'bg-[#3B2A1E]',
     };
 
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-tight transition-colors',
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold tracking-tight transition-colors',
                 variants[variant],
                 className,
             )}
@@ -65,7 +65,7 @@ export function badgeClasses(
     className?: string,
 ) {
     return cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-tight transition-colors',
+        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold tracking-tight transition-colors',
         variants[variant],
         className,
     );

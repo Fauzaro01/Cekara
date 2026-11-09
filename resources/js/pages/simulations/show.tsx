@@ -186,6 +186,22 @@ export default function SimulationShow({ scenario, latestAttempt }: Props) {
                 return (
                     <Banknote className="size-4.5 text-slate-600 dark:text-slate-300" />
                 );
+            case 'shield':
+                return (
+                    <ShieldCheck className="size-4.5 text-blue-600 dark:text-blue-400" />
+                );
+            case 'alert':
+                return (
+                    <AlertTriangle className="size-4.5 text-rose-600 dark:text-rose-400" />
+                );
+            case 'qrcode':
+                return (
+                    <HelpCircle className="size-4.5 text-emerald-600 dark:text-emerald-400" />
+                );
+            case 'ticket':
+                return (
+                    <Sparkles className="size-4.5 text-purple-600 dark:text-purple-400" />
+                );
             default:
                 return (
                     <User className="size-4.5 text-slate-600 dark:text-slate-300" />

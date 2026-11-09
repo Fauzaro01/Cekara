@@ -2,24 +2,39 @@ import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import {
     AlertTriangle,
-    Award,
-    BookOpen,
     Check,
     CheckCircle2,
-    Heart,
     HelpCircle,
     PhoneCall,
     Printer,
     RotateCcw,
     Share2,
-    Shield,
-    ShieldCheck,
     Sparkles,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+
+function CalmIcon({ className = 'size-5' }: { className?: string }) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 10c.8-1.2 2.2-1.2 3 0" />
+            <path d="M13 10c.8-1.2 2.2-1.2 3 0" />
+            <path d="M8.5 14.5c1 1.8 6 1.8 7 0" />
+        </svg>
+    );
+}
 
 interface CheatSheetItem {
     id: number;
@@ -139,23 +154,14 @@ export default function FamilyGuardianIndex({
             <Head title="Guardian Toolkit untuk Keluarga & Guru - Cekara" />
 
             {/* Hero Section */}
-            <section className="relative overflow-hidden border-b border-slate-200/80 bg-linear-to-b from-slate-50/80 to-white py-12 dark:border-slate-800 dark:from-slate-900/40 dark:to-slate-950">
+            <section className="relative overflow-hidden bg-[#FFF8EC] pt-8 pb-4 sm:pt-12 sm:pb-6">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="brand">
-                                    <Heart className="mr-1 size-3 fill-rose-500 text-rose-500" />
-                                    Family & School Guardian
-                                </Badge>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    Peduli Orang Tua & Kerabat
-                                </span>
-                            </div>
-                            <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
+                        <div className="max-w-xl">
+                            <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
                                 Toolkit Guardian Keluarga & Guru
                             </h1>
-                            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                            <p className="mt-2 text-sm leading-relaxed text-[#6B5646] sm:text-base">
                                 Bekali orang tua, kakek-nenek, dan adik di rumah
                                 dengan pemahaman sederhana menghadapi penipuan
                                 digital. Jadilah Guardian pertama di lingkungan
@@ -164,51 +170,49 @@ export default function FamilyGuardianIndex({
                         </div>
 
                         {/* Fast CTA */}
-                        <div className="flex flex-wrap gap-2.5">
+                        <div className="flex flex-col items-stretch sm:items-end gap-2.5 shrink-0 md:ml-auto">
                             <a
                                 href={`https://wa.me/?text=${familyShareWaText}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={`${buttonClasses('primary')} inline-flex items-center gap-1.5 shadow-sm`}
+                                className={`${buttonClasses('primary')} inline-flex w-full sm:w-[285px] items-center justify-center gap-2 shadow-sm text-center`}
                             >
-                                <Share2 className="size-4" />
-                                Bagikan Aturan 3T ke WA Keluarga
+                                <Share2 className="size-4 shrink-0" />
+                                <span>Bagikan Aturan 3T</span>
                             </a>
                             <Button
                                 variant="outline"
                                 onClick={handlePrint}
-                                className="print:hidden"
+                                className="print:hidden inline-flex w-full sm:w-[285px] items-center justify-center gap-2 text-center"
                             >
-                                <Printer className="mr-1.5 size-4" />
-                                Cetak Lembar Panduan
+                                <Printer className="size-4 shrink-0" />
+                                <span>Cetak Lembar Panduan</span>
                             </Button>
                         </div>
                     </div>
 
                     {/* Navigation Tabs */}
-                    <div className="mt-8 flex gap-6 border-b border-slate-200/80 dark:border-slate-800 print:hidden">
+                    <div className="mt-8 flex gap-6 border-b-2 border-[#EFE3D0] print:hidden">
                         <button
                             type="button"
                             onClick={() => setActiveTab('cheatsheet')}
-                            className={`inline-flex items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition ${
+                            className={`cursor-pointer border-b-2 pb-3 text-sm font-bold transition ${
                                 activeTab === 'cheatsheet'
-                                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
-                                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                                    ? 'border-[#3B2A1E] text-[#3B2A1E]'
+                                    : 'border-transparent text-[#6B5646] hover:text-[#3B2A1E]'
                             }`}
                         >
-                            <BookOpen className="size-4" />
                             Lembar Panduan Keluarga (Cheat Sheet)
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab('quiz')}
-                            className={`inline-flex items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition ${
+                            className={`cursor-pointer border-b-2 pb-3 text-sm font-bold transition ${
                                 activeTab === 'quiz'
-                                    ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
-                                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                                    ? 'border-[#3B2A1E] text-[#3B2A1E]'
+                                    : 'border-transparent text-[#6B5646] hover:text-[#3B2A1E]'
                             }`}
                         >
-                            <Award className="size-4" />
                             Tes Kerentanan Keluarga (5 Menit)
                         </button>
                     </div>
@@ -223,61 +227,52 @@ export default function FamilyGuardianIndex({
                         variant="glass"
                         className="mb-8 border-brand-200/80 bg-brand-50/40 p-6 sm:p-8 dark:border-brand-900/50 dark:bg-brand-950/20"
                     >
-                        <div className="flex items-center gap-2">
-                            <Badge variant="brand">
-                                <ShieldCheck className="mr-1 size-3" />
-                                Pedoman Emas
-                            </Badge>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                                Proteksi Cepat
-                            </span>
-                        </div>
-                        <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">
+                        <h2 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] sm:text-2xl">
                             Aturan Emas 3T untuk Anggota Keluarga di Rumah
                         </h2>
                         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-5 shadow-[3px_3px_0px_0px_#3B2A1E] transition-all">
                                 <div className="flex items-center gap-2.5">
-                                    <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400">
-                                        <Shield className="size-5" />
+                                    <span className="flex size-9 items-center justify-center rounded-xl border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]">
+                                        <CalmIcon className="size-5" />
                                     </span>
-                                    <span className="text-lg font-extrabold text-brand-600 dark:text-brand-400">
+                                    <span className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
                                         1. TENANG
                                     </span>
                                 </div>
-                                <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                                <p className="mt-3 text-xs leading-relaxed text-[#6B5646]">
                                     Jangan buru-buru panik saat menerima kabar
                                     darurat, musibah, atau ancaman pemblokiran
                                     rekening. Penipu sengaja memanfaatkan
                                     kepanikan agar Anda tidak berpikir logis.
                                 </p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-5 shadow-[3px_3px_0px_0px_#3B2A1E] transition-all">
                                 <div className="flex items-center gap-2.5">
-                                    <span className="flex size-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+                                    <span className="flex size-9 items-center justify-center rounded-xl border border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E]">
                                         <PhoneCall className="size-5" />
                                     </span>
-                                    <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
+                                    <span className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
                                         2. TELEPON
                                     </span>
                                 </div>
-                                <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                                <p className="mt-3 text-xs leading-relaxed text-[#6B5646]">
                                     Selalu lakukan panggilan suara/video ke
                                     nomor lama orang yang bersangkutan sebelum
                                     mengirimkan uang. Jangan hanya percaya pada
                                     chat teks atau foto profil.
                                 </p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-5 shadow-[3px_3px_0px_0px_#3B2A1E] transition-all">
                                 <div className="flex items-center gap-2.5">
-                                    <span className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                                    <span className="flex size-9 items-center justify-center rounded-xl border border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E]">
                                         <HelpCircle className="size-5" />
                                     </span>
-                                    <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+                                    <span className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
                                         3. TANYA
                                     </span>
                                 </div>
-                                <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                                <p className="mt-3 text-xs leading-relaxed text-[#6B5646]">
                                     Tunjukkan pesan asing kepada anak, cucu,
                                     atau kerabat muda di rumah. Jadikan generasi
                                     muda sebagai Guardian Digital keluarga Anda.

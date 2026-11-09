@@ -26,8 +26,10 @@ Route::post('/panduan-keluarga/kuis', [FamilyGuardianController::class, 'submitQ
 
 // Interactive Simulation Routes (Pilar Learn)
 Route::get('/simulasi', [SimulationController::class, 'index'])->name('simulations.index');
-Route::get('/simulasi/{slug}', [SimulationController::class, 'show'])->name('simulations.show');
-Route::post('/simulasi/{slug}/submit', [SimulationController::class, 'submit'])->name('simulations.submit');
+Route::middleware('auth')->group(function () {
+    Route::get('/simulasi/{slug}', [SimulationController::class, 'show'])->name('simulations.show');
+    Route::post('/simulasi/{slug}/submit', [SimulationController::class, 'submit'])->name('simulations.submit');
+});
 Route::post('/simulasi/kontribusi', [SimulationController::class, 'contribute'])->name('simulations.contribute');
 
 // Chatbot Fraud Analysis Endpoints

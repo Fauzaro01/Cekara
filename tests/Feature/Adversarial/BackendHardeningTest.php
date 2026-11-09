@@ -434,6 +434,46 @@ describe('Section 3: Concrete Driver Edge Cases', function () {
         expect($result->riskLevel)->toBe('LOW');
     });
 
+    test('CustomRouterDriver parses 9router responses containing trailing data: [DONE] marker', function () {
+        $provider = new LlmProvider([
+            'key' => 'custom',
+            'name' => '9router Local',
+            'model' => 'openrouter/openrouter/free',
+            'api_key' => 'sk-9router-key',
+            'base_url' => 'http://localhost:20128/v1',
+        ]);
+
+        $rawRouterBody = "\n         \n".json_encode([
+            'id' => 'gen-9router-1',
+            'choices' => [
+                [
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => json_encode([
+                            'risk_level' => 'HIGH',
+                            'score' => 92,
+                            'summary' => 'Pesan hoaks berantai biaya aktivasi WhatsApp Rp50.000.',
+                            'red_flags' => ['Klaim WhatsApp berbayar Rp50.000', 'Ancaman blokir permanen 24 jam'],
+                            'recommendations' => ['Abaikan dan jangan bayar', 'Jangan sebarkan ke grup'],
+                        ]),
+                    ],
+                ],
+            ],
+        ])."data: [DONE]\n";
+
+        Http::fake([
+            '*localhost:20128*' => Http::response($rawRouterBody, 200, ['Content-Type' => 'application/json']),
+        ]);
+
+        $driver = new CustomRouterDriver($provider);
+        $result = $driver->analyze('Mulai besok seluruh pengguna WhatsApp diwajibkan membayar biaya aktivasi Rp50.000.');
+
+        expect($result->isMock)->toBeFalse()
+            ->and($result->riskLevel)->toBe('HIGH')
+            ->and($result->score)->toBe(92)
+            ->and($result->redFlags)->toContain('Klaim WhatsApp berbayar Rp50.000');
+    });
+
     test('OpenAiDriver clamps non-standard risk levels to HIGH defensively', function (string $unknownRiskLevel) {
         $provider = new LlmProvider([
             'key' => 'openai',

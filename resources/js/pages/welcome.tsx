@@ -769,32 +769,102 @@ export default function Welcome() {
         setTimeout(() => {
             if (activeTab === 'text') {
                 const lower = inputText.toLowerCase();
-                if (
-                    lower.includes('deposit') ||
-                    lower.includes('.apk') ||
-                    lower.includes('transfer uang') ||
-                    lower.includes('otp') ||
-                    lower.includes('hadiah') ||
-                    lower.includes('undian')
-                ) {
+
+                // Weighted keyword scoring (mirrors backend MockLlmDriver approach)
+                const highKeywords = [
+                    'deposit', '.apk', 'transfer uang', 'kirim uang', 'transfer ke rekening',
+                    'otp', 'kode verifikasi', 'pin atm', 'cvv', 'kode 6 digit', 'password',
+                    'rekening terblokir', 'akun terblokir', 'akun dibekukan',
+                    'selamat anda', 'anda terpilih', 'memenangkan', 'pemenang undian',
+                    'klaim hadiah', 'biaya admin', 'biaya pencairan', 'bayar dulu',
+                    'saya polisi', 'dari kepolisian', 'dari kejaksaan', 'tersangka',
+                    'dijamin untung', 'profit pasti', 'tanpa risiko', 'return tinggi',
+                    'foto ktp', 'kirim ktp', 'selfie ktp',
+                ];
+                const mediumKeywords = [
+                    'hadiah', 'undian', 'komisi', 'bonus harian', 'like video',
+                    'kerja paruh waktu', 'tugas harian', 'tugas mudah', 'kerja sampingan',
+                    'klik link', 'klik tautan', 'buka link', 'klik disini',
+                    'segera', 'sekarang juga', 'dalam 24 jam', 'batas waktu',
+                    'jangan beritahu', 'rahasia', 'antara kita saja',
+                    'pinjaman online', 'pinjol', 'cepat cair', 'tanpa agunan',
+                    'investasi', 'trading', 'crypto', 'robot trading',
+                    'grup telegram', 'join telegram', 'gabung grup',
+                    'hubungi nomor', 'whatsapp saya di', 'gratis',
+                    'penipuan', 'scam', 'palsu', 'fraud', 'bodong', 'penipu',
+                    'transfer', 'kirim ke', 'customer service bank', 'petugas bank',
+                    'nomor rekening', 'data pribadi',
+                ];
+
+                let score = 0;
+                const matchedPoints: string[] = [];
+
+                highKeywords.forEach((kw) => {
+                    if (lower.includes(kw)) score += 30;
+                });
+                mediumKeywords.forEach((kw) => {
+                    if (lower.includes(kw)) score += 15;
+                });
+
+                // Build contextual suspicious points
+                if (lower.includes('.apk') || lower.includes('unduh') || lower.includes('instal'))
+                    matchedPoints.push('Mengirimkan berkas .apk atau meminta mengunduh aplikasi berbahaya.');
+                if (lower.includes('otp') || lower.includes('pin atm') || lower.includes('cvv') || lower.includes('password'))
+                    matchedPoints.push('Meminta kode OTP, PIN, CVV, atau kata sandi yang bersifat rahasia mutlak.');
+                if (lower.includes('transfer') || lower.includes('kirim uang') || lower.includes('deposit') || lower.includes('bayar dulu'))
+                    matchedPoints.push('Meminta transfer uang atau pembayaran deposit di muka.');
+                if (lower.includes('hadiah') || lower.includes('undian') || lower.includes('memenangkan') || lower.includes('terpilih'))
+                    matchedPoints.push('Klaim memenangkan hadiah atau undian yang tidak pernah diikuti.');
+                if (lower.includes('segera') || lower.includes('dalam 24 jam') || lower.includes('batas waktu'))
+                    matchedPoints.push('Menggunakan tekanan waktu mendesak untuk mencegah korban berpikir rasional.');
+                if (lower.includes('klik link') || lower.includes('klik tautan') || lower.includes('buka link'))
+                    matchedPoints.push('Mengarahkan untuk mengklik tautan yang berpotensi phishing.');
+                if (lower.includes('pinjol') || lower.includes('pinjaman online') || lower.includes('cepat cair'))
+                    matchedPoints.push('Tawaran pinjaman online instan yang berindikasi pinjol ilegal.');
+                if (lower.includes('investasi') || lower.includes('trading') || lower.includes('profit pasti'))
+                    matchedPoints.push('Menjanjikan keuntungan investasi yang tidak realistis.');
+                if (lower.includes('foto ktp') || lower.includes('kirim ktp') || lower.includes('data pribadi'))
+                    matchedPoints.push('Meminta data identitas pribadi yang dapat disalahgunakan.');
+                if (lower.includes('penipuan') || lower.includes('scam') || lower.includes('palsu') || lower.includes('penipu'))
+                    matchedPoints.push('Konten secara eksplisit mengandung istilah penipuan atau kecurangan.');
+                if (lower.includes('komisi') || lower.includes('like video') || lower.includes('tugas harian'))
+                    matchedPoints.push('Menawarkan tugas ringan dengan imbalan komisi, modus jebakan skema ponzi.');
+                if (lower.includes('polisi') || lower.includes('kejaksaan') || lower.includes('tersangka'))
+                    matchedPoints.push('Mengatasnamakan aparat hukum untuk mengintimidasi korban.');
+
+                if (matchedPoints.length === 0) {
+                    matchedPoints.push(
+                        'Gaya bahasa terkesan terburu-buru atau menawarkan keuntungan tanpa kejelasan identitas resmi pengirim.',
+                        'Belum ada bukti legalitas yang bisa diverifikasi langsung dari saluran resmi.',
+                    );
+                }
+
+                if (score >= 30) {
                     setScanResult({
                         level: 'high',
                         badgeLabel: 'Hati-hati, ini mencurigakan',
-                        headline:
-                            'Ditemukan tanda bahaya yang sering muncul pada modus penipuan tugas berbayar & berkas berbahaya.',
-                        suspiciousPoints: [
-                            'Meminta transfer uang muka / deposit jaminan sebelum kamu mulai bekerja.',
-                            'Menawarkan imbalan uang yang tidak masuk akal untuk tugas yang sangat ringan (like video/follow).',
-                            lower.includes('.apk')
-                                ? 'Mengirimkan berkas berekstensi .apk yang berpotensi mencuri SMS & kode perbankan.'
-                                : 'Pola manipulasi mendesak pengguna untuk segera mengirim uang.',
-                        ],
+                        headline: 'Ditemukan beberapa tanda bahaya yang sering muncul pada modus penipuan digital.',
+                        suspiciousPoints: matchedPoints.slice(0, 5),
                         explanation:
-                            'Di dunia kerja nyata, perusahaan yang membayar karyawan, bukan karyawan yang membayar perusahaan. Tawaran seperti ini biasanya memancing di awal dengan uang kecil, lalu meminta setoran yang makin besar hingga tabungan habis.',
+                            'Pesan dengan kombinasi permintaan transfer uang, data rahasia, atau tekanan waktu mendesak memiliki ciri khas penipuan rekayasa sosial.',
                         recommendedActions: [
-                            'Jangan transfer uang dalam jumlah berapa pun.',
+                            'Jangan transfer uang atau bagikan data rahasia dalam jumlah atau bentuk apa pun.',
                             'Jangan klik tautan atau pasang berkas yang dikirimkan.',
                             'Blokir nomor pengirim dan laporkan ke kanal Indonesia Anti-Scam Centre (iasc.ojk.go.id).',
+                        ],
+                    });
+                } else if (score >= 15) {
+                    setScanResult({
+                        level: 'medium',
+                        badgeLabel: 'Yuk cek dulu',
+                        headline: 'Pesan ini memiliki beberapa elemen mencurigakan yang perlu dicek ulang.',
+                        suspiciousPoints: matchedPoints.slice(0, 4),
+                        explanation:
+                            'Meskipun belum cukup bukti untuk divonis penipuan, pola komunikasi ini memerlukan verifikasi ke sumber resmi sebelum ditindaklanjuti.',
+                        recommendedActions: [
+                            'Cek nama perusahaan atau akun pengirim di mesin pencari resmi.',
+                            'Jangan langsung percaya tawaran sebelum konfirmasi ke pihak resmi.',
+                            'Tanyakan pendapat teman atau keluarga sebelum mengambil tindakan lanjutan.',
                         ],
                     });
                 } else {
@@ -803,12 +873,9 @@ export default function Welcome() {
                         badgeLabel: 'Yuk cek dulu',
                         headline:
                             'Pesan ini perlu dicek ulang ke sumber resminya sebelum dipercaya.',
-                        suspiciousPoints: [
-                            'Gaya bahasa terkesan terburu-buru atau menawarkan keuntungan tanpa kejelasan identitas resmi pengirim.',
-                            'Belum ada bukti legalitas yang bisa diverifikasi langsung dari saluran resmi.',
-                        ],
+                        suspiciousPoints: matchedPoints.slice(0, 3),
                         explanation:
-                            'Meskipun tidak secara terang-terangan meminta uang atau data sensitif, tawaran tanpa kejelasan kontak resmi perusahaan berisiko mengarahkanmu ke obrolan privat berbahaya.',
+                            'Meskipun tidak secara terang-terangan meminta uang atau data sensitif, pesan dari sumber tidak dikenal selalu perlu diverifikasi.',
                         recommendedActions: [
                             'Cek nama perusahaan atau akun pengirim di mesin pencari resmi.',
                             'Tanyakan pendapat teman atau keluarga sebelum mengambil tindakan lanjutan.',

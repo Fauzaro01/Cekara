@@ -409,7 +409,7 @@ describe('Tier 7: Multi-URL Messages & ChatController Integration', function () 
         expect(count($scan->metadata['detected_urls']))->toBe(2);
     });
 
-    test('guest analysis with phishing url returns high risk without database persistence', function () {
+    test('guest analysis with phishing url returns high risk and persists with user_id null and public_id', function () {
         $scanCountBefore = Scan::query()->count();
 
         $response = $this->postJson('/chat/analyze', [
@@ -420,7 +420,12 @@ describe('Tier 7: Multi-URL Messages & ChatController Integration', function () 
         $data = $response->json('data') ?? $response->json();
 
         expect(strtoupper($data['risk_level']))->toBe('HIGH');
-        expect(Scan::query()->count())->toBe($scanCountBefore);
+        expect(Scan::query()->count())->toBe($scanCountBefore + 1);
+
+        $scan = Scan::query()->latest('id')->first();
+        expect($scan->user_id)->toBeNull();
+        expect($scan->public_id)->not->toBeEmpty();
+        expect($response->json('public_id'))->toBe($scan->public_id);
     });
 });
 

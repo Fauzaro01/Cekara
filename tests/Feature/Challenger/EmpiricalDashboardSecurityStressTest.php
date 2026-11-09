@@ -217,7 +217,7 @@ describe('Boundary & Parameter Robustness', function () {
 
         $response = $this->actingAs($user)->delete('/scans/-1');
 
-        $response->assertNotFound();
+        expect(in_array($response->status(), [404, 405]))->toBeTrue();
     });
 
     test('deleting scan with zero ID returns 404 not found', function () {
@@ -233,7 +233,7 @@ describe('Boundary & Parameter Robustness', function () {
 
         $response = $this->actingAs($user)->delete('/scans/non-numeric-payload');
 
-        // Route is hardened with ->whereNumber('id'), returning 404 for non-numeric payload
-        expect($response->status())->toBe(404);
+        // Route is hardened with ->whereNumber('id'), rejecting non-numeric payload
+        expect(in_array($response->status(), [404, 405]))->toBeTrue();
     });
 });

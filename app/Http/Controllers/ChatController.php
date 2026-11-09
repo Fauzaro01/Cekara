@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Scan;
 use App\Services\Llm\LlmManager;
 use App\Services\Security\UrlPhishingScanner;
 use Illuminate\Http\JsonResponse;
@@ -27,8 +28,8 @@ class ChatController extends Controller
                 'nullable',
                 'file',
                 'image',
-                'mimes:jpg,jpeg,png',
-                'extensions:jpg,jpeg,png',
+                'mimes:jpg,jpeg,png,webp',
+                'extensions:jpg,jpeg,png,webp',
                 'dimensions:min_width=1,min_height=1',
                 'max:5120',
             ],
@@ -39,8 +40,8 @@ class ChatController extends Controller
             'content.min' => 'Kolom isi pesan harus berisi minimal :min karakter.',
             'content.max' => 'Kolom isi pesan tidak boleh lebih dari :max karakter.',
             'image.image' => 'Berkas harus berupa gambar.',
-            'image.mimes' => 'Format gambar harus berupa JPG, JPEG, atau PNG.',
-            'image.extensions' => 'Ekstensi berkas gambar harus berupa jpg, jpeg, atau png.',
+            'image.mimes' => 'Format gambar harus berupa JPG, JPEG, PNG, atau WEBP.',
+            'image.extensions' => 'Ekstensi berkas gambar harus berupa jpg, jpeg, png, atau webp.',
             'image.dimensions' => 'Berkas gambar tidak valid atau rusak.',
             'image.max' => 'Ukuran gambar maksimal adalah 5MB.',
         ]);
@@ -53,10 +54,8 @@ class ChatController extends Controller
             $imageFile = $request->file('image');
             $imageFilename = $imageFile->getClientOriginalName();
 
-            // Store image if user is authenticated for persistent history
-            if ($request->user()) {
-                $storedImagePath = $imageFile->store('scans', 'public');
-            }
+            // Store image to 'public' disk in 'scans' folder for all scans (both guest and auth)
+            $storedImagePath = $imageFile->store('scans', 'public');
 
             $context['image'] = [
                 'mime_type' => $imageFile->getMimeType(),
@@ -111,39 +110,44 @@ class ChatController extends Controller
         // Deduplicate red flags
         $result->redFlags = array_values(array_unique($result->redFlags));
 
-        // Auto-persist scan if user is authenticated (guest scans remain ephemeral)
-        if ($user = $request->user()) {
-            $scanType = match (true) {
-                $request->hasFile('image') => 'image',
-                ! empty($detectedUrls) => 'url',
-                default => 'text',
-            };
+        // Persist scan for both guest (user_id = null) and authenticated user
+        $scanType = match (true) {
+            $request->hasFile('image') => 'image',
+            ! empty($detectedUrls) => 'url',
+            default => 'text',
+        };
 
-            $user->scans()->create([
-                'scan_type' => $scanType,
-                'content' => $validated['content'] ?? ($imageFilename ?? 'Screenshot Chat'),
-                'risk_level' => $result->riskLevel,
-                'score' => $result->score,
-                'summary' => $result->summary,
-                'red_flags' => $result->redFlags,
-                'recommendations' => $result->recommendations,
-                'provider_used' => $result->providerName,
-                'model_used' => $result->model,
-                'is_mock' => $result->isMock,
-                'metadata' => [
-                    'image_path' => $storedImagePath,
-                    'image_filename' => $imageFilename,
-                    'detected_urls' => $detectedUrls,
-                    'url_scans' => $urlScans,
-                    'fallback_reason' => $result->fallbackReason,
-                ],
-            ]);
-        }
+        $scan = Scan::create([
+            'user_id' => $request->user()?->id,
+            'scan_type' => $scanType,
+            'content' => $validated['content'] ?? ($imageFilename ?? 'Screenshot Chat'),
+            'risk_level' => $result->riskLevel,
+            'score' => $result->score,
+            'summary' => $result->summary,
+            'red_flags' => $result->redFlags,
+            'recommendations' => $result->recommendations,
+            'provider_used' => $result->providerName,
+            'model_used' => $result->model,
+            'is_mock' => $result->isMock,
+            'metadata' => [
+                'image_path' => $storedImagePath,
+                'image_filename' => $imageFilename,
+                'detected_urls' => $detectedUrls,
+                'url_scans' => $urlScans,
+                'fallback_reason' => $result->fallbackReason,
+            ],
+        ]);
 
         $data = $result->toArray();
+        $data['public_id'] = $scan->public_id;
+        $data['scan_id'] = $scan->id;
+        $data['share_url'] = url("/scans/{$scan->public_id}");
 
         return response()->json([
             'success' => true,
+            'public_id' => $scan->public_id,
+            'scan_id' => $scan->id,
+            'share_url' => url("/scans/{$scan->public_id}"),
             'data' => $data,
             ...$data,
         ]);

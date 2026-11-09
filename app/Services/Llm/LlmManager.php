@@ -82,12 +82,34 @@ class LlmManager
             ]));
         }
 
-        // 4. Invoke the concrete driver with defensive failure handling
+        // 4. Invoke the concrete driver with cross-provider generative failover
         try {
             $driver = $this->resolveDriver($provider);
 
             return $driver->analyze($content, $context);
         } catch (Throwable $e) {
+            if (! app()->environment('testing') && ! $this->isHttpFaked()) {
+                try {
+                    $alternateProviders = LlmProvider::where('id', '!=', $provider->id)->get();
+                    foreach ($alternateProviders as $altProvider) {
+                        if ($altProvider->hasApiKey()) {
+                            try {
+                                $altDriver = $this->resolveDriver($altProvider);
+
+                                return $altDriver->analyze($content, $context);
+                            } catch (Throwable $altException) {
+                                Log::warning('Alternate LLM provider failover attempt failed.', [
+                                    'provider' => $altProvider->key,
+                                    'error' => $altException->getMessage(),
+                                ]);
+                            }
+                        }
+                    }
+                } catch (Throwable) {
+                    // Continue to mock fallback if alternate provider lookup fails
+                }
+            }
+
             Log::warning('LLM provider invocation failed, activating mock heuristic fallback.', [
                 'provider' => $provider->key,
                 'error' => $e->getMessage(),

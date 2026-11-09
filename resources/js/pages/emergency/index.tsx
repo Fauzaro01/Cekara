@@ -82,6 +82,8 @@ interface TabScanResult {
     capturedAt: string;
     tabTitle?: string;
     imagePreviewUrl?: string;
+    publicId?: string;
+    shareUrl?: string;
 }
 
 export default function EmergencyIndex({
@@ -91,10 +93,13 @@ export default function EmergencyIndex({
 
     // AI Live Tab Inspector State
     const [isCapturing, setIsCapturing] = useState<boolean>(false);
+    const [isCountingDown, setIsCountingDown] = useState<boolean>(false);
+    const [countdownRemaining, setCountdownRemaining] = useState<number>(0);
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const [tabScanResult, setTabScanResult] = useState<TabScanResult | null>(null);
     const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
+    const [isShareCopied, setIsShareCopied] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -232,17 +237,38 @@ export default function EmergencyIndex({
             // Hentikan stream segera demi privasi pengguna
             stream.getTracks().forEach((track) => track.stop());
 
-            const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+            // Tampilkan preview segera di UI
+            const previewUrl = canvas.toDataURL('image/webp', 0.8);
             setCapturedPreview(previewUrl);
             setIsCapturing(false);
+
+            // Berikan jeda 2.5 detik dengan indikator visual countdown di UI sebelum analisis dimulai
+            setIsCountingDown(true);
+            setCountdownRemaining(2.5);
+
+            const totalDelayMs = 2500;
+            const startTime = Date.now();
+            await new Promise<void>((resolve) => {
+                const timer = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const remaining = Math.max(0, (totalDelayMs - elapsed) / 1000);
+                    setCountdownRemaining(parseFloat(remaining.toFixed(1)));
+                    if (elapsed >= totalDelayMs) {
+                        clearInterval(timer);
+                        resolve();
+                    }
+                }, 100);
+            });
+
+            setIsCountingDown(false);
             setIsAnalyzing(true);
 
-            // Convert canvas ke blob untuk dikirim ke API
+            // Convert canvas ke blob format WebP untuk dikirim ke API
             canvas.toBlob(
                 async (blob) => {
                     if (!blob) {
                         setIsAnalyzing(false);
-                        setScanError('Gagal memproses tangkapan layar tab.');
+                        setScanError('Gagal memproses tangkapan layar tab ke WebP.');
                         return;
                     }
 
@@ -255,8 +281,8 @@ export default function EmergencyIndex({
                             : '';
 
                         const formData = new FormData();
-                        const file = new File([blob], 'tab_snapshot.jpg', {
-                            type: 'image/jpeg',
+                        const file = new File([blob], 'tab_snapshot.webp', {
+                            type: 'image/webp',
                         });
                         formData.append('image', file);
                         formData.append(
@@ -299,6 +325,14 @@ export default function EmergencyIndex({
                                   ? 'LOW'
                                   : 'MEDIUM';
 
+                        const publicId = data.public_id || json.public_id;
+                        const shareUrl =
+                            data.share_url ||
+                            json.share_url ||
+                            (publicId
+                                ? `${window.location.origin}/scans/${publicId}`
+                                : undefined);
+
                         setTabScanResult({
                             riskLevel,
                             score:
@@ -325,6 +359,8 @@ export default function EmergencyIndex({
                             }),
                             tabTitle,
                             imagePreviewUrl: previewUrl,
+                            publicId,
+                            shareUrl,
                         });
                         showToast(
                             'Audit tab berhasil diselesaikan oleh AI Agent!',
@@ -337,11 +373,12 @@ export default function EmergencyIndex({
                         setIsAnalyzing(false);
                     }
                 },
-                'image/jpeg',
-                0.85,
+                'image/webp',
+                0.8,
             );
         } catch (err: any) {
             setIsCapturing(false);
+            setIsCountingDown(false);
             setIsAnalyzing(false);
             if (
                 err.name === 'NotAllowedError' ||
@@ -413,6 +450,14 @@ export default function EmergencyIndex({
                           ? 'LOW'
                           : 'MEDIUM';
 
+                const publicId = data.public_id || json.public_id;
+                const shareUrl =
+                    data.share_url ||
+                    json.share_url ||
+                    (publicId
+                        ? `${window.location.origin}/scans/${publicId}`
+                        : undefined);
+
                 setTabScanResult({
                     riskLevel,
                     score: typeof data.score === 'number' ? data.score : 80,
@@ -433,6 +478,8 @@ export default function EmergencyIndex({
                     }),
                     tabTitle: file.name,
                     imagePreviewUrl: previewUrl,
+                    publicId,
+                    shareUrl,
                 });
                 showToast('Audit screenshot berhasil diselesaikan!');
             } catch (err: any) {
@@ -572,7 +619,7 @@ export default function EmergencyIndex({
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept="image/png,image/jpeg,image/jpg"
+                                        accept="image/png,image/jpeg,image/jpg,image/webp"
                                         onChange={handleManualImageUpload}
                                         className="hidden"
                                     />
@@ -599,6 +646,42 @@ export default function EmergencyIndex({
                                 >
                                     Tutup
                                 </button>
+                            </div>
+                        )}
+
+                        {/* Preview & Countdown Banner (Shown immediately after capture during 2.5s delay) */}
+                        {isCountingDown && capturedPreview && (
+                            <div className="rounded-3xl border-2 border-[#3B2A1E] bg-white p-6 shadow-[4px_4px_0px_0px_#3B2A1E] space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#EFE3D0] pb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                            <Loader2 className="size-5 text-[#3B2A1E] animate-spin" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
+                                                Tangkapan Layar Tab Berhasil Diambil
+                                            </h3>
+                                            <p className="text-xs text-[#6B5646]">
+                                                Mengompresi ke format WebP dan menyiapkan analisis AI...
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="inline-flex items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF8EC] px-4 py-2 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                        <span className="text-xs font-bold text-[#6B5646]">Mulai analisis dalam:</span>
+                                        <span className="font-mono text-base font-black text-[#FF9A3C]">
+                                            {countdownRemaining.toFixed(1)}s
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-hidden rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF8EC]">
+                                    <img
+                                        src={capturedPreview}
+                                        alt="Pratinjau Tangkapan Layar Tab"
+                                        className="w-full max-h-72 object-cover object-top"
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -725,31 +808,102 @@ export default function EmergencyIndex({
                                 </div>
 
                                 {/* Next Action Buttons */}
-                                <div className="border-t border-[#EFE3D0] pt-5 flex flex-wrap items-center justify-between gap-3">
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        {tabScanResult.riskLevel !== 'LOW' && (
-                                            <button
-                                                type="button"
-                                                onClick={handleTransferToWhatsApp}
-                                                className="inline-flex items-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2.5 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] transition hover:-translate-y-0.5 hover:bg-[#ffd952] cursor-pointer"
-                                            >
-                                                <MessageCircle className="size-4 text-[#2E7D32]" />
-                                                <span>Sebarkan Peringatan ke WhatsApp Keluarga</span>
-                                            </button>
-                                        )}
+                                <div className="border-t border-[#EFE3D0] pt-5 space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex flex-wrap items-center gap-2.5">
+                                            {/* Salin Link Hasil */}
+                                            {tabScanResult.shareUrl && (
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        if (!tabScanResult.shareUrl) return;
+                                                        try {
+                                                            await navigator.clipboard.writeText(tabScanResult.shareUrl);
+                                                            setIsShareCopied(true);
+                                                            showToast('Tautan hasil audit berhasil disalin ke papan klip!');
+                                                            setTimeout(() => setIsShareCopied(false), 3000);
+                                                        } catch {
+                                                            showToast('Gagal menyalin tautan.');
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        'inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-[#3B2A1E] px-4 py-2 text-xs font-bold shadow-[2px_2px_0px_0px_#3B2A1E] transition hover:-translate-y-0.5 cursor-pointer',
+                                                        isShareCopied ? 'bg-[#FFE27A] text-[#3B2A1E]' : 'bg-white text-[#3B2A1E] hover:bg-[#FFF8EC]',
+                                                    )}
+                                                >
+                                                    {isShareCopied ? (
+                                                        <>
+                                                            <CheckCircle2 className="size-4 text-[#3B2A1E]" />
+                                                            <span>Tautan Tersalin!</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Copy className="size-4 text-[#6B5646]" />
+                                                            <span>Salin Link Hasil</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+
+                                            {/* Bagikan ke WhatsApp */}
+                                            {tabScanResult.shareUrl && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const message =
+                                                            `*HASIL AUDIT SITUS SIBER - CEKARA*\n\n` +
+                                                            `Situs/Tab: *${tabScanResult.tabTitle || 'Halaman Web'}*\n` +
+                                                            `Tingkat Risiko: *${tabScanResult.riskLevel} (${tabScanResult.score}%)*\n\n` +
+                                                            `Ringkasan:\n${tabScanResult.summary}\n\n` +
+                                                            `Lihat laporan selengkapnya:\n${tabScanResult.shareUrl}\n\n` +
+                                                            `_Cek dulu sebelum percaya bersama Cekara._`;
+                                                        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+                                                    }}
+                                                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#8ECDF0] px-4 py-2 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] transition hover:-translate-y-0.5 hover:bg-[#78bfe6] cursor-pointer"
+                                                >
+                                                    <Share2 className="size-4 text-[#3B2A1E]" />
+                                                    <span>Bagikan ke WhatsApp</span>
+                                                </button>
+                                            )}
+
+                                            {/* Transfer to Emergency WhatsApp Generator Tab */}
+                                            {tabScanResult.riskLevel !== 'LOW' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleTransferToWhatsApp}
+                                                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] transition hover:-translate-y-0.5 hover:bg-[#ffd952] cursor-pointer"
+                                                >
+                                                    <MessageCircle className="size-4 text-[#3B2A1E]" />
+                                                    <span>Buat Pesan Peringatan Keluarga</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setTabScanResult(null);
+                                                setCapturedPreview(null);
+                                            }}
+                                            className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-[#6B5646] hover:text-[#3B2A1E] hover:underline cursor-pointer"
+                                        >
+                                            <RotateCcw className="size-3.5" />
+                                            <span>Periksa Tab Lainnya</span>
+                                        </button>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setTabScanResult(null);
-                                            setCapturedPreview(null);
-                                        }}
-                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6B5646] hover:text-[#3B2A1E] hover:underline cursor-pointer"
-                                    >
-                                        <RotateCcw className="size-3.5" />
-                                        <span>Periksa Tab Lainnya</span>
-                                    </button>
+                                    {/* Link ke Halaman Publik Scan */}
+                                    {tabScanResult.publicId && (
+                                        <div className="pt-2 border-t border-[#EFE3D0] flex justify-end">
+                                            <a
+                                                href={`/scans/${tabScanResult.publicId}`}
+                                                className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-[#3B2A1E] hover:text-[#FF9A3C] hover:underline"
+                                            >
+                                                <span>Buka Laporan Investigasi Lengkap</span>
+                                                <ArrowRight className="size-3.5 text-[#FF9A3C]" />
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

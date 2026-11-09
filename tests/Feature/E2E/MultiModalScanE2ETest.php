@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChatController;
+use App\Models\Scan;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -110,7 +111,7 @@ test('tier 2: authenticated user screenshot scan persists to database with image
     ]);
 });
 
-test('tier 2: guest user screenshot scan remains ephemeral without database persistence', function () {
+test('tier 2: guest user screenshot scan persists to database with user_id null and stores image', function () {
     $file = UploadedFile::fake()->image('guest_chat_sample.png', 500, 500);
 
     $this->assertDatabaseCount('scans', 0);
@@ -120,9 +121,15 @@ test('tier 2: guest user screenshot scan remains ephemeral without database pers
     ]);
 
     $response->assertOk();
+    $response->assertJsonStructure(['public_id', 'scan_id', 'share_url']);
 
-    // Zero scans saved for guest
-    $this->assertDatabaseCount('scans', 0);
+    $this->assertDatabaseCount('scans', 1);
+    $scan = Scan::first();
+    expect($scan->user_id)->toBeNull();
+    expect($scan->scan_type)->toBe('image');
+    expect($scan->public_id)->not->toBeEmpty();
+    expect($scan->metadata['image_path'])->not->toBeNull();
+    Storage::disk('public')->assertExists($scan->metadata['image_path']);
 });
 
 /*

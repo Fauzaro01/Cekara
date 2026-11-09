@@ -74,7 +74,7 @@ test('tier 1: guest is rejected when attempting emergency checklist mutations', 
 |--------------------------------------------------------------------------
 */
 
-test('tier 2: guest scan execution is ephemeral and does not persist to database', function () {
+test('tier 2: guest scan execution persists to database with user_id null and returns public_id and share_url', function () {
     $endpoint = Route::has('chat.analyze') ? route('chat.analyze') : '/chat/analyze';
 
     $this->assertDatabaseCount('scans', 0);
@@ -85,9 +85,14 @@ test('tier 2: guest scan execution is ephemeral and does not persist to database
 
     $response->assertOk();
     $response->assertJson(['success' => true]);
+    $response->assertJsonStructure(['public_id', 'scan_id', 'share_url']);
 
-    // Guest scans must never be persisted to database, preserving privacy and satisfying R2
-    $this->assertDatabaseCount('scans', 0);
+    $this->assertDatabaseCount('scans', 1);
+    $scan = Scan::first();
+    expect($scan->user_id)->toBeNull();
+    expect($scan->public_id)->not->toBeEmpty();
+    expect($response->json('public_id'))->toBe($scan->public_id);
+    expect($response->json('share_url'))->toBe(url("/scans/{$scan->public_id}"));
 });
 
 test('tier 2: authenticated user scan execution automatically persists to database', function () {

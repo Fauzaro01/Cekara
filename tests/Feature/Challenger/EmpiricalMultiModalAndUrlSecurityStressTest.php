@@ -108,9 +108,8 @@ describe('UrlPhishingScanner ReDoS & Stress Resistance', function () {
 */
 
 describe('Multi-Modal Upload Security & Storage Isolation', function () {
-    test('guest uploads are strictly ephemeral and never stored to disk or database', function () {
+    test('guest uploads are persisted to database with user_id null and saved to public storage disk', function () {
         $image = UploadedFile::fake()->image('guest_chat_proof.png', 400, 400);
-
         $initialScanCount = Scan::count();
         $initialFileCount = count(Storage::disk('public')->allFiles('scans'));
 
@@ -121,12 +120,16 @@ describe('Multi-Modal Upload Security & Storage Isolation', function () {
 
         $response->assertOk();
         $response->assertJson(['success' => true]);
+        $response->assertJsonStructure(['public_id', 'scan_id', 'share_url']);
 
-        // Verify zero scans created in database
-        expect(Scan::count())->toBe($initialScanCount);
+        expect(Scan::count())->toBe($initialScanCount + 1);
+        expect(count(Storage::disk('public')->allFiles('scans')))->toBe($initialFileCount + 1);
 
-        // Verify no new files stored on the public disk for guest
-        expect(count(Storage::disk('public')->allFiles('scans')))->toBe($initialFileCount);
+        $scan = Scan::latest('id')->first();
+        expect($scan->user_id)->toBeNull();
+        expect($scan->public_id)->not->toBeEmpty();
+        expect($response->json('public_id'))->toBe($scan->public_id);
+        expect($response->json('share_url'))->toBe(url("/scans/{$scan->public_id}"));
     });
 
     test('authenticated uploads are securely stored to public disk and persisted with correct user_id', function () {

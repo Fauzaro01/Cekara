@@ -581,9 +581,8 @@ export default function EmergencyIndex({
 
                             {/* Privacy Notice Banner */}
                             <div className="mt-6 flex items-center gap-2.5 rounded-2xl border border-[#EFE3D0] bg-white px-4 py-2.5 text-xs text-[#6B5646]">
-                                <ShieldCheck className="size-4 text-[#2E7D32] shrink-0" />
                                 <span>
-                                    <strong>Privasi 100% Aman:</strong> Koneksi tab hanya mengambil 1 kali tangkapan layar sesaat untuk dianalisis dan langsung diputuskan. Cekara tidak pernah merekam aktivitas penjelajahan pribadimu.
+                                    *   Koneksi tab hanya mengambil 1 kali tangkapan layar sesaat untuk dianalisis dan langsung diputuskan.
                                 </span>
                             </div>
                         </div>

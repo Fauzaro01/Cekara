@@ -14,8 +14,9 @@ import {
     X,
     ExternalLink,
     FileText,
-    Shield,
     ShieldCheck,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
 import { buttonClasses } from '@/components/ui/button';
 import OceanWaveDivider from '@/components/ocean-wave-divider';
@@ -33,12 +34,15 @@ export default function AppLayout({ children }: PropsWithChildren) {
     const user = auth?.user;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+    const [isBottomBarOpen, setIsBottomBarOpen] = useState(true);
+    const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
     const [termsModal, setTermsModal] = useState<'terms' | 'privacy' | null>(null);
 
     // Close drawers on route change
     useEffect(() => {
         setSidebarMobileOpen(false);
         setMobileMenuOpen(false);
+        setAccountDrawerOpen(false);
     }, [url]);
 
     useEffect(() => {
@@ -46,9 +50,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
             if (e.key === 'Escape') {
                 setTermsModal(null);
                 setSidebarMobileOpen(false);
+                setAccountDrawerOpen(false);
             }
         };
-        if (termsModal || sidebarMobileOpen) {
+        if (termsModal || sidebarMobileOpen || accountDrawerOpen) {
             window.addEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'hidden';
             window.lenisInstance?.stop();
@@ -61,7 +66,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
             document.body.style.overflow = '';
             window.lenisInstance?.start();
         };
-    }, [termsModal, sidebarMobileOpen]);
+    }, [termsModal, sidebarMobileOpen, accountDrawerOpen]);
 
     const isGuestActive = (path: string) => {
         if (path === '/') {
@@ -73,9 +78,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
     const isAuthActive = (path: string) => {
         if (path === '/dashboard') {
             return url === '/dashboard' || url.startsWith('/dashboard');
-        }
-        if (path === '/#cek-pesan') {
-            return url === '/' || url.startsWith('/#cek-pesan');
         }
         return url.startsWith(path);
     };
@@ -97,13 +99,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
             badgeColor: null,
         },
         {
-            href: '/#cek-pesan',
-            label: 'Cek Pesan',
-            icon: Shield,
-            badge: 'AI',
-            badgeColor: 'bg-[#8ECDF0] text-[#3B2A1E]',
-        },
-        {
             href: '/simulasi',
             label: 'Latihan Simulasi',
             icon: BookOpen,
@@ -117,20 +112,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
             badge: 'Live',
             badgeColor: 'bg-[#FF9A3C] text-[#3B2A1E]',
         },
-        {
-            href: '/panduan-keluarga',
-            label: 'Panduan Keluarga',
-            icon: Users,
-            badge: null,
-            badgeColor: null,
-        },
-        {
-            href: '/tanggap-darurat',
-            label: 'Tanggap Darurat',
-            icon: LifeBuoy,
-            badge: 'Siaga',
-            badgeColor: 'bg-[#D4573A] text-white',
-        },
     ];
 
     const adminNavItems = [
@@ -143,159 +124,232 @@ export default function AppLayout({ children }: PropsWithChildren) {
         },
     ];
 
-    // Shared Sidebar Component for Logged-In User
-    const renderSidebarContent = (onNavigate?: () => void) => {
-        if (!user) return null;
+    // Slide-up Account & Menu Drawer for Logged-In User
+    const renderAccountDrawer = () => {
+        if (!user || !accountDrawerOpen) return null;
         return (
-            <div className="flex h-full flex-col justify-between overflow-y-auto">
-                <div>
-                    {/* Brand Header */}
-                    <div className="border-b-2 border-[#EFE3D0] p-6 pb-5">
-                        <Link
-                            href="/dashboard"
-                            onClick={onNavigate}
-                            className="group flex items-center gap-3 rounded-2xl focus-visible:outline-2 focus-visible:outline-[#3B2A1E]"
-                        >
-                            <img
-                                src="/logotr.png"
-                                alt="Logo Cekara"
-                                className="size-11 shrink-0 object-contain transition group-hover:scale-105 sm:size-12"
-                            />
-                            <div>
-                                <span className="block font-['Fredoka',system-ui,sans-serif] text-2xl leading-none font-bold tracking-tight text-[#3B2A1E]">
-                                    CEKARA
-                                </span>
-                                <span className="mt-1 block text-xs leading-tight font-bold text-[#6B5646]">
-                                    Cek dulu sebelum percaya
-                                </span>
+            <div
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+                role="dialog"
+                aria-modal="true"
+            >
+                {/* Backdrop Overlay */}
+                <div
+                    className="fixed inset-0 bg-[#3B2A1E]/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+                    onClick={() => setAccountDrawerOpen(false)}
+                />
+
+                {/* Sheet Modal */}
+                <div className="relative z-10 w-full max-w-md rounded-t-3xl sm:rounded-3xl border-t-2 sm:border-2 border-[#3B2A1E] bg-[#FFF8EC] p-6 shadow-[0px_-8px_30px_rgba(59,42,30,0.2)] sm:shadow-[6px_6px_0px_0px_#3B2A1E] animate-in slide-in-from-bottom duration-200">
+                    {/* Pull notch / handle on mobile */}
+                    <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-[#3B2A1E]/20 sm:hidden" />
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] pb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
+                                Akun Guardian
+                            </span>
+                            <div className="flex items-center gap-1 rounded-xl border border-[#3B2A1E] bg-[#FFE27A] px-2 py-0.5 text-[10px] font-extrabold text-[#3B2A1E]">
+                                <ShieldCheck className="size-3" />
+                                <span>Anti-Scam</span>
                             </div>
-                        </Link>
-
-                        {/* Guardian Status Pill */}
-                        <div className="mt-4 flex items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A]/60 px-3.5 py-2 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
-                            <ShieldCheck className="size-4 shrink-0 text-[#3B2A1E]" />
-                            <span className="truncate">Guardian Anti-Scam</span>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setAccountDrawerOpen(false)}
+                            className="flex size-8 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1px_1px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition cursor-pointer"
+                            aria-label="Tutup Menu"
+                        >
+                            <X className="size-4" strokeWidth={2.5} />
+                        </button>
                     </div>
 
-                    {/* Navigation Links */}
-                    <div className="px-4 py-4 space-y-1.5">
-                        <div className="px-3 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-[#6B5646]/80 font-['Fredoka',system-ui,sans-serif]">
-                            Navigasi Guardian
-                        </div>
-
-                        {authNavItems.map((item) => {
-                            const Icon = item.icon;
-                            const active = isAuthActive(item.href);
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={onNavigate}
-                                    className={`flex items-center justify-between rounded-2xl border-2 px-3.5 py-2.5 text-sm font-bold transition-all duration-150 ${
-                                        active
-                                            ? 'border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                            : 'border-transparent text-[#6B5646] hover:border-[#3B2A1E] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Icon
-                                            className={`size-5 shrink-0 ${
-                                                active ? 'opacity-100' : 'opacity-80'
-                                            }`}
-                                            strokeWidth={2}
-                                        />
-                                        <span>{item.label}</span>
-                                    </div>
-                                    {item.badge && (
-                                        <span
-                                            className={`rounded-lg border border-[#3B2A1E] px-1.5 py-0.5 text-[10px] font-black uppercase shadow-[1px_1px_0px_0px_#3B2A1E] ${
-                                                item.badgeColor || 'bg-[#8ECDF0] text-[#3B2A1E]'
-                                            }`}
-                                        >
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </Link>
-                            );
-                        })}
-
-                        {/* Admin Navigation */}
-                        {user.is_admin && (
-                            <>
-                                <div className="pt-4 px-3 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-[#6B5646]/80 font-['Fredoka',system-ui,sans-serif]">
-                                    Administrasi
-                                </div>
-                                {adminNavItems.map((item) => {
-                                    const Icon = item.icon;
-                                    const active = isAuthActive(item.href);
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            onClick={onNavigate}
-                                            className={`flex items-center justify-between rounded-2xl border-2 px-3.5 py-2.5 text-sm font-bold transition-all duration-150 ${
-                                                active
-                                                    ? 'border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                                    : 'border-transparent text-[#6B5646] hover:border-[#3B2A1E] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Icon
-                                                    className="size-5 shrink-0 opacity-80"
-                                                    strokeWidth={2}
-                                                />
-                                                <span>{item.label}</span>
-                                            </div>
-                                            <span className="rounded-lg border border-[#3B2A1E] bg-[#FFE27A] px-1.5 py-0.5 text-[10px] font-black uppercase text-[#3B2A1E] shadow-[1px_1px_0px_0px_#3B2A1E]">
-                                                {item.badge}
-                                            </span>
-                                        </Link>
-                                    );
-                                })}
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                {/* Bottom User Profile Card & Logout */}
-                <div className="border-t-2 border-[#EFE3D0] bg-[#FFF8EC] p-4 space-y-2">
-                    <Link
-                        href="/profile"
-                        onClick={onNavigate}
-                        className={`flex items-center gap-3 rounded-2xl border-2 p-2.5 transition-all duration-150 ${
-                            isAuthActive('/profile')
-                                ? 'border-[#3B2A1E] bg-[#8ECDF0] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                : 'border-[#3B2A1E] bg-white hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
-                        }`}
-                        title="Pengaturan Profil Akun"
-                    >
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] font-extrabold text-[#3B2A1E]">
+                    {/* User Profile Card */}
+                    <div className="my-5 flex items-center gap-3.5 rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] font-extrabold text-lg text-[#3B2A1E]">
                             {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-bold text-[#3B2A1E]">
+                            <div className="truncate text-base font-bold text-[#3B2A1E]">
                                 {user.name}
                             </div>
                             <div className="truncate text-xs font-semibold text-[#6B5646]">
                                 {user.email}
                             </div>
                         </div>
-                    </Link>
+                    </div>
 
+                    {/* Navigation inside Drawer */}
+                    <div className="space-y-2 mb-5">
+                        <Link
+                            href="/profile"
+                            onClick={() => setAccountDrawerOpen(false)}
+                            className={`flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
+                                isAuthActive('/profile')
+                                    ? 'border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                    : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <User className="size-4.5" />
+                                <span>Pengaturan Profil</span>
+                            </div>
+                            <span className="text-xs font-extrabold text-[#6B5646]">Buka →</span>
+                        </Link>
+
+                        {user.is_admin && (
+                            <Link
+                                href="/admin/llm-providers"
+                                onClick={() => setAccountDrawerOpen(false)}
+                                className={`flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
+                                    isAuthActive('/admin/llm-providers')
+                                        ? 'border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                        : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Settings className="size-4.5" />
+                                    <span>Kelola AI / LLM</span>
+                                </div>
+                                <span className="rounded-lg border border-[#3B2A1E] bg-[#FFE27A] px-1.5 py-0.5 text-[10px] font-black uppercase text-[#3B2A1E]">
+                                    Admin
+                                </span>
+                            </Link>
+                        )}
+                    </div>
+
+                    {/* Logout Button */}
                     <Link
                         href="/logout"
                         method="post"
                         as="button"
-                        onClick={onNavigate}
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-[#D4573A] bg-white py-2.5 text-xs font-bold text-[#D4573A] shadow-[2px_2px_0px_0px_#D4573A] transition hover:bg-[#D4573A] hover:text-white active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-                        title="Keluar dari akun Anda"
+                        onClick={() => setAccountDrawerOpen(false)}
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-[#D4573A] bg-white py-2.5 text-sm font-bold text-[#D4573A] shadow-[2px_2px_0px_0px_#D4573A] transition hover:bg-[#D4573A] hover:text-white active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
                     >
                         <LogOut className="size-4" strokeWidth={2} />
                         <span>Keluar Akun</span>
                     </Link>
                 </div>
             </div>
+        );
+    };
+
+    // Modern Bottom Bar Navigation
+    const renderBottomBar = () => {
+        if (!user) return null;
+
+        return (
+            <>
+                {/* Floating Tab When Minimized / Closed */}
+                {!isBottomBarOpen && (
+                    <div className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
+                        <button
+                            type="button"
+                            onClick={() => setIsBottomBarOpen(true)}
+                            className="pointer-events-auto flex items-center gap-2 rounded-full border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] transition-all hover:bg-[#FF9A3C] hover:scale-105 active:translate-y-0.5 cursor-pointer animate-in fade-in zoom-in-95 duration-200"
+                            title="Buka Navigasi"
+                        >
+                            <ChevronUp className="size-4" strokeWidth={3} />
+                            <span>Buka Navigasi</span>
+                        </button>
+                    </div>
+                )}
+
+                {/* Main Bottom Bar When Open */}
+                {isBottomBarOpen && (
+                    <div className="fixed bottom-3 sm:bottom-4 inset-x-0 z-40 flex flex-col items-center pointer-events-none px-3 sm:px-4">
+                        {/* Toggle Tab on top of bar */}
+                        <button
+                            type="button"
+                            onClick={() => setIsBottomBarOpen(false)}
+                            className="pointer-events-auto mb-1 flex items-center gap-1 rounded-full border-2 border-[#3B2A1E] bg-[#FFF8EC] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#6B5646] shadow-[1px_1px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] hover:text-[#3B2A1E] transition active:scale-95 cursor-pointer"
+                            title="Sembunyikan Navigasi"
+                        >
+                            <ChevronDown className="size-3" strokeWidth={2.5} />
+                            <span>Tutup</span>
+                        </button>
+
+                        {/* Navigation Dock */}
+                        <nav
+                            aria-label="Navigasi Guardian"
+                            className="pointer-events-auto flex w-full max-w-md items-center justify-around gap-1 rounded-2xl sm:rounded-3xl border-2 border-[#3B2A1E] bg-[#FFF8EC]/95 p-1.5 sm:p-2 shadow-[4px_4px_0px_0px_#3B2A1E] backdrop-blur-md animate-in slide-in-from-bottom-4 duration-200"
+                        >
+                            {/* Dashboard */}
+                            <Link
+                                href="/dashboard"
+                                className={`flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
+                                    isAuthActive('/dashboard')
+                                        ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                        : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                }`}
+                            >
+                                <LayoutDashboard className="size-5 shrink-0" strokeWidth={2.2} />
+                                <span className="mt-0.5 text-[11px] font-bold leading-tight">
+                                    Dashboard
+                                </span>
+                            </Link>
+
+                            {/* Latihan Simulasi */}
+                            <Link
+                                href="/simulasi"
+                                className={`relative flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
+                                    isAuthActive('/simulasi')
+                                        ? 'border-2 border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                        : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                }`}
+                            >
+                                <div className="relative">
+                                    <BookOpen className="size-5 shrink-0" strokeWidth={2.2} />
+                                    <span className="absolute -top-1 -right-1.5 size-2 rounded-full border border-[#3B2A1E] bg-[#FF9A3C]" />
+                                </div>
+                                <span className="mt-0.5 text-[11px] font-bold leading-tight">
+                                    Simulasi
+                                </span>
+                            </Link>
+
+                            {/* Radar Komunitas */}
+                            <Link
+                                href="/radar"
+                                className={`relative flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
+                                    isAuthActive('/radar')
+                                        ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                        : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                }`}
+                            >
+                                <div className="relative">
+                                    <Radio className="size-5 shrink-0" strokeWidth={2.2} />
+                                    <span className="absolute -top-1 -right-1.5 flex size-2">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D4573A] opacity-75" />
+                                        <span className="relative inline-flex size-2 rounded-full border border-[#3B2A1E] bg-[#D4573A]" />
+                                    </span>
+                                </div>
+                                <span className="mt-0.5 text-[11px] font-bold leading-tight">
+                                    Radar
+                                </span>
+                            </Link>
+
+                            {/* Akun / Menu */}
+                            <button
+                                type="button"
+                                onClick={() => setAccountDrawerOpen(true)}
+                                className={`flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 cursor-pointer ${
+                                    accountDrawerOpen || isAuthActive('/profile')
+                                        ? 'border-2 border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                        : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                }`}
+                            >
+                                <div className="flex size-5 items-center justify-center rounded-full border border-[#3B2A1E] bg-[#FFE27A] text-[10px] font-black text-[#3B2A1E]">
+                                    {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="mt-0.5 text-[11px] font-bold leading-tight">
+                                    Akun
+                                </span>
+                            </button>
+                        </nav>
+                    </div>
+                )}
+            </>
         );
     };
 
@@ -631,74 +685,79 @@ export default function AppLayout({ children }: PropsWithChildren) {
     );
 
     // =========================================================================
-    // CASE 1: LOGGED IN USER (Dedicated Sidebar Layout - No Top Header Nav)
+    // CASE 1: LOGGED IN USER (Bottom Bar & Full-Width Modern Layout)
     // =========================================================================
     if (user) {
         return (
-            <div className="flex min-h-screen flex-col lg:flex-row bg-[#FFF8EC] font-['Nunito',system-ui,sans-serif] text-[#3B2A1E]">
-                {/* Mobile Top Navigation Bar (Only on small screens) */}
-                <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC]/95 px-4 backdrop-blur-md lg:hidden">
-                    <Link href="/dashboard" className="flex items-center gap-2.5">
+            <div className="flex min-h-screen flex-col bg-[#FFF8EC] font-['Nunito',system-ui,sans-serif] text-[#3B2A1E]">
+                {/* Top Navigation Bar (Visible across all devices) */}
+                <header className="sticky top-0 z-30 flex h-16 sm:h-18 items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC]/95 px-4 sm:px-8 backdrop-blur-md">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 sm:gap-3">
                         <img
                             src="/logotr.png"
                             alt="Logo Cekara"
-                            className="size-9 object-contain"
+                            className="size-9 sm:size-10 object-contain"
                         />
-                        <span className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold tracking-tight text-[#3B2A1E]">
-                            CEKARA
-                        </span>
+                        <div>
+                            <span className="block font-['Fredoka',system-ui,sans-serif] text-xl sm:text-2xl font-bold tracking-tight text-[#3B2A1E]">
+                                CEKARA
+                            </span>
+                            <span className="hidden sm:block text-[11px] font-bold text-[#6B5646]">
+                                Cek dulu sebelum percaya
+                            </span>
+                        </div>
                     </Link>
 
-                    <div className="flex items-center gap-2">
-                        <Link
-                            href="/profile"
-                            className="flex size-10 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-xs font-extrabold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
-                            title="Profil Akun"
-                        >
-                            {user.name.charAt(0).toUpperCase()}
-                        </Link>
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                        {/* Guardian Anti-Scam Pill */}
+                        <div className="hidden sm:flex items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A]/60 px-3 py-1.5 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
+                            <ShieldCheck className="size-4 shrink-0 text-[#3B2A1E]" />
+                            <span>Guardian Anti-Scam</span>
+                        </div>
+
+                        {/* Quick Toggle Bottom Bar Button */}
                         <button
                             type="button"
-                            onClick={() => setSidebarMobileOpen(!sidebarMobileOpen)}
-                            className="flex size-10 cursor-pointer items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
-                            aria-label="Buka navigasi sidebar"
+                            onClick={() => setIsBottomBarOpen(!isBottomBarOpen)}
+                            className="flex items-center gap-1.5 rounded-xl border-2 border-[#3B2A1E] bg-white px-3 py-2 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition cursor-pointer"
+                            title={isBottomBarOpen ? 'Sembunyikan Menu Bawah' : 'Tampilkan Menu Bawah'}
                         >
-                            {sidebarMobileOpen ? (
-                                <X className="size-5" strokeWidth={2.5} />
+                            {isBottomBarOpen ? (
+                                <>
+                                    <ChevronDown className="size-4" strokeWidth={2.5} />
+                                    <span className="hidden md:inline">Tutup Bar</span>
+                                </>
                             ) : (
-                                <Menu className="size-5" strokeWidth={2.5} />
+                                <>
+                                    <ChevronUp className="size-4" strokeWidth={2.5} />
+                                    <span className="hidden md:inline">Buka Bar</span>
+                                </>
                             )}
+                        </button>
+
+                        {/* Profile Avatar Trigger Button */}
+                        <button
+                            type="button"
+                            onClick={() => setAccountDrawerOpen(true)}
+                            className="flex size-10 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] text-sm font-black text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FF9A3C] transition cursor-pointer"
+                            title="Menu Akun & Profil"
+                        >
+                            {user.name.charAt(0).toUpperCase()}
                         </button>
                     </div>
                 </header>
 
-                {/* Mobile Drawer Overlay */}
-                {sidebarMobileOpen && (
-                    <div
-                        className="fixed inset-0 z-50 flex lg:hidden"
-                        role="dialog"
-                        aria-modal="true"
-                    >
-                        <div
-                            className="fixed inset-0 bg-[#3B2A1E]/50 backdrop-blur-xs transition-opacity animate-in fade-in"
-                            onClick={() => setSidebarMobileOpen(false)}
-                        />
-                        <aside className="relative flex w-72 max-w-[85vw] flex-col justify-between border-r-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_0px_0px_0px_#3B2A1E] animate-in slide-in-from-left duration-200 z-10">
-                            {renderSidebarContent(() => setSidebarMobileOpen(false))}
-                        </aside>
-                    </div>
-                )}
-
-                {/* Desktop Sticky Sidebar */}
-                <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r-2 border-[#EFE3D0] bg-[#FFF8EC] lg:flex flex-col justify-between">
-                    {renderSidebarContent()}
-                </aside>
-
-                {/* Main Content Area */}
-                <div className="flex flex-1 flex-col min-w-0">
+                {/* Main Content Area with Bottom Padding */}
+                <div className={`flex flex-1 flex-col min-w-0 transition-all duration-200 ${isBottomBarOpen ? 'pb-24 sm:pb-28' : 'pb-10'}`}>
                     <main className="flex-1 min-w-0">{children}</main>
                     {renderFooter()}
                 </div>
+
+                {/* Account Drawer Modal */}
+                {renderAccountDrawer()}
+
+                {/* Bottom Bar Navigation */}
+                {renderBottomBar()}
 
                 {renderTermsModal()}
             </div>

@@ -11,7 +11,6 @@ import {
     Image as ImageIcon,
     Link2,
     MessageSquare,
-    Plus,
     Send,
     Shield,
     ShieldAlert,
@@ -231,20 +230,11 @@ export default function Dashboard({
                 {/* User Greeting & Header Banner */}
                 <div className="relative mb-8 overflow-hidden rounded-2xl border border-slate-200/80 bg-linear-to-br from-white via-brand-50/20 to-white p-6 shadow-xs sm:p-8 dark:border-slate-800 dark:from-slate-900/60 dark:via-brand-950/20 dark:to-slate-900/40">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
-                                    Halo, {user?.name ?? 'Guardian'}!
-                                </h1>
-                                <Badge
-                                    variant="brand"
-                                    className="px-2.5 py-0.5 text-xs font-semibold"
-                                >
-                                    <Award className="mr-1 size-3" />
-                                    {guardianStatus.rank}
-                                </Badge>
-                            </div>
-                            <p className="mt-1.5 max-w-xl text-sm text-slate-600 dark:text-slate-400">
+                        <div className="max-w-xl">
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
+                                Halo, {user?.name ?? 'Guardian'}!
+                            </h1>
+                            <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
                                 Pusat kendali kesiapsiagaan siber dan riwayat
                                 proteksi digital pribadi Anda. Pantau skor
                                 kewaspadaan dan latih insting keamanan secara
@@ -252,22 +242,12 @@ export default function Dashboard({
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setIsReporting(true)}
-                                className={`${buttonClasses('primary')} shadow-sm`}
-                            >
-                                <Plus className="mr-1.5 size-4" />
-                                Laporkan Modus Baru
-                            </button>
-                            <Link
-                                href="/#cek-pesan"
-                                className={`${buttonClasses('outline')} shadow-sm`}
-                            >
-                                <Zap className="mr-1.5 size-4 text-brand-500" />
-                                Analisis Pesan
-                            </Link>
+                        <div className="flex shrink-0 items-center justify-center sm:justify-end">
+                            <img
+                                src="/maskot_gaya.png"
+                                alt="Maskot Cekara"
+                                className="h-28 w-auto object-contain select-none drop-shadow-md transition-transform duration-300 hover:scale-105 sm:h-36 md:h-40"
+                            />
                         </div>
                     </div>
                 </div>

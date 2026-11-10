@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, LlmProvidersSkeleton } from '@/components/ui/skeleton';
 
 export interface LlmProviderItem {
     id: number;
@@ -55,6 +56,7 @@ export default function LlmProvidersPage({
     providers = defaultProvidersList,
 }: LlmProvidersPageProps) {
     const list = providers.length > 0 ? providers : defaultProvidersList;
+    const isInitialLoading = useSkeletonMount(280);
 
     const [providerStates, setProviderStates] = useState(
         list.map((p) => ({
@@ -165,6 +167,15 @@ export default function LlmProvidersPage({
         );
     };
 
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Manajemen Provider LLM" />
+                <LlmProvidersSkeleton />
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <Head title="Manajemen Provider LLM" />
@@ -172,20 +183,15 @@ export default function LlmProvidersPage({
             <div className="mx-auto max-w-5xl px-6 py-10">
                 {/* Header */}
                 <div className="mb-8">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
-                                Manajemen Provider LLM
-                            </h1>
-                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                Kelola kunci API, model, endpoint kustom, dan
-                                tentukan provider aktif yang digunakan chatbot
-                                Cekara.
-                            </p>
-                        </div>
-                        <Badge variant="brand" className="px-3 py-1 text-xs">
-                            Panel Administrator
-                        </Badge>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
+                            Manajemen Provider LLM
+                        </h1>
+                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                            Kelola kunci API, model, endpoint kustom, dan
+                            tentukan provider aktif yang digunakan chatbot
+                            Cekara.
+                        </p>
                     </div>
                 </div>
 

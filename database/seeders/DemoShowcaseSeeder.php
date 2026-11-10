@@ -18,7 +18,7 @@ class DemoShowcaseSeeder extends Seeder
     {
         // 1. Seed scenarios, providers, and community radar alerts
         $this->call([
-            SimulationScenarioSeeder::class,
+            // SimulationScenarioSeeder::class, // Dikelola langsung oleh admin melalui panel
             LlmProviderSeeder::class,
             // CommunityRadarSeeder::class, // Menggunakan data nyata dari komunitas
         ]);

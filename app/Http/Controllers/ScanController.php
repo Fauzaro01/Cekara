@@ -42,4 +42,39 @@ class ScanController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Return scan data as JSON for restoring AI analysis results on the emergency page.
+     */
+    public function showJson(string $publicId): \Illuminate\Http\JsonResponse
+    {
+        $scan = Scan::where('public_id', $publicId)->first();
+
+        if (! $scan) {
+            return response()->json(['success' => false, 'message' => 'Scan not found'], 404);
+        }
+
+        $imagePath = $scan->metadata['image_path'] ?? null;
+        $imageUrl = $imagePath ? Storage::disk('public')->url($imagePath) : null;
+
+        return response()->json([
+            'success' => true,
+            'scan' => [
+                'public_id' => $scan->public_id,
+                'scan_type' => $scan->scan_type,
+                'content' => $scan->content,
+                'risk_level' => $scan->risk_level,
+                'score' => $scan->score,
+                'summary' => $scan->summary,
+                'red_flags' => $scan->red_flags ?? [],
+                'recommendations' => $scan->recommendations ?? [],
+                'provider_used' => $scan->provider_used,
+                'model_used' => $scan->model_used,
+                'image_url' => $imageUrl,
+                'share_url' => url("/scans/{$scan->public_id}"),
+                'created_at' => $scan->created_at?->toISOString(),
+                'formatted_date' => $scan->created_at?->translatedFormat('d F Y, H:i') ?? $scan->created_at?->format('d M Y H:i'),
+            ],
+        ]);
+    }
 }

@@ -16,13 +16,14 @@ import {
     Share2,
     ShieldAlert,
     ShieldCheck,
-    UploadCloud,
     X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, EmergencySkeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface StepLink {
@@ -86,10 +87,30 @@ interface TabScanResult {
     shareUrl?: string;
 }
 
+function formatTabTitle(rawLabel?: string | null): string {
+    if (!rawLabel || rawLabel.trim() === '') {
+        return 'Tab Browser';
+    }
+    const trimmed = rawLabel.trim();
+    if (
+        trimmed.startsWith('web-contents-media-stream://') ||
+        trimmed.startsWith('mediastream:') ||
+        trimmed.includes('media-stream') ||
+        /^[0-9a-fA-F-]{16,}$/.test(trimmed)
+    ) {
+        return 'Tab Browser';
+    }
+    return trimmed;
+}
+
 export default function EmergencyIndex({
     whatsappPresets = [],
 }: Props) {
+    const isInitialLoading = useSkeletonMount(280);
     const [activeTab, setActiveTab] = useState<EmergencyTab>('live_tab');
+
+    // localStorage key for persisting the last scan public_id
+    const LAST_SCAN_KEY = 'cekara_emergency_last_scan_id';
 
     // AI Live Tab Inspector State
     const [isCapturing, setIsCapturing] = useState<boolean>(false);
@@ -100,9 +121,7 @@ export default function EmergencyIndex({
     const [tabScanResult, setTabScanResult] = useState<TabScanResult | null>(null);
     const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
     const [isShareCopied, setIsShareCopied] = useState<boolean>(false);
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [isRestoringResult, setIsRestoringResult] = useState<boolean>(false);
 
     // WhatsApp Form State
     const [selectedPresetCategory, setSelectedPresetCategory] =
@@ -114,6 +133,71 @@ export default function EmergencyIndex({
     const [waAdvice, setWaAdvice] = useState<string>('');
     const [waTone, setWaTone] = useState<AudienceTone>('family');
     const [isCopied, setIsCopied] = useState<boolean>(false);
+
+    // Restore last scan result from backend on mount (persists across reload/navigation)
+    const hasRestoredRef = useRef(false);
+    useEffect(() => {
+        if (hasRestoredRef.current) return;
+        hasRestoredRef.current = true;
+
+        const savedScanId = localStorage.getItem(LAST_SCAN_KEY);
+        if (!savedScanId || tabScanResult) return;
+
+        setIsRestoringResult(true);
+
+        fetch(`/api/scans/${encodeURIComponent(savedScanId)}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    // Scan no longer exists, clear the saved reference
+                    localStorage.removeItem(LAST_SCAN_KEY);
+                    return null;
+                }
+                return res.json();
+            })
+            .then((json) => {
+                if (!json || !json.success || !json.scan) return;
+                const scan = json.scan;
+
+                const rawLevel = String(scan.risk_level || 'MEDIUM').toUpperCase();
+                const riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' =
+                    rawLevel.includes('HIGH') || rawLevel.includes('TINGGI') || rawLevel.includes('DANGER')
+                        ? 'HIGH'
+                        : rawLevel.includes('LOW') || rawLevel.includes('RENDAH') || rawLevel.includes('AMAN')
+                          ? 'LOW'
+                          : 'MEDIUM';
+
+                const createdAt = scan.created_at
+                    ? new Date(scan.created_at).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                      })
+                    : '';
+
+                setTabScanResult({
+                    riskLevel,
+                    score: typeof scan.score === 'number' ? scan.score : 50,
+                    summary: scan.summary || '',
+                    redFlags: Array.isArray(scan.red_flags) ? scan.red_flags : [],
+                    recommendations: Array.isArray(scan.recommendations) ? scan.recommendations : [],
+                    providerName: scan.provider_used,
+                    model: scan.model_used,
+                    capturedAt: scan.formatted_date || createdAt,
+                    tabTitle: scan.content,
+                    imagePreviewUrl: scan.image_url || undefined,
+                    publicId: scan.public_id,
+                    shareUrl: scan.share_url,
+                });
+            })
+            .catch(() => {
+                // Silently fail — user can still do a new scan
+                localStorage.removeItem(LAST_SCAN_KEY);
+            })
+            .finally(() => {
+                setIsRestoringResult(false);
+            });
+    }, []);
 
     // Initialize WhatsApp form when preset changes
     useEffect(() => {
@@ -129,11 +213,6 @@ export default function EmergencyIndex({
             }
         }
     }, [selectedPresetCategory, whatsappPresets]);
-
-    const showToast = (message: string) => {
-        setToastMessage(message);
-        setTimeout(() => setToastMessage(null), 3500);
-    };
 
     // Format WhatsApp Message with proper Markdown & Tone
     const generatedWhatsAppMessage = useMemo(() => {
@@ -177,10 +256,10 @@ export default function EmergencyIndex({
         try {
             await navigator.clipboard.writeText(generatedWhatsAppMessage);
             setIsCopied(true);
-            showToast('Pesan peringatan berhasil disalin ke papan klip!');
+            toast.success('Pesan peringatan berhasil disalin ke papan klip!');
             setTimeout(() => setIsCopied(false), 3000);
         } catch {
-            showToast('Gagal menyalin teks ke papan klip.');
+            toast.error('Gagal menyalin teks ke papan klip.');
         }
     };
 
@@ -215,7 +294,7 @@ export default function EmergencyIndex({
             });
 
             const videoTrack = stream.getVideoTracks()[0];
-            const tabTitle = videoTrack?.label || 'Tab Browser Aktif';
+            const tabTitle = formatTabTitle(videoTrack?.label);
 
             // Elemen video sementara di memori untuk capture frame
             const video = document.createElement('video');
@@ -362,13 +441,18 @@ export default function EmergencyIndex({
                             publicId,
                             shareUrl,
                         });
-                        showToast(
+                        toast.success(
                             'Audit tab berhasil diselesaikan oleh AI Agent!',
                         );
+
+                        // Persist scan ID to localStorage so results survive page reload/navigation
+                        if (publicId) {
+                            localStorage.setItem(LAST_SCAN_KEY, publicId);
+                        }
                     } catch (err: any) {
-                        setScanError(
-                            err.message || 'Gagal menganalisis tab.',
-                        );
+                        const errMsg = err.message || 'Gagal menganalisis tab.';
+                        setScanError(errMsg);
+                        toast.error(errMsg);
                     } finally {
                         setIsAnalyzing(false);
                     }
@@ -384,111 +468,13 @@ export default function EmergencyIndex({
                 err.name === 'NotAllowedError' ||
                 err.name === 'PermissionDeniedError'
             ) {
-                showToast('Izin berbagi tab dibatalkan.');
+                toast.warning('Izin berbagi tab dibatalkan.');
             } else {
-                setScanError(
-                    'Tidak dapat mengakses tab: ' +
-                        (err.message || 'Izin ditolak'),
-                );
+                const errMsg = 'Tidak dapat mengakses tab: ' + (err.message || 'Izin ditolak');
+                setScanError(errMsg);
+                toast.error(errMsg);
             }
         }
-    };
-
-    const handleManualImageUpload = (
-        e: React.ChangeEvent<HTMLInputElement>,
-    ) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setScanError(null);
-        setIsAnalyzing(true);
-
-        const reader = new FileReader();
-        reader.onload = async () => {
-            const previewUrl = reader.result as string;
-            setCapturedPreview(previewUrl);
-
-            try {
-                const csrfMeta = document.querySelector(
-                    'meta[name="csrf-token"]',
-                );
-                const csrfToken = csrfMeta
-                    ? csrfMeta.getAttribute('content')
-                    : '';
-
-                const formData = new FormData();
-                formData.append('image', file);
-                formData.append(
-                    'content',
-                    `Tangkapan layar halaman web: "${file.name}". Analisis letak bahaya kejahatan siber yang mengancam pengguna (seperti phishing, penipuan online/scam, judi online, atau pemerasan) beserta cara menanggulanginya. Abaikan hal teknis konfigurasi website/developer di luar konteks kejahatan siber.`,
-                );
-
-                const response = await fetch('/chat/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        Accept: 'application/json',
-                        ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
-                    },
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    throw new Error('Layanan analisis AI sedang sibuk.');
-                }
-
-                const json = await response.json();
-                const data = json.data || json;
-
-                const rawLevel = String(
-                    data.riskLevel || data.risk_level || 'HIGH',
-                ).toUpperCase();
-                const riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' =
-                    rawLevel.includes('HIGH') || rawLevel.includes('TINGGI')
-                        ? 'HIGH'
-                        : rawLevel.includes('LOW') || rawLevel.includes('RENDAH')
-                          ? 'LOW'
-                          : 'MEDIUM';
-
-                const publicId = data.public_id || json.public_id;
-                const shareUrl =
-                    data.share_url ||
-                    json.share_url ||
-                    (publicId
-                        ? `${window.location.origin}/scans/${publicId}`
-                        : undefined);
-
-                setTabScanResult({
-                    riskLevel,
-                    score: typeof data.score === 'number' ? data.score : 80,
-                    summary:
-                        data.summary ||
-                        'Hasil analisis tangkapan layar berkas.',
-                    redFlags: Array.isArray(data.redFlags)
-                        ? data.redFlags
-                        : data.red_flags || [],
-                    recommendations: Array.isArray(data.recommendations)
-                        ? data.recommendations
-                        : [],
-                    providerName: data.providerName || data.provider_used,
-                    model: data.model || data.model_used,
-                    capturedAt: new Date().toLocaleTimeString('id-ID', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                    }),
-                    tabTitle: file.name,
-                    imagePreviewUrl: previewUrl,
-                    publicId,
-                    shareUrl,
-                });
-                showToast('Audit screenshot berhasil diselesaikan!');
-            } catch (err: any) {
-                setScanError(err.message || 'Gagal menganalisis gambar.');
-            } finally {
-                setIsAnalyzing(false);
-            }
-        };
-        reader.readAsDataURL(file);
     };
 
     const handleTransferToWhatsApp = () => {
@@ -511,23 +497,24 @@ export default function EmergencyIndex({
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Tanggap Darurat Penipuan - Cekara" />
+                <EmergencySkeleton />
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
-            <Head title="Pusat Tanggap Darurat & Peringatan Keluarga - Cekara" />
+            <Head title="Pusat Tanggap Darurat & Peringatan - Cekara" />
 
-            {/* Notification Toast */}
-            {toastMessage && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 fixed right-6 bottom-6 z-50 flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-950/90 px-5 py-3 text-sm text-emerald-200 shadow-2xl backdrop-blur-md">
-                    <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
-                    <span>{toastMessage}</span>
-                </div>
-            )}
-
-            <div className="mx-auto max-w-5xl px-6 py-10">
+            <div className="mx-auto max-w-5xl px-6 py-10 pb-28 sm:pb-32">
                 {/* Header Section */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-100">
-                        Pusat Tanggap Darurat & Peringatan Keluarga
+                        Pusat Tanggap Darurat & Peringatan 
                     </h1>
                     <p className="mt-2 max-w-3xl text-base leading-relaxed text-slate-600 dark:text-slate-400">
                         Panduan tindakan terstruktur untuk membatasi kerugian
@@ -607,22 +594,6 @@ export default function EmergencyIndex({
                                             </>
                                         )}
                                     </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#3B2A1E] bg-white px-4 py-2.5 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition hover:bg-[#FFF8EC] cursor-pointer"
-                                    >
-                                        <UploadCloud className="size-4 text-[#6B5646]" />
-                                        <span>Atau Unggah Screenshot Manual</span>
-                                    </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                                        onChange={handleManualImageUpload}
-                                        className="hidden"
-                                    />
                                 </div>
                             </div>
 
@@ -706,20 +677,20 @@ export default function EmergencyIndex({
                                 {/* Header Result with Risk Badge */}
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#EFE3D0] pb-5">
                                     <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-[#6B5646]">
-                                                Hasil Audit Tab:
+                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                            <span className="text-xs font-bold text-[#6B5646]">
+                                                Hasil audit tab:
                                             </span>
                                             <span className="text-xs font-semibold text-[#6B5646]">
-                                                {tabScanResult.tabTitle} • {tabScanResult.capturedAt}
+                                                {formatTabTitle(tabScanResult.tabTitle)} • {tabScanResult.capturedAt}
                                             </span>
                                         </div>
                                         <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl sm:text-2xl font-bold text-[#3B2A1E]">
                                             {tabScanResult.riskLevel === 'HIGH'
-                                                ? '🚨 Hati-hati! Tab Ini Terindikasi Sangat Berbahaya'
+                                                ? 'Hati-hati! Tab Ini Terindikasi Sangat Berbahaya'
                                                 : tabScanResult.riskLevel === 'MEDIUM'
-                                                  ? '⚠️ Waspada! Terdapat Pola Mencurigakan di Tab Ini'
-                                                  : '🛡️ Tab Ini Terindikasi Normal & Aman'}
+                                                  ? 'Waspada! Terdapat Pola Mencurigakan di Tab Ini'
+                                                  : 'Tab Ini Terindikasi Normal & Aman'}
                                         </h3>
                                     </div>
 
@@ -820,10 +791,10 @@ export default function EmergencyIndex({
                                                         try {
                                                             await navigator.clipboard.writeText(tabScanResult.shareUrl);
                                                             setIsShareCopied(true);
-                                                            showToast('Tautan hasil audit berhasil disalin ke papan klip!');
+                                                            toast.success('Tautan hasil audit berhasil disalin ke papan klip!');
                                                             setTimeout(() => setIsShareCopied(false), 3000);
                                                         } catch {
-                                                            showToast('Gagal menyalin tautan.');
+                                                            toast.error('Gagal menyalin tautan.');
                                                         }
                                                     }}
                                                     className={cn(
@@ -852,7 +823,7 @@ export default function EmergencyIndex({
                                                     onClick={() => {
                                                         const message =
                                                             `*HASIL AUDIT SITUS SIBER - CEKARA*\n\n` +
-                                                            `Situs/Tab: *${tabScanResult.tabTitle || 'Halaman Web'}*\n` +
+                                                            `Situs/Tab: *${formatTabTitle(tabScanResult.tabTitle)}*\n` +
                                                             `Tingkat Risiko: *${tabScanResult.riskLevel} (${tabScanResult.score}%)*\n\n` +
                                                             `Ringkasan:\n${tabScanResult.summary}\n\n` +
                                                             `Lihat laporan selengkapnya:\n${tabScanResult.shareUrl}\n\n` +
@@ -884,6 +855,7 @@ export default function EmergencyIndex({
                                             onClick={() => {
                                                 setTabScanResult(null);
                                                 setCapturedPreview(null);
+                                                localStorage.removeItem(LAST_SCAN_KEY);
                                             }}
                                             className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-[#6B5646] hover:text-[#3B2A1E] hover:underline cursor-pointer"
                                         >
@@ -908,8 +880,23 @@ export default function EmergencyIndex({
                             </div>
                         )}
 
+                        {/* Loading State: Restoring previous result */}
+                        {isRestoringResult && (
+                            <div className="rounded-3xl border-2 border-[#3B2A1E] bg-white p-8 text-center shadow-[4px_4px_0px_0px_#3B2A1E]">
+                                <div className="inline-flex size-16 items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A] shadow-[2px_2px_0px_0px_#3B2A1E] mb-4">
+                                    <Loader2 className="size-8 text-[#3B2A1E] animate-spin" />
+                                </div>
+                                <h3 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E]">
+                                    Memuat Hasil Analisis Sebelumnya...
+                                </h3>
+                                <p className="mt-2 text-xs sm:text-sm text-[#6B5646] max-w-md mx-auto leading-relaxed">
+                                    Menampilkan kembali hasil investigasi AI terakhir yang telah tersimpan.
+                                </p>
+                            </div>
+                        )}
+
                         {/* 3 Panduan Cepat Investigasi Tab */}
-                        {!tabScanResult && !isAnalyzing && (
+                        {!tabScanResult && !isAnalyzing && !isRestoringResult && (
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[2px_2px_0px_0px_#3B2A1E]">
                                     <span className="flex size-7 items-center justify-center rounded-lg border-2 border-[#3B2A1E] bg-[#FFE27A] text-xs font-extrabold text-[#3B2A1E] mb-2.5">

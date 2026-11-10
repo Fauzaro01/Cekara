@@ -47,6 +47,20 @@ class HandleInertiaRequests extends Middleware
                     'avatar' => $request->user()->avatar ? asset('storage/' . $request->user()->avatar) : null,
                 ] : null,
             ],
+            'nav_badges' => fn () => [
+                'latest_community_activity_at' => rescue(function () {
+                    $msgMax = \App\Models\CommunityMessage::query()->max('created_at');
+                    $roomMax = \App\Models\CommunityRoom::query()->max('updated_at');
+                    $max = max($msgMax, $roomMax);
+
+                    return $max ? \Illuminate\Support\Carbon::parse($max)->toIso8601String() : null;
+                }, null, false),
+                'latest_simulation_activity_at' => rescue(function () {
+                    $scenarioMax = \App\Models\SimulationScenario::query()->where('is_active', true)->max('updated_at');
+
+                    return $scenarioMax ? \Illuminate\Support\Carbon::parse($scenarioMax)->toIso8601String() : null;
+                }, null, false),
+            ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success') ?? ($request->session()->get('status') === 'profile-updated' ? 'Profil akun Anda berhasil diperbarui!' : null),
                 'error' => fn () => $request->session()->get('error'),

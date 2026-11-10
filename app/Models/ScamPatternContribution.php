@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int|null $user_id
+ * @property int|null $community_room_id
  * @property string $title
  * @property string $category
  * @property string $platform
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'user_id',
+    'community_room_id',
     'title',
     'category',
     'platform',
@@ -75,5 +77,15 @@ class ScamPatternContribution extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the community discussion room this pattern was verified from.
+     *
+     * @return BelongsTo<CommunityRoom, $this>
+     */
+    public function communityRoom(): BelongsTo
+    {
+        return $this->belongsTo(CommunityRoom::class);
     }
 }

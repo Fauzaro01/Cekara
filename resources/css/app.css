@@ -141,6 +141,84 @@ h6 {
     background-color: #fff8ec;
 }
 
+/* ========================================================
+   PROFESSIONAL SHIMMER & SKELETON CARD ANIMATIONS
+   Berkilau-kilau khas Cekara (Warm Gold & White Beam)
+   ======================================================== */
+@keyframes shimmer-sweep {
+    0% {
+        transform: translateX(-150%) skewX(-15deg);
+    }
+    100% {
+        transform: translateX(150%) skewX(-15deg);
+    }
+}
+
+@keyframes sparkle-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.75;
+    }
+}
+
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: #EFE3D0;
+    border-radius: 12px;
+}
+
+.skeleton-shimmer::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.15) 20%,
+        rgba(255, 255, 255, 0.85) 50%,
+        rgba(255, 226, 122, 0.5) 55%,
+        rgba(255, 255, 255, 0.15) 80%,
+        transparent 100%
+    );
+    animation: shimmer-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    content: '';
+    pointer-events: none;
+}
+
+.skeleton-card {
+    position: relative;
+    overflow: hidden;
+    background: #FFFFFF;
+    border: 2px solid #3B2A1E;
+    border-radius: 20px;
+    box-shadow: 3px 3px 0px 0px #3B2A1E;
+}
+
+.skeleton-card::after {
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    bottom: -50%;
+    left: -50%;
+    background: linear-gradient(
+        105deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0) 35%,
+        rgba(255, 255, 255, 0.65) 50%,
+        rgba(255, 226, 122, 0.45) 55%,
+        rgba(255, 255, 255, 0) 65%,
+        transparent 80%
+    );
+    animation: shimmer-sweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    content: '';
+    pointer-events: none;
+}
+
 /* Accessibility: Safe reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *,

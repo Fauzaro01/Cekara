@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, UserDashboardSkeleton } from '@/components/ui/skeleton';
 import type { Auth } from '@/types/auth';
 
 interface GuardianStatus {
@@ -62,10 +63,8 @@ export default function Dashboard({
 }: Props) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const user = auth?.user;
+    const isInitialLoading = useSkeletonMount(280);
 
-    const [activeTab, setActiveTab] = useState<
-        'all' | 'text' | 'image' | 'url'
-    >('all');
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
     // Threat report modal state & form
@@ -131,15 +130,6 @@ export default function Dashboard({
         }
     };
 
-    const filteredScans = useMemo(() => {
-        if (activeTab === 'all') {
-            return recentScans;
-        }
-        return recentScans.filter(
-            (s) => s.scan_type.toLowerCase() === activeTab,
-        );
-    }, [recentScans, activeTab]);
-
     const handleDeleteScan = (id: number) => {
         if (
             confirm('Apakah Anda yakin ingin menghapus riwayat pemindaian ini?')
@@ -189,17 +179,14 @@ export default function Dashboard({
         );
     };
 
-
-    const getScanTypeLabel = (type: string) => {
-        switch (type.toLowerCase()) {
-            case 'image':
-                return 'Screenshot Chat';
-            case 'url':
-                return 'Tautan URL';
-            default:
-                return 'Teks Pesan';
-        }
-    };
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Dashboard Pengguna - Cekara" />
+                <UserDashboardSkeleton />
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>
@@ -350,7 +337,7 @@ export default function Dashboard({
                         >
                             <div>
                                 <h3 className="font-semibold text-slate-900 group-hover:text-emerald-600 dark:text-slate-100 dark:group-hover:text-emerald-400">
-                                    Radar Komunitas
+                                    Komunitas 
                                 </h3>
                                 <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                                     Pantau laporan modus penipuan terbaru dari
@@ -364,69 +351,18 @@ export default function Dashboard({
                     </div>
                 </div>
 
-                {/* Scan History Section ('Recent Tabs') */}
+                {/* Scan History Section */}
                 <div className="mb-10">
-                    <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                        <div>
-                            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                                Riwayat Pemindaian Penipuan
-                            </h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Daftar analisis pesan, tangkapan layar, dan URL
-                                yang telah Anda pindai.
-                            </p>
-                        </div>
-
-                        {/* Recent Tabs Filter */}
-                        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-100/70 p-1 dark:border-slate-800 dark:bg-slate-900/60">
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('all')}
-                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
-                                    activeTab === 'all'
-                                        ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-800 dark:text-slate-100'
-                                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                                }`}
-                            >
-                                Semua ({recentScans.length})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('text')}
-                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
-                                    activeTab === 'text'
-                                        ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-800 dark:text-slate-100'
-                                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                                }`}
-                            >
-                                Teks Pesan
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('image')}
-                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
-                                    activeTab === 'image'
-                                        ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-800 dark:text-slate-100'
-                                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                                }`}
-                            >
-                                Screenshot Chat
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('url')}
-                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
-                                    activeTab === 'url'
-                                        ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-800 dark:text-slate-100'
-                                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                                }`}
-                            >
-                                Tautan URL
-                            </button>
-                        </div>
+                    <div className="mb-4">
+                        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                            Riwayat Pemindaian Penipuan Terbaru
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Daftar analisis tangkapan layar dari CEKARA yang mengakses tab browser Anda.
+                        </p>
                     </div>
 
-                    {filteredScans.length === 0 ? (
+                    {recentScans.length === 0 ? (
                         <Card
                             variant="glass"
                             className="flex flex-col items-center justify-center px-6 py-8 sm:px-8 sm:py-10 text-center"
@@ -447,7 +383,7 @@ export default function Dashboard({
                         </Card>
                     ) : (
                         <div className="flex flex-col gap-4">
-                            {filteredScans.map((scan) => (
+                            {recentScans.slice(0, 4).map((scan) => (
                                 <Card
                                     key={scan.id}
                                     variant="floating"
@@ -455,11 +391,6 @@ export default function Dashboard({
                                 >
                                     <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                                {getScanTypeLabel(
-                                                    scan.scan_type,
-                                                )}
-                                            </span>
                                             {getRiskBadge(scan.risk_level)}
                                             <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                                                 Skor Risiko: {scan.score}%
@@ -540,21 +471,13 @@ export default function Dashboard({
 
                 {/* Recent Simulations Journey */}
                 <div className="mb-8">
-                    <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
-                        <div>
-                            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                                Simulasi Pembelajaran yang Baru Diikuti
-                            </h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Progres dan hasil skor skenario latihan interaktif yang telah Anda ikuti.
-                            </p>
-                        </div>
-                        <Link
-                            href="/simulasi"
-                            className="inline-flex items-center text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
-                        >
-                            Lihat Semua Skenario
-                        </Link>
+                    <div className="mb-4">
+                        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                            Simulasi Pembelajaran yang Baru Diikuti
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Progres dan hasil skor skenario latihan interaktif yang telah Anda ikuti.
+                        </p>
                     </div>
 
                     {recentSimulations.length === 0 ? (
@@ -641,13 +564,13 @@ export default function Dashboard({
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <Badge variant="brand">
-                                    Formulir Pelaporan • Radar Komunitas
+                                    Formulir Pelaporan • Komunitas
                                 </Badge>
                                 <h2 className="mt-2 font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E] sm:text-2xl">
                                     Laporkan Temuan Modus Penipuan Baru
                                 </h2>
                                 <p className="mt-1 text-xs text-[#6B5646] sm:text-sm">
-                                    Laporan dari akun Anda akan dianalisis dan diterbitkan pada Radar Komunitas agar masyarakat luas lebih waspada.
+                                    Laporan dari akun Anda akan dianalisis dan diterbitkan pada Komunitas agar masyarakat luas lebih waspada.
                                 </p>
                             </div>
                             <button

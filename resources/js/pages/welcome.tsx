@@ -1966,13 +1966,11 @@ export default function Welcome() {
                         <div className="mt-8 flex flex-col items-center justify-between gap-6 rounded-3xl border-2 border-[#3B2A1E] bg-[#FFE27A] p-6 shadow-[3px_3px_0px_0px_#3B2A1E] sm:flex-row sm:gap-8 sm:p-7">
                             <div className="flex-1 text-center sm:text-left">
                                 <h4 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold leading-tight text-[#3B2A1E] sm:text-2xl md:text-[27px]">
-                                    Ingin Uji Coba 10+ Skenario Lengkap dengan
-                                    Skor & Ranking?
+                                    Ingin terus mengasah pemikiran kritismu untuk menghindari penipuan digital,
+                                    & Sertifikasi ?
                                 </h4>
                                 <p className="mt-2.5 text-sm font-semibold leading-relaxed text-[#5A4434] sm:text-base md:text-[17px]">
-                                    Masuk ke Laboratorium Simulasi Cekara untuk
-                                    mencoba simulasi percakapan interaktif penuh
-                                    dan catat rekor skor Guardian Anda.
+                                    Masuk, dan ikuti simulasi pembelajaran edukatif yang interaktif dari CEKARA untuk bisa menghadapi modus penipuan digital di Indonesia !
                                 </p>
                             </div>
                             <div className="relative flex flex-col items-center shrink-0">
@@ -1988,7 +1986,7 @@ export default function Welcome() {
                                     href="/simulasi"
                                     className="relative z-10 inline-flex shrink-0 items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] bg-white px-5 py-3 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] transition-colors hover:bg-[#FFF8EC]"
                                 >
-                                    <span>Buka Laborato Simulasi</span>
+                                    <span>Mulai Simulasi</span>
                                     <ArrowRight className="size-4" />
                                 </Link>
                             </div>
@@ -2003,11 +2001,10 @@ export default function Welcome() {
                             <div className="mb-6 max-w-2xl">
 
                                 <h2 className="mb-3 font-['Fredoka',system-ui,sans-serif] text-2xl font-bold text-[#3B2A1E] sm:text-3xl">
-                                    CEKARA Hadir Sebagai Teman Diskusi, Bukan
-                                    Vonis Mutlak
+                                    CEKARA Hadir Sebagai Teman Diskusi, bukan Penjamin 100% aman ya!
                                 </h2>
                                 <p className="text-sm leading-relaxed text-[#6B5646] sm:text-base">
-                                    Kami tidak memberi label hijau "pasti aman"
+                                    Kami tidak memberi pernyataan "pasti aman"
                                     karena modus kejahatan siber terus
                                     berkembang. CEKARA menyajikan kemungkinan
                                     dan indikator risiko agar kamu terbiasa
@@ -2018,7 +2015,7 @@ export default function Welcome() {
                             <div className="grid grid-cols-1 gap-4 border-t-2 border-[#EFE3D0] pt-4 sm:grid-cols-2">
                                 <div className="rounded-2xl border border-[#EFE3D0] bg-[#FFF8EC] p-4">
                                     <h4 className="mb-1 font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
-                                        Status Prototipe Edukatif
+                                        Prototipe Edukatif
                                     </h4>
                                     <p className="text-xs leading-relaxed text-[#6B5646]">
                                         Aplikasi ini dikembangkan untuk ajang
@@ -2031,7 +2028,7 @@ export default function Welcome() {
 
                                 <div className="rounded-2xl border border-[#EFE3D0] bg-[#FFF8EC] p-4">
                                     <h4 className="mb-1 font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
-                                        Kanal Pengaduan Resmi
+                                        Jika Kamu Menjadi Korban Penipuan
                                     </h4>
                                     <p className="text-xs leading-relaxed text-[#6B5646]">
                                         Jika kamu sudah telanjur menjadi korban

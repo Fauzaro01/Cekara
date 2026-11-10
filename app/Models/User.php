@@ -87,6 +87,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the public URL for the user's avatar.
+     */
+    public function getAvatarUrl(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        if (str_starts_with($this->avatar, 'http://') || str_starts_with($this->avatar, 'https://') || str_starts_with($this->avatar, '/storage/')) {
+            return $this->avatar;
+        }
+
+        return asset('storage/'.$this->avatar);
+    }
+
+    /**
      * Get the scans performed by this user.
      *
      * @return HasMany<Scan, $this>

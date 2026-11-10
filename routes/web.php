@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\LlmProviderController;
+use App\Http\Controllers\Admin\SimulationController as AdminSimulationController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommunityRadarController;
 use App\Http\Controllers\DashboardController;
@@ -17,16 +19,27 @@ Route::get('/tanggap-darurat', [EmergencyActionController::class, 'index'])->nam
 Route::redirect('/act', '/tanggap-darurat');
 
 // Radar Ancaman Komunitas (Community Threat Radar & Real-Time Discussion Rooms)
-Route::get('/radar', [CommunityRadarController::class, 'index'])->name('radar.index');
+Route::get('/komunitas', [CommunityRadarController::class, 'index'])->name('radar.index');
+Route::redirect('/radar', '/komunitas');
 Route::get('/radar/sync', [CommunityRadarController::class, 'sync'])->name('radar.sync');
 Route::get('/radar/rooms/{room}/messages', [CommunityRadarController::class, 'roomMessages'])->name('radar.rooms.messages');
 Route::post('/radar/{pattern}/upvote', [CommunityRadarController::class, 'upvote'])->name('radar.upvote');
+Route::post('/komunitas/{pattern}/upvote', [CommunityRadarController::class, 'upvote']);
 Route::post('/radar', [CommunityRadarController::class, 'store'])->name('radar.store');
 
 Route::middleware('auth')->group(function () {
     Route::post('/radar/rooms', [CommunityRadarController::class, 'storeRoom'])->name('radar.rooms.store');
     Route::post('/radar/rooms/{room}/messages', [CommunityRadarController::class, 'storeMessage'])->name('radar.rooms.messages.store');
     Route::post('/radar/messages/{message}/reactions', [CommunityRadarController::class, 'toggleReaction'])->name('radar.messages.reactions.toggle');
+    Route::post('/radar/categories', [CommunityRadarController::class, 'storeCategory'])->name('radar.categories.store');
+    Route::patch('/radar/rooms/{room}/category', [CommunityRadarController::class, 'updateRoomCategory'])->name('radar.rooms.category.update');
+    Route::post('/radar/rooms/{room}/verify-as-pattern', [CommunityRadarController::class, 'verifyRoomAsPattern'])->name('radar.rooms.verify-as-pattern');
+    Route::delete('/radar/rooms/{room}', [CommunityRadarController::class, 'destroyRoom'])->name('radar.rooms.destroy');
+    Route::delete('/radar/messages/{message}', [CommunityRadarController::class, 'destroyMessage'])->name('radar.messages.destroy');
+    Route::delete('/radar/{pattern}', [CommunityRadarController::class, 'destroyPattern'])->name('radar.patterns.destroy');
+    Route::patch('/radar/notices/{notice}/read', [CommunityRadarController::class, 'markNoticeAsRead'])->name('radar.notices.read');
+    Route::post('/radar/notices/mark-all-read', [CommunityRadarController::class, 'markAllNoticesAsRead'])->name('radar.notices.read-all');
+    Route::delete('/radar/notices/{notice}', [CommunityRadarController::class, 'destroyNotice'])->name('radar.notices.destroy');
 });
 
 // Toolkit Guardian untuk Orang Tua & Guru (Family & School Guardian)
@@ -49,13 +62,24 @@ Route::middleware('throttle:60,1')->group(function () {
 
 // Public Shareable Scan Investigation Results
 Route::get('/scans/{public_id}', [ScanController::class, 'show'])->name('scans.show');
+Route::get('/api/scans/{public_id}', [ScanController::class, 'showJson'])->name('api.scans.show');
 
 // Admin LLM Provider Management Routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/llm-providers', [LlmProviderController::class, 'index'])->name('llm-providers.index');
     Route::post('/llm-providers', [LlmProviderController::class, 'store'])->name('llm-providers.store');
     Route::put('/llm-providers/{provider}', [LlmProviderController::class, 'update'])->name('llm-providers.update');
     Route::post('/llm-providers/{provider}/activate', [LlmProviderController::class, 'activate'])->name('llm-providers.activate');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::patch('/users/{user}/role', [UserController::class, 'toggleRole'])->name('users.toggle-role');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/simulasi', [AdminSimulationController::class, 'index'])->name('simulations.index');
+    Route::post('/simulasi', [AdminSimulationController::class, 'store'])->name('simulations.store');
+    Route::put('/simulasi/{scenario}', [AdminSimulationController::class, 'update'])->name('simulations.update');
+    Route::patch('/simulasi/{scenario}/toggle-active', [AdminSimulationController::class, 'toggleActive'])->name('simulations.toggle-active');
+    Route::delete('/simulasi/{scenario}', [AdminSimulationController::class, 'destroy'])->name('simulations.destroy');
 });
 
 // Authenticated User Routes (Auth & Email Verified Gate)

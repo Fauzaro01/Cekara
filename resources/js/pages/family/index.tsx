@@ -1,20 +1,16 @@
-import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import {
     AlertTriangle,
-    Check,
     CheckCircle2,
     HelpCircle,
     PhoneCall,
     Printer,
-    RotateCcw,
     Share2,
-    Sparkles,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, FamilySkeleton } from '@/components/ui/skeleton';
 
 function CalmIcon({ className = 'size-5' }: { className?: string }) {
     return (
@@ -45,109 +41,37 @@ interface CheatSheetItem {
     action_rule: string;
 }
 
-interface QuizOption {
-    id: string;
-    text: string;
-    score: number;
-}
-
-interface QuizQuestion {
-    id: number;
-    question: string;
-    options: QuizOption[];
-}
-
 interface Props {
     cheatSheets: CheatSheetItem[];
-    quizQuestions: QuizQuestion[];
-}
-
-interface QuizResult {
-    score: number;
-    level: string;
-    verdict: string;
-    badgeColor: 'safe' | 'warn' | 'danger';
-    share_url: string;
-    share_text: string;
+    quizQuestions?: unknown[];
 }
 
 export default function FamilyGuardianIndex({
     cheatSheets,
-    quizQuestions,
 }: Props) {
-    const [activeTab, setActiveTab] = useState<'cheatsheet' | 'quiz'>(
-        'cheatsheet',
-    );
-    const [answers, setAnswers] = useState<Record<number, string>>({});
-    const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
-    const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
-    const [quizError, setQuizError] = useState<string | null>(null);
-
-    const getXsrfToken = () => {
-        if (typeof document === 'undefined') {
-            return '';
-        }
-        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    };
-
-    const handleSelectOption = (questionId: number, optionId: string) => {
-        setAnswers((prev) => ({
-            ...prev,
-            [questionId]: optionId,
-        }));
-    };
-
-    const handleQuizSubmit = async () => {
-        const answeredCount = Object.keys(answers).length;
-        if (answeredCount < quizQuestions.length) {
-            setQuizError(
-                `Harap jawab seluruh ${quizQuestions.length} pertanyaan sebelum melihat hasil.`,
-            );
-            return;
-        }
-
-        setIsSubmittingQuiz(true);
-        setQuizError(null);
-
-        try {
-            const res = await fetch('/panduan-keluarga/kuis', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-XSRF-TOKEN': getXsrfToken(),
-                },
-                body: JSON.stringify({ answers }),
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success) {
-                setQuizResult(data);
-                window.scrollTo({ top: 300, behavior: 'smooth' });
-            } else {
-                setQuizError(data.message || 'Gagal mengevaluasi kuis.');
-            }
-        } catch {
-            setQuizError('Terjadi kendala jaringan saat memproses kuis.');
-        } finally {
-            setIsSubmittingQuiz(false);
-        }
-    };
+    const isInitialLoading = useSkeletonMount(280);
 
     const handlePrint = () => {
         window.print();
     };
 
     const familyShareWaText = encodeURIComponent(
-        `🛡️ *PANDUAN WASPADA PENIPUAN HP UNTUK KELUARGA* (dari Cekara)\n\n` +
+        ` *PANDUAN WASPADA PENIPUAN HP UNTUK KELUARGA* (dari Cekara)\n\n` +
             `Keluarga tercinta, jika menerima pesan mencurigakan di WhatsApp/SMS, selalu ingat *ATURAN 3T*:\n` +
             `1. *TENANG* - Jangan panik jika ada kabar musibah atau rekening diblokir.\n` +
             `2. *TELEPON LANGSUNG* - Hubungi nomor biasa kerabat/anak sebelum transfer.\n` +
             `3. *TANYA ANAK/GUARDIAN* - Jangan pernah pasang file berekstensi .APK atau beri kode OTP.\n\n` +
             `Baca panduan lengkapnya di: https://cekara.id/panduan-keluarga`,
     );
+
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Panduan Literasi Keluarga - Cekara" />
+                <FamilySkeleton />
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>
@@ -159,7 +83,7 @@ export default function FamilyGuardianIndex({
                     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                         <div className="max-w-xl">
                             <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
-                                Toolkit Guardian Keluarga & Guru
+                                Panduan Waspada Penipuan Digital untuk Keluarga
                             </h1>
                             <p className="mt-2 text-sm leading-relaxed text-[#6B5646] sm:text-base">
                                 Bekali orang tua, kakek-nenek, dan adik di rumah
@@ -190,38 +114,11 @@ export default function FamilyGuardianIndex({
                             </Button>
                         </div>
                     </div>
-
-                    {/* Navigation Tabs */}
-                    <div className="mt-8 flex gap-6 border-b-2 border-[#EFE3D0] print:hidden">
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('cheatsheet')}
-                            className={`cursor-pointer border-b-2 pb-3 text-sm font-bold transition ${
-                                activeTab === 'cheatsheet'
-                                    ? 'border-[#3B2A1E] text-[#3B2A1E]'
-                                    : 'border-transparent text-[#6B5646] hover:text-[#3B2A1E]'
-                            }`}
-                        >
-                            Lembar Panduan Keluarga (Cheat Sheet)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('quiz')}
-                            className={`cursor-pointer border-b-2 pb-3 text-sm font-bold transition ${
-                                activeTab === 'quiz'
-                                    ? 'border-[#3B2A1E] text-[#3B2A1E]'
-                                    : 'border-transparent text-[#6B5646] hover:text-[#3B2A1E]'
-                            }`}
-                        >
-                            Tes Kerentanan Keluarga (5 Menit)
-                        </button>
-                    </div>
                 </div>
             </section>
 
-            {/* TAB 1: Family Cheat Sheet */}
-            {activeTab === 'cheatsheet' && (
-                <section className="mx-auto max-w-5xl px-6 py-10">
+            {/* Family Cheat Sheet */}
+            <section className="mx-auto max-w-5xl px-6 py-10">
                     {/* 3T Golden Rules Banner */}
                     <Card
                         variant="glass"
@@ -290,10 +187,7 @@ export default function FamilyGuardianIndex({
                                 className="p-6"
                             >
                                 <div className="flex items-center gap-2">
-                                    <Badge variant="warn">
-                                        {item.category}
-                                    </Badge>
-                                    <span className="text-xs text-slate-400">
+                                    <span className="text-xs font-bold text-[#6B5646]">
                                         Panduan #{item.id}
                                     </span>
                                 </div>
@@ -336,128 +230,6 @@ export default function FamilyGuardianIndex({
                         ))}
                     </div>
                 </section>
-            )}
-
-            {/* TAB 2: Family Vulnerability Assessment Quiz */}
-            {activeTab === 'quiz' && (
-                <section className="mx-auto max-w-5xl px-6 py-10">
-                    {/* Quiz Result View */}
-                    {quizResult && (
-                        <Card
-                            variant="floating"
-                            className="mb-8 border-l-4 border-l-brand-600 bg-brand-50/20 p-6 sm:p-8 dark:bg-brand-950/20"
-                        >
-                            <div className="flex items-center justify-between">
-                                <Badge variant={quizResult.badgeColor} withDot>
-                                    Tingkat Kerentanan: {quizResult.level}
-                                </Badge>
-                                <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
-                                    Skor: {quizResult.score} / 100
-                                </span>
-                            </div>
-
-                            <p className="mt-3 text-sm leading-relaxed text-slate-800 dark:text-slate-200">
-                                {quizResult.verdict}
-                            </p>
-
-                            <div className="mt-6 flex flex-wrap gap-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-                                <a
-                                    href={quizResult.share_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`${buttonClasses('primary')} inline-flex items-center gap-1.5 shadow-sm`}
-                                >
-                                    <Share2 className="size-4" />
-                                    Bagikan Hasil ke WhatsApp Keluarga
-                                </a>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setQuizResult(null);
-                                        setAnswers({});
-                                    }}
-                                >
-                                    <RotateCcw className="mr-1.5 size-4" />
-                                    Ulangi Tes
-                                </Button>
-                            </div>
-                        </Card>
-                    )}
-
-                    {quizError && (
-                        <div className="mb-6 flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-medium text-red-800 dark:bg-red-950/40 dark:text-red-300">
-                            <AlertTriangle className="size-4 shrink-0 text-red-600" />
-                            <span>{quizError}</span>
-                        </div>
-                    )}
-
-                    <div className="space-y-6">
-                        {quizQuestions.map((q, idx) => (
-                            <Card key={q.id} variant="floating" className="p-6">
-                                <div className="flex items-center gap-2.5">
-                                    <span className="flex size-7 items-center justify-center rounded-xl bg-brand-100 text-xs font-bold text-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
-                                        {idx + 1}
-                                    </span>
-                                    <h3 className="text-sm font-bold text-slate-900 sm:text-base dark:text-slate-100">
-                                        {q.question}
-                                    </h3>
-                                </div>
-
-                                <div className="mt-4 space-y-2.5">
-                                    {q.options.map((opt) => {
-                                        const isSelected =
-                                            answers[q.id] === opt.id;
-                                        return (
-                                            <button
-                                                key={opt.id}
-                                                type="button"
-                                                onClick={() =>
-                                                    handleSelectOption(
-                                                        q.id,
-                                                        opt.id,
-                                                    )
-                                                }
-                                                className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-left text-xs transition-all ${
-                                                    isSelected
-                                                        ? 'border-brand-500 bg-brand-50/60 font-medium text-brand-900 ring-2 ring-brand-500/20 dark:border-brand-400 dark:bg-brand-950/40 dark:text-brand-200'
-                                                        : 'border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
-                                                }`}
-                                            >
-                                                <span
-                                                    className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                                                        isSelected
-                                                            ? 'bg-brand-600 text-white'
-                                                            : 'border border-slate-300 text-slate-500 dark:border-slate-700'
-                                                    }`}
-                                                >
-                                                    {opt.id}
-                                                </span>
-                                                <span className="leading-relaxed">
-                                                    {opt.text}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-
-                    <div className="mt-8 flex justify-end">
-                        <Button
-                            variant="primary"
-                            onClick={handleQuizSubmit}
-                            disabled={isSubmittingQuiz}
-                            className="min-w-44 shadow-sm"
-                        >
-                            <Sparkles className="mr-1.5 size-4" />
-                            {isSubmittingQuiz
-                                ? 'Mengevaluasi...'
-                                : 'Lihat Hasil Asesmen Keluarga'}
-                        </Button>
-                    </div>
-                </section>
-            )}
         </AppLayout>
     );
 }

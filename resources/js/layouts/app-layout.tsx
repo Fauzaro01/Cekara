@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type PropsWithChildren } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import {
     Home,
     BookOpen,
@@ -9,6 +9,7 @@ import {
     LayoutDashboard,
     Settings,
     User,
+    UserCheck,
     LogOut,
     Menu,
     X,
@@ -25,18 +26,146 @@ import AuthSwitchToggle from '@/components/auth-switch-toggle';
 import { ToastContainer } from '@/components/ui/toast';
 import type { Auth } from '@/types/auth';
 
+interface NavBadges {
+    latest_community_activity_at?: string | null;
+    latest_simulation_activity_at?: string | null;
+}
+
 interface SharedProps {
     auth: Auth;
+    nav_badges?: NavBadges;
     [key: string]: unknown;
 }
 
+/**
+ * Reusable professional notification beacon with subtle pulse
+ */
+function NavigationBadgeBeacon({ label }: { label: string }) {
+    return (
+        <span
+            className="absolute -top-1 -right-1.5 flex size-2.5 items-center justify-center pointer-events-none"
+            aria-label={label}
+            title={label}
+        >
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#E06812]/40 duration-1000" />
+            <span className="relative inline-flex size-2 rounded-full border border-[#3B2A1E] bg-[#E06812] shadow-[0_0_4px_rgba(224,104,18,0.45)]" />
+            <span className="sr-only">{label}</span>
+        </span>
+    );
+}
+
 export default function AppLayout({ children }: PropsWithChildren) {
-    const { auth } = usePage<SharedProps>().props;
+    const { auth, nav_badges } = usePage<SharedProps>().props;
     const { url } = usePage();
     const user = auth?.user;
     const isInitialMount = useRef(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isBottomBarOpen, setIsBottomBarOpen] = useState(true);
+    const [isNavigating, setIsNavigating] = useState(false);
+
+    // Dynamic unread indicators for bottom navigation
+    const [hasNewSimulations, setHasNewSimulations] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        if (window.location.pathname.startsWith('/simulasi')) return false;
+
+        const latestAt = nav_badges?.latest_simulation_activity_at;
+        if (!latestAt) return false;
+
+        const lastSeen = localStorage.getItem('cekara_last_seen_simulasi');
+        if (!lastSeen) return true;
+
+        return new Date(latestAt).getTime() > new Date(lastSeen).getTime();
+    });
+
+    const [hasNewCommunity, setHasNewCommunity] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        if (
+            window.location.pathname.startsWith('/komunitas') ||
+            window.location.pathname.startsWith('/radar')
+        )
+            return false;
+
+        const latestAt = nav_badges?.latest_community_activity_at;
+        if (!latestAt) return false;
+
+        const lastSeen = localStorage.getItem('cekara_last_seen_community');
+        if (!lastSeen) return true;
+
+        return new Date(latestAt).getTime() > new Date(lastSeen).getTime();
+    });
+
+    // Update unread status and mark as seen when visiting respective sections
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const isSimulasiPage = url.startsWith('/simulasi');
+        const isKomunitasPage =
+            url.startsWith('/komunitas') || url.startsWith('/radar');
+
+        if (isSimulasiPage) {
+            if (nav_badges?.latest_simulation_activity_at) {
+                localStorage.setItem(
+                    'cekara_last_seen_simulasi',
+                    nav_badges.latest_simulation_activity_at
+                );
+            } else {
+                localStorage.setItem(
+                    'cekara_last_seen_simulasi',
+                    new Date().toISOString()
+                );
+            }
+            setHasNewSimulations(false);
+        } else {
+            const latestAt = nav_badges?.latest_simulation_activity_at;
+            if (!latestAt) {
+                setHasNewSimulations(false);
+            } else {
+                const lastSeen = localStorage.getItem('cekara_last_seen_simulasi');
+                setHasNewSimulations(
+                    !lastSeen ||
+                        new Date(latestAt).getTime() > new Date(lastSeen).getTime()
+                );
+            }
+        }
+
+        if (isKomunitasPage) {
+            if (nav_badges?.latest_community_activity_at) {
+                localStorage.setItem(
+                    'cekara_last_seen_community',
+                    nav_badges.latest_community_activity_at
+                );
+            } else {
+                localStorage.setItem(
+                    'cekara_last_seen_community',
+                    new Date().toISOString()
+                );
+            }
+            setHasNewCommunity(false);
+        } else {
+            const latestAt = nav_badges?.latest_community_activity_at;
+            if (!latestAt) {
+                setHasNewCommunity(false);
+            } else {
+                const lastSeen = localStorage.getItem('cekara_last_seen_community');
+                setHasNewCommunity(
+                    !lastSeen ||
+                        new Date(latestAt).getTime() > new Date(lastSeen).getTime()
+                );
+            }
+        }
+    }, [url, nav_badges]);
+
+    // Lightweight periodic refresh for nav badges when user is active
+    useEffect(() => {
+        if (!user) return;
+        const interval = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                router.reload({ only: ['nav_badges'] });
+            }
+        }, 60000);
+        return () => window.clearInterval(interval);
+    }, [user]);
+
     const [accountDrawerOpen, setAccountDrawerOpen] = useState(() => {
         if (typeof window === 'undefined') return false;
         return (
@@ -52,6 +181,16 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (window.location.hash === '#privacy') return 'privacy';
         return null;
     });
+
+    // Page transition shimmer indicator
+    useEffect(() => {
+        const unbindStart = router.on('start', () => setIsNavigating(true));
+        const unbindFinish = router.on('finish', () => setIsNavigating(false));
+        return () => {
+            unbindStart();
+            unbindFinish();
+        };
+    }, []);
 
     // Close drawers on route change (ignore initial mount/reload)
     useEffect(() => {
@@ -166,13 +305,15 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (path === '/dashboard') {
             return url === '/dashboard' || url.startsWith('/dashboard');
         }
+        if (path === '/tanggap-darurat') {
+            return url.startsWith('/tanggap-darurat') || url.startsWith('/act');
+        }
         return url.startsWith(path);
     };
 
     const guestNavLinks = [
         { href: '/', label: 'Beranda', icon: Home },
         { href: '/simulasi', label: 'Belajar', icon: BookOpen },
-        { href: '/tanggap-darurat', label: 'Bertindak', icon: LifeBuoy },
         { href: '/komunitas', label: 'Komunitas', icon: Users },
         { href: '/panduan-keluarga', label: 'Panduan Keluarga', icon: Users },
     ];
@@ -193,21 +334,18 @@ export default function AppLayout({ children }: PropsWithChildren) {
             badgeColor: 'bg-[#FFE27A] text-[#3B2A1E]',
         },
         {
+            href: '/tanggap-darurat',
+            label: 'Bertindak',
+            icon: LifeBuoy,
+            badge: 'Siaga',
+            badgeColor: 'bg-[#FF9A3C] text-[#3B2A1E]',
+        },
+        {
             href: '/komunitas',
             label: 'Komunitas',
             icon: Users,
             badge: 'Live',
             badgeColor: 'bg-[#FF9A3C] text-[#3B2A1E]',
-        },
-    ];
-
-    const adminNavItems = [
-        {
-            href: '/admin/llm-providers',
-            label: 'Kelola AI / LLM',
-            icon: Settings,
-            badge: 'Admin',
-            badgeColor: 'bg-[#FFE27A] text-[#3B2A1E]',
         },
     ];
 
@@ -289,61 +427,45 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             </span>
                         </Link>
 
-                        <Link
-                            href="/panduan-keluarga"
-                            onClick={() => setAccountDrawerOpen(false)}
-                            className={`group flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
-                                isAuthActive('/panduan-keluarga')
-                                    ? 'border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                    : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
-                            }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <Users className="size-4.5" />
-                                <span>Panduan Literasi Keluarga</span>
-                            </div>
-                            <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
-                                Buka
-                                <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
-                            </span>
-                        </Link>
+                        {!user.is_admin && (
+                            <>
+                                <Link
+                                    href="/panduan-keluarga"
+                                    onClick={() => setAccountDrawerOpen(false)}
+                                    className={`group flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
+                                        isAuthActive('/panduan-keluarga')
+                                            ? 'border-[#3B2A1E] bg-[#8ECDF0] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                            : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Users className="size-4.5" />
+                                        <span>Panduan Literasi Keluarga</span>
+                                    </div>
+                                    <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
+                                        Buka
+                                        <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
+                                    </span>
+                                </Link>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setAccountDrawerOpen(false);
-                                setTermsModal('privacy');
-                            }}
-                            className="group flex w-full items-center justify-between rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 py-2.5 text-sm font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition-all duration-150 hover:bg-[#FFE27A] cursor-pointer"
-                        >
-                            <div className="flex items-center gap-3">
-                                <ShieldCheck className="size-4.5" />
-                                <span>Pengaturan Privasi dan Keamanan</span>
-                            </div>
-                            <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
-                                Buka
-                                <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
-                            </span>
-                        </button>
-
-                        {user.is_admin && (
-                            <Link
-                                href="/admin/llm-providers"
-                                onClick={() => setAccountDrawerOpen(false)}
-                                className={`flex items-center justify-between rounded-2xl border-2 px-4 py-2.5 text-sm font-bold transition-all duration-150 ${
-                                    isAuthActive('/admin/llm-providers')
-                                        ? 'border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                        : 'border-[#3B2A1E] bg-white text-[#3B2A1E] hover:bg-[#FFE27A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Settings className="size-4.5" />
-                                    <span>Kelola AI / LLM</span>
-                                </div>
-                                <span className="rounded-lg border border-[#3B2A1E] bg-[#FFE27A] px-1.5 py-0.5 text-[10px] font-black uppercase text-[#3B2A1E]">
-                                    Admin
-                                </span>
-                            </Link>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setAccountDrawerOpen(false);
+                                        setTermsModal('privacy');
+                                    }}
+                                    className="group flex w-full items-center justify-between rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 py-2.5 text-sm font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition-all duration-150 hover:bg-[#FFE27A] cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <ShieldCheck className="size-4.5" />
+                                        <span>Pengaturan Privasi dan Keamanan</span>
+                                    </div>
+                                    <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#6B5646]">
+                                        Buka
+                                        <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={2.5} />
+                                    </span>
+                                </button>
+                            </>
                         )}
                     </div>
 
@@ -358,33 +480,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <LogOut className="size-4" strokeWidth={2} />
                         <span>Keluar Akun</span>
                     </Link>
-
-                    {/* Footer Legal Links inside Drawer */}
-                    <div className="mt-4 pt-3 border-t-2 border-[#EFE3D0] flex items-center justify-end text-[11px] font-bold text-[#6B5646]">
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setAccountDrawerOpen(false);
-                                    setTermsModal('terms');
-                                }}
-                                className="hover:text-[#E06812] transition cursor-pointer"
-                            >
-                                Ketentuan Layanan
-                            </button>
-                            <span>•</span>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setAccountDrawerOpen(false);
-                                    setTermsModal('privacy');
-                                }}
-                                className="hover:text-[#E06812] transition cursor-pointer"
-                            >
-                                Kebijakan Privasi
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         );
@@ -402,11 +497,17 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         <button
                             type="button"
                             onClick={() => setIsBottomBarOpen(true)}
-                            className="pointer-events-auto flex items-center gap-2 rounded-full border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] transition-all hover:bg-[#FF9A3C] hover:scale-105 active:translate-y-0.5 cursor-pointer animate-in fade-in zoom-in-95 duration-200"
+                            className="pointer-events-auto relative flex items-center gap-2 rounded-full border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#3B2A1E] shadow-[3px_3px_0px_0px_#3B2A1E] transition-all hover:bg-[#FF9A3C] hover:scale-105 active:translate-y-0.5 cursor-pointer animate-in fade-in zoom-in-95 duration-200"
                             title="Buka Navigasi"
                         >
                             <ChevronUp className="size-4" strokeWidth={3} />
                             <span>Buka Navigasi</span>
+                            {(hasNewSimulations || hasNewCommunity) && (
+                                <span className="relative flex size-2 ml-0.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#E06812]/40 duration-1000" />
+                                    <span className="relative inline-flex size-2 rounded-full border border-[#3B2A1E] bg-[#E06812]" />
+                                </span>
+                            )}
                         </button>
                     </div>
                 )}
@@ -428,7 +529,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         {/* Navigation Dock */}
                         <nav
                             aria-label="Navigasi Guardian"
-                            className="pointer-events-auto flex w-full max-w-md items-center justify-around gap-1 sm:gap-2 rounded-2xl sm:rounded-3xl border-2 sm:border-3 border-[#3B2A1E] bg-[#FFF8EC]/95 p-1.5 sm:p-2 shadow-[4px_4px_0px_0px_#3B2A1E] backdrop-blur-md animate-in slide-in-from-bottom-4 duration-200"
+                            className={`pointer-events-auto flex w-full ${
+                                user.is_admin ? 'max-w-[620px] sm:max-w-2xl' : 'max-w-[490px] sm:max-w-lg'
+                            } items-center justify-around gap-1 sm:gap-1.5 rounded-2xl sm:rounded-3xl border-2 sm:border-3 border-[#3B2A1E] bg-[#FFF8EC]/95 p-1.5 sm:p-2 shadow-[4px_4px_0px_0px_#3B2A1E] backdrop-blur-md animate-in slide-in-from-bottom-4 duration-200`}
                         >
                             {/* Dashboard */}
                             <Link
@@ -445,7 +548,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 </span>
                             </Link>
 
-
                             {/* Latihan Simulasi */}
                             <Link
                                 href="/simulasi"
@@ -457,10 +559,29 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             >
                                 <div className="relative">
                                     <BookOpen className="size-5 shrink-0" strokeWidth={2.2} />
-                                    <span className="absolute -top-1 -right-1.5 size-2 rounded-full border border-[#3B2A1E] bg-[#FF9A3C]" />
+                                    {hasNewSimulations && !isAuthActive('/simulasi') && (
+                                        <NavigationBadgeBeacon label="Pembaruan materi simulasi tersedia" />
+                                    )}
                                 </div>
                                 <span className="mt-0.5 text-[11px] font-bold leading-tight">
                                     Simulasi
+                                </span>
+                            </Link>
+
+                            {/* Bertindak (Tanggap Darurat) */}
+                            <Link
+                                href="/tanggap-darurat"
+                                className={`relative flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
+                                    isAuthActive('/tanggap-darurat')
+                                        ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                        : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                }`}
+                            >
+                                <div className="relative">
+                                    <LifeBuoy className="size-5 shrink-0" strokeWidth={2.2} />
+                                </div>
+                                <span className="mt-0.5 text-[11px] font-bold leading-tight">
+                                    Bertindak
                                 </span>
                             </Link>
 
@@ -475,15 +596,52 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             >
                                 <div className="relative">
                                     <Users className="size-5 shrink-0" strokeWidth={2.2} />
-                                    <span className="absolute -top-1 -right-1.5 flex size-2">
-                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D4573A] opacity-75" />
-                                        <span className="relative inline-flex size-2 rounded-full border border-[#3B2A1E] bg-[#D4573A]" />
-                                    </span>
+                                    {hasNewCommunity && !isAuthActive('/komunitas') && (
+                                        <NavigationBadgeBeacon label="Ada obrolan baru di komunitas" />
+                                    )}
                                 </div>
                                 <span className="mt-0.5 text-[11px] font-bold leading-tight">
                                     Komunitas
                                 </span>
                             </Link>
+
+                            {/* Kelola AI / LLM (Khusus Admin) */}
+                            {user.is_admin && (
+                                <Link
+                                    href="/admin/llm-providers"
+                                    className={`relative flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
+                                        isAuthActive('/admin/llm-providers')
+                                            ? 'border-2 border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                            : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                    }`}
+                                >
+                                    <div className="relative">
+                                        <Settings className="size-5 shrink-0" strokeWidth={2.2} />
+                                    </div>
+                                    <span className="mt-0.5 text-[11px] font-bold leading-tight whitespace-nowrap">
+                                        Kelola AI
+                                    </span>
+                                </Link>
+                            )}
+
+                            {/* Kelola Pengguna (Khusus Admin) - Di samping kanan Kelola AI */}
+                            {user.is_admin && (
+                                <Link
+                                    href="/admin/users"
+                                    className={`relative flex flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl py-1.5 px-1 transition-all duration-150 ${
+                                        isAuthActive('/admin/users')
+                                            ? 'border-2 border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                            : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                    }`}
+                                >
+                                    <div className="relative">
+                                        <UserCheck className="size-5 shrink-0" strokeWidth={2.2} />
+                                    </div>
+                                    <span className="mt-0.5 text-[11px] font-bold leading-tight whitespace-nowrap">
+                                        Pengguna
+                                    </span>
+                                </Link>
+                            )}
 
                             {/* Akun / Menu */}
                             <button
@@ -537,7 +695,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         href="/"
                                         className="text-[#3B2A1E]/85 transition hover:text-[#E06812]"
                                     >
-                                        Pemeriksa Pesan (Beranda)
+                                        Beranda
                                     </Link>
                                 </li>
                                 <li>
@@ -545,7 +703,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         href="/simulasi"
                                         className="text-[#3B2A1E]/85 transition hover:text-[#E06812]"
                                     >
-                                        Simulasi Interaktif (Belajar)
+                                        Belajar & Simulasi
                                     </Link>
                                 </li>
                                 <li>
@@ -553,7 +711,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         href="/komunitas"
                                         className="text-[#3B2A1E]/85 transition hover:text-[#E06812]"
                                     >
-                                        Komunitas Pemberantas Kejahatan
+                                        Komunitas 
                                     </Link>
                                 </li>
                                 <li>
@@ -561,7 +719,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                         href="/panduan-keluarga"
                                         className="text-[#3B2A1E]/85 transition hover:text-[#E06812]"
                                     >
-                                        Panduan Lindungi Keluarga
+                                        Panduan Keluarga
                                     </Link>
                                 </li>
                             </ul>
@@ -605,15 +763,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 Tanggap & Bantuan Resmi
                             </span>
                             <ul className="space-y-3.5 text-[15px] sm:text-base font-bold md:flex md:flex-col md:items-end">
-                                <li>
-                                    <Link
-                                        href="/tanggap-darurat"
-                                        className="inline-flex items-center gap-2 text-[#3B2A1E]/85 transition hover:text-[#E06812]"
-                                    >
-                                        <span>Tanggap Darurat Akun</span>
-                                        <ExternalLink className="size-4 opacity-80" />
-                                    </Link>
-                                </li>
+
                                 <li>
                                     <a
                                         href="https://iasc.ojk.go.id"
@@ -850,12 +1000,26 @@ export default function AppLayout({ children }: PropsWithChildren) {
         </>
     );
 
+    const renderNavigationIndicator = () => {
+        if (!isNavigating) return null;
+        return (
+            <div
+                className="fixed top-0 inset-x-0 z-[9999] h-1.5 overflow-hidden bg-[#FFE27A] shadow-[0_1px_8px_rgba(255,226,122,0.7)]"
+                aria-hidden="true"
+            >
+                <div className="skeleton-shimmer h-full w-full" />
+            </div>
+        );
+    };
+
     // =========================================================================
     // CASE 1: LOGGED IN USER (Bottom Bar & Clean Full-Width Layout - ZERO Top Navbar)
     // =========================================================================
     if (user) {
         return (
             <div className="flex min-h-screen flex-col bg-[#FFF8EC] font-['Nunito',system-ui,sans-serif] text-[#3B2A1E]">
+                {renderNavigationIndicator()}
+
                 {/* Main Content Area with Bottom Padding for floating dock */}
                 <div
                     className={`flex flex-1 flex-col min-w-0 transition-all duration-200 ${
@@ -885,121 +1049,127 @@ export default function AppLayout({ children }: PropsWithChildren) {
     // =========================================================================
     return (
         <div className="flex min-h-screen flex-col bg-[#FFF8EC] font-['Nunito',system-ui,sans-serif] text-[#3B2A1E]">
-            {/* Warm School Canteen Sticky Header */}
-            <header className="sticky top-0 z-40 border-b-2 border-[#EFE3D0] bg-[#FFF8EC]/95 backdrop-blur-md">
-                <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:h-22 sm:px-8">
-                    {/* Brand Logo & Desktop Nav */}
-                    <div className="flex items-center gap-6 lg:gap-10">
-                        <Link
-                            href="/"
-                            className="group flex items-center gap-3 rounded-2xl p-1 font-bold tracking-tight text-[#3B2A1E] transition focus-visible:outline-2 focus-visible:outline-[#3B2A1E]"
-                        >
-                            <img
-                                src="/logotr.png"
-                                alt="Logo Cekara"
-                                className="size-11 shrink-0 object-contain transition group-hover:scale-105 sm:size-12"
-                            />
-                            <div>
-                                <span className="block font-['Fredoka',system-ui,sans-serif] text-2xl leading-none font-bold tracking-tight text-[#3B2A1E] sm:text-3xl">
-                                    CEKARA
-                                </span>
-                                <span className="mt-1 hidden text-xs leading-tight font-semibold text-[#6B5646] sm:block sm:text-[13px]">
-                                    Cek dulu sebelum percaya
-                                </span>
-                            </div>
-                        </Link>
+            {renderNavigationIndicator()}
 
-                        <nav className="hidden items-center gap-1.5 sm:gap-2 lg:flex">
-                            {guestNavLinks.map((item) => {
-                                const Icon = item.icon;
-                                const active = isGuestActive(item.href);
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={`inline-flex h-11 items-center gap-2 rounded-2xl border-2 px-3.5 text-sm font-bold transition-colors duration-150 sm:h-12 sm:px-4 sm:text-[15px] ${
-                                            active
-                                                ? 'border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                                : 'border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
-                                        }`}
-                                    >
-                                        <Icon
-                                            className={`size-[18px] ${
+            {/* Floating Capsule Header (Frosted Cream Translucent) */}
+            <div className="fixed top-3 sm:top-5 inset-x-0 z-40 flex justify-center px-3 sm:px-6 pointer-events-none">
+                <header
+                    className={`pointer-events-auto flex flex-col w-full max-w-5xl transition-all duration-300 border-2 border-[#3B2A1E] bg-[#FFF8EC]/65 backdrop-blur-md sm:backdrop-blur-lg shadow-[3px_3px_0px_0px_#3B2A1E] ${
+                        mobileMenuOpen ? 'rounded-[28px]' : 'rounded-full'
+                    }`}
+                >
+                    <div className="flex h-15 sm:h-16 items-center justify-between px-3.5 sm:px-6">
+                        {/* Brand Logo & Desktop Nav */}
+                        <div className="flex items-center gap-4 lg:gap-6">
+                            <Link
+                                href="/"
+                                className="group flex items-center gap-2.5 rounded-full py-1 px-1 font-bold tracking-tight text-[#3B2A1E] transition focus-visible:outline-2 focus-visible:outline-[#3B2A1E]"
+                            >
+                                <img
+                                    src="/logotr.png"
+                                    alt="Logo Cekara"
+                                    className="size-9 sm:size-10 shrink-0 object-contain transition group-hover:scale-105"
+                                />
+                                <div>
+                                    <span className="block font-['Fredoka',system-ui,sans-serif] text-lg sm:text-xl leading-none font-bold tracking-tight text-[#3B2A1E]">
+                                        CEKARA
+                                    </span>
+                                    <span className="block text-[9px] sm:text-[10px] leading-tight font-semibold text-[#6B5646] tracking-tight whitespace-nowrap mt-0.5">
+                                        Cek dulu sebelum percaya
+                                    </span>
+                                </div>
+                            </Link>
+
+                            <nav className="hidden items-center gap-1 xl:gap-1.5 lg:flex">
+                                {guestNavLinks.map((item) => {
+                                    const Icon = item.icon;
+                                    const active = isGuestActive(item.href);
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={`inline-flex h-9 sm:h-10 items-center gap-1.5 rounded-full border-2 px-3 text-xs sm:text-[13px] font-bold transition-all duration-150 ${
                                                 active
-                                                    ? 'opacity-100'
-                                                    : 'opacity-75'
+                                                    ? 'border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
+                                                    : 'border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
                                             }`}
-                                            strokeWidth={2}
-                                        />
-                                        <span>{item.label}</span>
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-                    </div>
-
-                    {/* Right Toolbar */}
-                    <div className="flex items-center gap-3 sm:gap-4">
-                        <div className="hidden items-center sm:flex">
-                            <AuthSwitchToggle variant="header" />
+                                        >
+                                            <Icon
+                                                className={`size-3.5 sm:size-4 ${
+                                                    active
+                                                        ? 'opacity-100'
+                                                        : 'opacity-75'
+                                                }`}
+                                                strokeWidth={2}
+                                            />
+                                            <span>{item.label}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </nav>
                         </div>
 
-                        {/* Mobile Hamburger Toggle */}
-                        <button
-                            type="button"
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="inline-flex size-11 min-h-[44px] cursor-pointer items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] transition hover:bg-[#FFE27A] lg:hidden"
-                            aria-label="Toggle navigation menu"
-                        >
-                            {mobileMenuOpen ? (
-                                <X className="size-6" strokeWidth={2} />
-                            ) : (
-                                <Menu className="size-6" strokeWidth={2} />
-                            )}
-                        </button>
+                        {/* Right Toolbar */}
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="hidden items-center sm:flex">
+                                <AuthSwitchToggle variant="header" />
+                            </div>
+
+                            {/* Mobile Hamburger Toggle */}
+                            <button
+                                type="button"
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                className="inline-flex size-10 min-h-[40px] cursor-pointer items-center justify-center rounded-full border-2 border-[#3B2A1E] bg-[#FFF8EC]/80 text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition hover:bg-[#FFE27A] lg:hidden"
+                                aria-label="Toggle navigation menu"
+                            >
+                                {mobileMenuOpen ? (
+                                    <X className="size-5" strokeWidth={2.2} />
+                                ) : (
+                                    <Menu className="size-5" strokeWidth={2.2} />
+                                )}
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                {/* Mobile Drawer for Guests */}
-                {mobileMenuOpen && (
-                    <div className="border-t-2 border-[#EFE3D0] bg-[#FFF8EC] px-5 py-5 lg:hidden">
-                        <nav className="flex flex-col gap-2">
-                            {guestNavLinks.map((item) => {
-                                const Icon = item.icon;
-                                const active = isGuestActive(item.href);
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        onClick={() => setMobileMenuOpen(false)}
-                                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-base font-bold transition-all ${
-                                            active
-                                                ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
-                                                : 'text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
-                                        }`}
-                                    >
-                                        <Icon
-                                            className="size-5 opacity-80"
-                                            strokeWidth={2}
-                                        />
-                                        <span>{item.label}</span>
-                                    </Link>
-                                );
-                            })}
-                        </nav>
+                    {/* Mobile Drawer for Guests */}
+                    {mobileMenuOpen && (
+                        <div className="border-t-2 border-[#3B2A1E]/15 px-4 pt-3 pb-4 lg:hidden">
+                            <nav className="flex flex-col gap-1.5">
+                                {guestNavLinks.map((item) => {
+                                    const Icon = item.icon;
+                                    const active = isGuestActive(item.href);
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className={`flex items-center gap-2.5 rounded-full px-3.5 py-2 text-xs sm:text-sm font-bold transition-all ${
+                                                active
+                                                    ? 'border-2 border-[#3B2A1E] bg-[#FF9A3C] text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
+                                                    : 'border-2 border-transparent text-[#6B5646] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]'
+                                            }`}
+                                        >
+                                            <Icon
+                                                className="size-4 opacity-80"
+                                                strokeWidth={2}
+                                            />
+                                            <span>{item.label}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </nav>
 
-                        {/* Mobile Auth Actions */}
-                        <div className="mt-5 border-t-2 border-[#EFE3D0] pt-5">
-                            <div className="w-full pt-1">
+                            {/* Mobile Auth Actions */}
+                            <div className="mt-3 border-t-2 border-[#3B2A1E]/15 pt-3">
                                 <AuthSwitchToggle variant="mobile" />
                             </div>
                         </div>
-                    </div>
-                )}
-            </header>
+                    )}
+                </header>
+            </div>
 
             {/* Main Content Area */}
-            <main className="flex-1">{children}</main>
+            <main className="flex-1 pt-24 sm:pt-28">{children}</main>
 
             {renderFooter()}
 

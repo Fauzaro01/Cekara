@@ -108,3 +108,43 @@ test('chat analyze rejects fake executable disguised as webp file', function () 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['image']);
 });
+
+test('api scan show returns json scan data by public_id', function () {
+    $scan = Scan::factory()->create([
+        'user_id' => null,
+        'public_id' => (string) Str::uuid(),
+        'risk_level' => 'HIGH',
+        'score' => 88,
+        'summary' => 'Halaman terindikasi scam.',
+        'red_flags' => ['Indikasi 1', 'Indikasi 2'],
+        'recommendations' => ['Rekomendasi 1'],
+    ]);
+
+    $response = $this->getJson("/api/scans/{$scan->public_id}");
+
+    $response->assertOk();
+    $response->assertJson([
+        'success' => true,
+        'scan' => [
+            'public_id' => $scan->public_id,
+            'risk_level' => 'HIGH',
+            'score' => 88,
+            'summary' => 'Halaman terindikasi scam.',
+            'red_flags' => ['Indikasi 1', 'Indikasi 2'],
+            'recommendations' => ['Rekomendasi 1'],
+        ],
+    ]);
+});
+
+test('api scan show returns 404 for unknown public_id', function () {
+    $randomUuid = (string) Str::uuid();
+
+    $response = $this->getJson("/api/scans/{$randomUuid}");
+
+    $response->assertNotFound();
+    $response->assertJson([
+        'success' => false,
+        'message' => 'Scan not found',
+    ]);
+});
+

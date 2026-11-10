@@ -120,3 +120,62 @@ test('authenticated user cannot delete another users scan', function () {
         'id' => $scan->id,
     ]);
 });
+
+test('administrator visiting dashboard sees admin dashboard component with user api recap and chart', function () {
+    $admin = User::factory()->create([
+        'is_admin' => true,
+    ]);
+    $regularUser = User::factory()->create([
+        'name' => 'Warga Guardian',
+        'email' => 'warga@example.com',
+        'is_admin' => false,
+    ]);
+
+    Scan::factory()->create([
+        'user_id' => $regularUser->id,
+        'scan_type' => 'text',
+        'risk_level' => 'HIGH',
+        'score' => 95,
+        'summary' => 'Penipuan hadiah via SMS',
+    ]);
+
+    Scan::factory()->create([
+        'user_id' => null, // Guest
+        'scan_type' => 'url',
+        'risk_level' => 'LOW',
+        'score' => 10,
+        'summary' => 'Tautan situs resmi',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('admin/dashboard')
+        ->has('overview')
+        ->where('overview.total_api_requests', 2)
+        ->where('overview.high_risk_scans', 1)
+        ->has('chartData', 14)
+        ->has('userApiStats')
+        ->has('guestStats')
+        ->where('guestStats.total_requests', 1)
+        ->has('recentScans', 2)
+    );
+});
+
+test('admin dashboard handles missing active provider gracefully', function () {
+    \App\Models\LlmProvider::query()->update(['is_active' => false]);
+
+    $admin = User::factory()->create([
+        'is_admin' => true,
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('admin/dashboard')
+        ->where('overview.active_provider', null)
+    );
+});
+

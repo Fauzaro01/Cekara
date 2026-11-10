@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Camera, Trash2, Save, Lock } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, ProfileSkeleton } from '@/components/ui/skeleton';
 
 export default function ProfileEdit({
     mustVerifyEmail,
@@ -15,6 +16,7 @@ export default function ProfileEdit({
     status?: string;
 }) {
     const user = usePage().props.auth.user!;
+    const isInitialLoading = useSkeletonMount(280);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(
@@ -136,6 +138,15 @@ export default function ProfileEdit({
             onFinish: () => deleteForm.reset(),
         });
     };
+
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Profil Akun" />
+                <ProfileSkeleton />
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>

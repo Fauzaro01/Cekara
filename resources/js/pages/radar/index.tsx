@@ -1,6 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
+    Bell,
     Bold,
+    CheckCheck,
     CheckCircle2,
     Clock,
     Code,
@@ -25,8 +28,8 @@ import {
     ShieldAlert,
     ShieldCheck,
     Smile,
-    Sparkles,
     ThumbsUp,
+    Trash2,
     Users,
     X,
 } from 'lucide-react';
@@ -37,6 +40,7 @@ import { Button, buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, RadarSkeleton } from '@/components/ui/skeleton';
 import type { Auth } from '@/types/auth';
 
 interface SharedProps {
@@ -46,6 +50,7 @@ interface SharedProps {
 
 interface ThreatAlert {
     id: number;
+    community_room_id?: number | null;
     title: string;
     category: string;
     platform: string;
@@ -72,6 +77,7 @@ interface CommunityMessageItem {
     user: {
         id: number;
         name: string;
+        avatar?: string | null;
         is_admin: boolean;
     };
     reactions: MessageReaction[];
@@ -84,12 +90,15 @@ interface CommunityRoomItem {
     category: string;
     description: string;
     is_pinned: boolean;
+    is_verified_radar?: boolean;
+    verified_pattern_id?: number | null;
     messages_count: number;
     created_at_human: string;
     updated_at_human: string;
     creator: {
         id: number;
         name: string;
+        avatar?: string | null;
         is_admin: boolean;
     };
     messages: CommunityMessageItem[];
@@ -116,10 +125,32 @@ interface Stats {
     top_targeted_platform: string;
 }
 
+interface CategoryItem {
+    key: string;
+    label: string;
+    variant?: 'danger' | 'warn' | 'brand' | 'neutral' | string;
+}
+
+interface ModerationNoticeItem {
+    id: number;
+    user_id: number;
+    type: 'room_deleted' | 'message_deleted';
+    target_title: string;
+    room_title: string | null;
+    reason: string;
+    admin_name: string;
+    admin_avatar?: string | null;
+    is_read: boolean;
+    created_at_human: string;
+    created_at_time: string;
+}
+
 interface Props {
     alerts: ThreatAlert[];
     rooms?: CommunityRoomItem[];
+    categories?: CategoryItem[];
     dailyRoomQuota?: DailyRoomQuota;
+    moderationNotices?: ModerationNoticeItem[];
     realtimeConfig?: RealtimeConfig;
     filters: {
         category: string;
@@ -136,21 +167,22 @@ interface SharedAuthProps {
             id: number;
             name: string;
             email: string;
+            avatar?: string | null;
             is_admin?: boolean;
         } | null;
     };
 }
 
-const categories = [
+const defaultCategories: CategoryItem[] = [
     { key: 'all', label: 'Semua Kategori' },
-    { key: 'apk_malware', label: 'Malware APK' },
-    { key: 'phishing_banking', label: 'Phishing Bank' },
-    { key: 'fake_job', label: 'Lowongan Palsu' },
-    { key: 'social_engineering', label: 'Rekayasa Sosial' },
-    { key: 'fake_giveaway', label: 'Undian Palsu' },
+    { key: 'apk_malware', label: 'Malware APK', variant: 'danger' },
+    { key: 'phishing_banking', label: 'Phishing Bank', variant: 'warn' },
+    { key: 'fake_job', label: 'Lowongan Palsu', variant: 'warn' },
+    { key: 'social_engineering', label: 'Rekayasa Sosial', variant: 'brand' },
+    { key: 'fake_giveaway', label: 'Undian Palsu', variant: 'neutral' },
 ];
 
-const categoryBadgeLabel: Record<
+const defaultCategoryBadgeLabel: Record<
     string,
     { label: string; variant: 'danger' | 'warn' | 'brand' | 'neutral' }
 > = {
@@ -342,12 +374,70 @@ function MarkdownRenderer({ content }: { content: string }) {
 export default function CommunityRadarIndex({
     alerts: initialAlerts,
     rooms: initialRooms = [],
+    categories: initialCategories = defaultCategories,
     dailyRoomQuota: initialQuota = { used: 0, max: 3, remaining: 3 },
+    moderationNotices: initialNotices = [],
     realtimeConfig,
     filters,
 }: Props) {
     const { auth } = usePage<{ props: SharedAuthProps }>().props as unknown as SharedAuthProps;
     const currentUser = auth?.user ?? null;
+    const isInitialLoading = useSkeletonMount(280);
+
+    // Moderation notices state (Sandbox Pesan Notif)
+    const [moderationNotices, setModerationNotices] =
+        useState<ModerationNoticeItem[]>(initialNotices);
+    const [isNoticeSandboxOpen, setIsNoticeSandboxOpen] = useState(false);
+    const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
+    const [markingReadNoticeId, setMarkingReadNoticeId] = useState<number | null>(
+        null,
+    );
+
+    const unreadNoticesCount = useMemo(
+        () => moderationNotices.filter((n) => !n.is_read).length,
+        [moderationNotices],
+    );
+
+    // Delete reason & confirmation states
+    const [deleteReason, setDeleteReason] = useState('');
+    const [deleteReasonError, setDeleteReasonError] = useState<string | null>(
+        null,
+    );
+
+    // Categories dynamic state
+    const [categoryList, setCategoryList] = useState<CategoryItem[]>(() => {
+        if (!initialCategories || initialCategories.length === 0) {
+            return defaultCategories;
+        }
+        const hasAll = initialCategories.some((c) => c.key === 'all');
+        return hasAll
+            ? initialCategories
+            : [{ key: 'all', label: 'Semua Kategori' }, ...initialCategories];
+    });
+
+    const categoryBadgeMap = useMemo(() => {
+        const map: Record<
+            string,
+            { label: string; variant: 'danger' | 'warn' | 'brand' | 'neutral' }
+        > = { ...defaultCategoryBadgeLabel };
+
+        for (const cat of categoryList) {
+            if (cat.key !== 'all') {
+                const v =
+                    cat.variant === 'danger' ||
+                    cat.variant === 'warn' ||
+                    cat.variant === 'brand' ||
+                    cat.variant === 'neutral'
+                        ? cat.variant
+                        : 'brand';
+                map[cat.key] = {
+                    label: cat.label,
+                    variant: v,
+                };
+            }
+        }
+        return map;
+    }, [categoryList]);
 
     // Tab switcher between Ruang Diskusi & Radar Ancaman
     const [activeTab, setActiveTab] = useState<'discussions' | 'radar'>(
@@ -377,6 +467,19 @@ export default function CommunityRadarIndex({
     // Laravel Reverb WebSocket state
     const [reverbConnected, setReverbConnected] = useState(false);
 
+    // Add Category Modal State (Admin only)
+    const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+    const [newCategoryForm, setNewCategoryForm] = useState({
+        label: '',
+        key: '',
+        variant: 'brand' as 'danger' | 'warn' | 'brand' | 'neutral',
+    });
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [categoryError, setCategoryError] = useState<string | null>(null);
+
+    // Update Room Category State (Admin only)
+    const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
+
     // Create Room Modal State
     const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
     const [newRoomForm, setNewRoomForm] = useState({
@@ -386,6 +489,31 @@ export default function CommunityRadarIndex({
     });
     const [isCreatingRoom, setIsCreatingRoom] = useState(false);
     const [roomError, setRoomError] = useState<string | null>(null);
+
+    // Verify Discussion Room as Radar Pattern Modal State (Admin only)
+    const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+    const [verifyModalRoom, setVerifyModalRoom] =
+        useState<CommunityRoomItem | null>(null);
+    const [verifyForm, setVerifyForm] = useState({
+        title: '',
+        category: 'fake_job',
+        platform: 'WhatsApp',
+        location: '',
+        description: '',
+        evidence_text: '',
+    });
+    const [isVerifyingRoom, setIsVerifyingRoom] = useState(false);
+    const [verifyError, setVerifyError] = useState<string | null>(null);
+    const [deletingPatternId, setDeletingPatternId] = useState<number | null>(null);
+    const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
+    const [deletingMessageId, setDeletingMessageId] = useState<number | null>(null);
+    const [confirmDeleteModal, setConfirmDeleteModal] = useState<{
+        type: 'room' | 'message';
+        id: number;
+        title: string;
+        roomId?: number;
+    } | null>(null);
+
 
     // Message Composer State (Markdown + Image)
     const [messageBody, setMessageBody] = useState('');
@@ -418,7 +546,7 @@ export default function CommunityRadarIndex({
     );
 
     const filteredRooms = useMemo(() => {
-        return rooms.filter((r) => {
+        const list = rooms.filter((r) => {
             if (
                 selectedCategory !== 'all' &&
                 r.category !== selectedCategory
@@ -435,7 +563,23 @@ export default function CommunityRadarIndex({
             }
             return true;
         });
-    }, [rooms, selectedCategory, roomSearch]);
+
+        return [...list].sort((a, b) => {
+            if (a.is_pinned !== b.is_pinned) {
+                return a.is_pinned ? -1 : 1;
+            }
+
+            if (sortBy === 'latest') {
+                return b.id - a.id;
+            }
+
+            if (b.messages_count !== a.messages_count) {
+                return b.messages_count - a.messages_count;
+            }
+
+            return b.id - a.id;
+        });
+    }, [rooms, selectedCategory, roomSearch, sortBy]);
 
     const mergeMessageIntoRoom = useCallback(
         (roomId: number, incomingMsg: CommunityMessageItem) => {
@@ -588,6 +732,65 @@ export default function CommunityRadarIndex({
                                         : a,
                                 ),
                             );
+                        } else if (
+                            eventName.endsWith('room.deleted') &&
+                            parsedData?.room_id
+                        ) {
+                            const deletedRoomId = Number(parsedData.room_id);
+                            setRooms((prev) =>
+                                prev.filter((r) => r.id !== deletedRoomId),
+                            );
+                            setActiveRoomId((prev) =>
+                                prev === deletedRoomId ? null : prev,
+                            );
+                        } else if (
+                            eventName.endsWith('message.deleted') &&
+                            parsedData?.message_id
+                        ) {
+                            const targetRoomId = Number(parsedData.room_id);
+                            const targetMsgId = Number(parsedData.message_id);
+                            setRooms((prev) =>
+                                prev.map((r) => {
+                                    if (r.id !== targetRoomId) {
+                                        return r;
+                                    }
+                                    const updated = r.messages.filter(
+                                        (m) => m.id !== targetMsgId,
+                                    );
+                                    return {
+                                        ...r,
+                                        messages: updated,
+                                        messages_count: Math.max(
+                                            0,
+                                            r.messages_count - 1,
+                                        ),
+                                    };
+                                }),
+                            );
+                        } else if (
+                            eventName.endsWith('moderation.notice.created') &&
+                            parsedData?.notice
+                        ) {
+                            const incomingNotice: ModerationNoticeItem =
+                                parsedData.notice;
+                            if (
+                                currentUser &&
+                                incomingNotice.user_id === currentUser.id
+                            ) {
+                                setModerationNotices((prev) => [
+                                    incomingNotice,
+                                    ...prev.filter(
+                                        (n) => n.id !== incomingNotice.id,
+                                    ),
+                                ]);
+                                toast.warning(
+                                    `Notifikasi Moderasi: ${
+                                        incomingNotice.type === 'room_deleted'
+                                            ? 'Ruang diskusi'
+                                            : 'Pesan'
+                                    } Anda dihapus oleh admin. Alasan: "${incomingNotice.reason}"`,
+                                );
+                            }
                         }
                     } catch {
                         // Ignore non-JSON frames
@@ -657,6 +860,12 @@ export default function CommunityRadarIndex({
                             };
                         }),
                     );
+                }
+                if (Array.isArray(data.categories) && data.categories.length > 0) {
+                    setCategoryList([
+                        { key: 'all', label: 'Semua Kategori' },
+                        ...data.categories,
+                    ]);
                 }
                 if (data.daily_room_quota) {
                     setDailyQuota(data.daily_room_quota);
@@ -810,9 +1019,419 @@ export default function CommunityRadarIndex({
         }
     };
 
+    const handleAddCategory = async (e: FormEvent) => {
+        e.preventDefault();
+        setCategoryError(null);
+        setIsAddingCategory(true);
+
+        try {
+            const res = await fetch('/radar/categories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+                body: JSON.stringify({
+                    label: newCategoryForm.label.trim(),
+                    key: newCategoryForm.key.trim() || undefined,
+                    variant: newCategoryForm.variant,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setCategoryError(
+                    data.message ||
+                        data.errors?.label?.[0] ||
+                        data.errors?.key?.[0] ||
+                        'Gagal menambahkan kategori baru.',
+                );
+                return;
+            }
+
+            if (Array.isArray(data.categories)) {
+                setCategoryList([
+                    { key: 'all', label: 'Semua Kategori' },
+                    ...data.categories,
+                ]);
+            } else if (data.category) {
+                setCategoryList((prev) => [...prev, data.category]);
+            }
+
+            toast.success(data.message || 'Kategori baru berhasil ditambahkan.');
+            setIsAddCategoryOpen(false);
+            setNewCategoryForm({
+                label: '',
+                key: '',
+                variant: 'brand',
+            });
+        } catch {
+            setCategoryError(
+                'Terjadi kesalahan jaringan saat menambahkan kategori.',
+            );
+        } finally {
+            setIsAddingCategory(false);
+        }
+    };
+
+    const handleOpenVerifyModal = (room: CommunityRoomItem) => {
+        setVerifyModalRoom(room);
+        setVerifyError(null);
+
+        // Pre-fill from the room and its messages
+        const sampleEvidence =
+            room.messages.find(
+                (m) =>
+                    m.body &&
+                    m.body.length > 15 &&
+                    !m.body.startsWith('**Topik Diskusi'),
+            )?.body?.slice(0, 500) || '';
+
+        setVerifyForm({
+            title: room.title,
+            category: room.category,
+            platform: 'WhatsApp / Online',
+            location: '',
+            description: room.description,
+            evidence_text: sampleEvidence,
+        });
+        setIsVerifyModalOpen(true);
+    };
+
+    const handleVerifyRoomAsPattern = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!verifyModalRoom) {
+            return;
+        }
+
+        setVerifyError(null);
+
+        if (!verifyForm.title.trim() || !verifyForm.description.trim()) {
+            setVerifyError('Judul dan ringkasan modus penipuan wajib diisi.');
+            return;
+        }
+
+        setIsVerifyingRoom(true);
+
+        try {
+            const res = await fetch(
+                `/radar/rooms/${verifyModalRoom.id}/verify-as-pattern`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': getXsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        title: verifyForm.title.trim(),
+                        category: verifyForm.category,
+                        platform:
+                            verifyForm.platform.trim() || 'WhatsApp / Online',
+                        location: verifyForm.location.trim() || null,
+                        description: verifyForm.description.trim(),
+                        evidence_text: verifyForm.evidence_text.trim() || null,
+                    }),
+                },
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setVerifyError(
+                    data.message ||
+                        data.errors?.title?.[0] ||
+                        data.errors?.description?.[0] ||
+                        'Gagal memverifikasi diskusi menjadi modus radar.',
+                );
+                return;
+            }
+
+            if (data.alert) {
+                setAlerts((prev) => [
+                    data.alert,
+                    ...prev.filter((a) => a.id !== data.alert.id),
+                ]);
+            }
+
+            if (data.room) {
+                setRooms((prev) =>
+                    prev.map((r) => (r.id === data.room.id ? data.room : r)),
+                );
+            }
+
+            toast.success(
+                data.message ||
+                    'Ruang diskusi berhasil diverifikasi ke Daftar Modus Terverifikasi!',
+            );
+            setIsVerifyModalOpen(false);
+            setVerifyModalRoom(null);
+        } catch {
+            setVerifyError(
+                'Terjadi kesalahan jaringan saat memverifikasi diskusi.',
+            );
+        } finally {
+            setIsVerifyingRoom(false);
+        }
+    };
+
+    const handleDeletePattern = async (patternId: number) => {
+        if (
+            !confirm(
+                'Apakah Anda yakin ingin menghapus modus penipuan ini dari radar?',
+            )
+        ) {
+            return;
+        }
+
+        setDeletingPatternId(patternId);
+
+        try {
+            const res = await fetch(`/radar/${patternId}`, {
+                method: 'DELETE',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.message || 'Gagal menghapus modus penipuan.');
+                return;
+            }
+
+            setAlerts((prev) => prev.filter((a) => a.id !== patternId));
+            toast.success(data.message || 'Modus penipuan berhasil dihapus.');
+        } catch {
+            toast.error('Gagal menghapus modus penipuan.');
+        } finally {
+            setDeletingPatternId(null);
+        }
+    };
+
+    const handleDeleteRoom = async (roomId: number) => {
+        if (currentUser?.is_admin && deleteReason.trim().length < 5) {
+            setDeleteReasonError(
+                'Admin wajib menyertakan alasan penghapusan minimal 5 karakter.',
+            );
+            return;
+        }
+
+        setDeletingRoomId(roomId);
+        try {
+            const res = await fetch(`/radar/rooms/${roomId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+                body: JSON.stringify({
+                    reason: deleteReason.trim(),
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.message || 'Gagal menghapus ruang diskusi.');
+                return;
+            }
+
+            setRooms((prev) => prev.filter((r) => r.id !== roomId));
+            setActiveRoomId((prev) => (prev === roomId ? null : prev));
+            setConfirmDeleteModal(null);
+            setDeleteReason('');
+            setDeleteReasonError(null);
+            toast.success(data.message || 'Ruang diskusi berhasil dihapus.');
+        } catch {
+            toast.error('Gagal menghapus ruang diskusi.');
+        } finally {
+            setDeletingRoomId(null);
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: number, roomId: number) => {
+        if (currentUser?.is_admin && deleteReason.trim().length < 5) {
+            setDeleteReasonError(
+                'Admin wajib menyertakan alasan penghapusan minimal 5 karakter.',
+            );
+            return;
+        }
+
+        setDeletingMessageId(messageId);
+        try {
+            const res = await fetch(`/radar/messages/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+                body: JSON.stringify({
+                    reason: deleteReason.trim(),
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.message || 'Gagal menghapus pesan.');
+                return;
+            }
+
+            setRooms((prev) =>
+                prev.map((r) => {
+                    if (r.id !== roomId) {
+                        return r;
+                    }
+                    const updated = r.messages.filter(
+                        (m) => m.id !== messageId,
+                    );
+                    return {
+                        ...r,
+                        messages: updated,
+                        messages_count: Math.max(0, r.messages_count - 1),
+                    };
+                }),
+            );
+            setConfirmDeleteModal(null);
+            setDeleteReason('');
+            setDeleteReasonError(null);
+            toast.success(data.message || 'Pesan berhasil dihapus.');
+        } catch {
+            toast.error('Gagal menghapus pesan.');
+        } finally {
+            setDeletingMessageId(null);
+        }
+    };
+
+    const handleMarkNoticeAsRead = async (noticeId: number) => {
+        setMarkingReadNoticeId(noticeId);
+        try {
+            const res = await fetch(`/radar/notices/${noticeId}/read`, {
+                method: 'PATCH',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+            });
+            if (res.ok) {
+                setModerationNotices((prev) =>
+                    prev.map((n) =>
+                        n.id === noticeId ? { ...n, is_read: true } : n,
+                    ),
+                );
+            }
+        } catch {
+            // ignore
+        } finally {
+            setMarkingReadNoticeId(null);
+        }
+    };
+
+    const handleMarkAllNoticesAsRead = async () => {
+        if (unreadNoticesCount === 0 || isMarkingAllRead) {
+            return;
+        }
+        setIsMarkingAllRead(true);
+        try {
+            const res = await fetch('/radar/notices/mark-all-read', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+            });
+            if (res.ok) {
+                setModerationNotices((prev) =>
+                    prev.map((n) => ({ ...n, is_read: true })),
+                );
+                toast.success('Semua notifikasi telah ditandai sudah dibaca.');
+            }
+        } catch {
+            toast.error('Gagal memperbarui status notifikasi.');
+        } finally {
+            setIsMarkingAllRead(false);
+        }
+    };
+
+    const handleDeleteNotice = async (noticeId: number) => {
+        try {
+            const res = await fetch(`/radar/notices/${noticeId}`, {
+                method: 'DELETE',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+            });
+            if (res.ok) {
+                setModerationNotices((prev) =>
+                    prev.filter((n) => n.id !== noticeId),
+                );
+                toast.success('Notifikasi berhasil dihapus.');
+            }
+        } catch {
+            toast.error('Gagal menghapus notifikasi.');
+        }
+    };
+
+    const handleUpdateRoomCategory = async (
+        roomId: number,
+        newCategory: string,
+    ) => {
+        if (!currentUser?.is_admin || isUpdatingCategory) {
+            return;
+        }
+
+        setIsUpdatingCategory(true);
+        try {
+            const res = await fetch(`/radar/rooms/${roomId}/category`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getXsrfToken(),
+                },
+                body: JSON.stringify({ category: newCategory }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.message || 'Gagal mengubah kategori topik.');
+                return;
+            }
+
+            setRooms((prev) =>
+                prev.map((r) =>
+                    r.id === roomId ? { ...r, category: newCategory } : r,
+                ),
+            );
+            toast.success('Kategori ruang diskusi berhasil diperbarui.');
+        } catch {
+            toast.error('Terjadi kesalahan jaringan.');
+        } finally {
+            setIsUpdatingCategory(false);
+        }
+    };
+
     const handleSendMessage = async (e: FormEvent) => {
         e.preventDefault();
-        if (!activeRoom || isSendingMessage) {
+        if (!activeRoom || isSendingMessage || currentUser?.is_admin) {
             return;
         }
         if (!messageBody.trim() && !selectedImage) {
@@ -878,7 +1497,12 @@ export default function CommunityRadarIndex({
     };
 
     const handleToggleReaction = async (messageId: number, emoji: string) => {
-        if (!currentUser || !activeRoom || pendingReactionByMsg[messageId]) {
+        if (
+            !currentUser ||
+            currentUser?.is_admin ||
+            !activeRoom ||
+            pendingReactionByMsg[messageId]
+        ) {
             return;
         }
 
@@ -929,7 +1553,7 @@ export default function CommunityRadarIndex({
     };
 
     const handleUpvote = async (alertId: number) => {
-        if (upvotedIds.includes(alertId)) {
+        if (currentUser?.is_admin || upvotedIds.includes(alertId)) {
             return;
         }
 
@@ -963,53 +1587,6 @@ export default function CommunityRadarIndex({
         }
     };
 
-    const handleSubmitReport = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setFormError(null);
-        setIsSubmittingReport(true);
-
-        try {
-            const res = await fetch('/komunitas', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-XSRF-TOKEN': getXsrfToken(),
-                },
-                body: JSON.stringify(reportForm),
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success) {
-                toast.success(
-                    data.message || 'Laporan modus kejahatan berhasil dikirim.'
-                );
-                setIsReportModalOpen(false);
-                setReportForm({
-                    title: '',
-                    category: 'apk_malware',
-                    platform: '',
-                    location: '',
-                    description: '',
-                    evidence_text: '',
-                });
-                router.reload({ only: ['alerts', 'stats'] });
-            } else {
-                setFormError(
-                    data.message ||
-                        'Gagal mengirim laporan. Pastikan seluruh kolom wajib telah diisi dengan benar.'
-                );
-            }
-        } catch {
-            setFormError(
-                'Terjadi kesalahan saat mengirim laporan. Silakan coba beberapa saat lagi.'
-            );
-        } finally {
-            setIsSubmittingReport(false);
-        }
-    };
-
     const filteredAlerts = alerts
         .filter((item) => {
             if (
@@ -1037,6 +1614,15 @@ export default function CommunityRadarIndex({
             return b.upvotes_count - a.upvotes_count;
         });
 
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Radar Kejahatan Siber - Cekara" />
+                <RadarSkeleton />
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <Head title="Radar Ancaman & Diskusi Komunitas - Cekara" />
@@ -1046,12 +1632,6 @@ export default function CommunityRadarIndex({
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <div className="mb-3 flex flex-wrap items-center gap-2">
-                                <Badge variant="warn" withDot>
-                                    Komunitas Guardian
-                                </Badge>
-                            </div>
-
                             <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
                                 Komunitas Pemberantas Kejahatan
                             </h1>
@@ -1064,34 +1644,57 @@ export default function CommunityRadarIndex({
                             </p>
                         </div>
 
-                        {/* CTA Create Discussion Room (Max 3/Day) */}
+                        {/* Dynamic CTA depending on Active Tab */}
                         <div className="flex flex-col items-start gap-2 sm:items-end">
-                            {currentUser ? (
-                                <>
+                            {activeTab === 'radar' ? (
+                                <Button
+                                    variant="outline"
+                                    size="md"
+                                    onClick={() => setActiveTab('discussions')}
+                                >
+                                    <MessageSquare className="size-4" />
+                                    <span>Buka Obrolan Komunitas</span>
+                                </Button>
+                            ) : currentUser ? (
+                                currentUser.is_admin ? (
                                     <Button
                                         variant="primary"
                                         size="md"
                                         onClick={() => {
-                                            setRoomError(null);
-                                            setIsCreateRoomOpen(true);
+                                            setCategoryError(null);
+                                            setIsAddCategoryOpen(true);
                                         }}
-                                        disabled={dailyQuota.remaining <= 0}
                                     >
-                                        <MessageSquarePlus className="size-4" />
-                                        <span>
-                                            {dailyQuota.remaining > 0
-                                                ? 'Buat Ruang Diskusi'
-                                                : 'Kuota Harian Penuh (3/3)'}
-                                        </span>
+                                        <Plus className="size-4" />
+                                        <span>Tambah Kategori</span>
                                     </Button>
-                                    <span className="text-xs font-bold text-[#6B5646]">
-                                        Kuota Hari Ini:{' '}
-                                        <strong className="text-[#3B2A1E]">
-                                            {dailyQuota.remaining}/{dailyQuota.max}{' '}
-                                            ruang tersisa
-                                        </strong>
-                                    </span>
-                                </>
+                                ) : (
+                                    <>
+                                        <Button
+                                            variant="primary"
+                                            size="md"
+                                            onClick={() => {
+                                                setRoomError(null);
+                                                setIsCreateRoomOpen(true);
+                                            }}
+                                            disabled={dailyQuota.remaining <= 0}
+                                        >
+                                            <MessageSquarePlus className="size-4" />
+                                            <span>
+                                                {dailyQuota.remaining > 0
+                                                    ? 'Buat Ruang Diskusi'
+                                                    : 'Kuota Harian Penuh (3/3)'}
+                                            </span>
+                                        </Button>
+                                        <span className="text-xs font-bold text-[#6B5646]">
+                                            Kuota Hari Ini:{' '}
+                                            <strong className="text-[#3B2A1E]">
+                                                {dailyQuota.remaining}/{dailyQuota.max}{' '}
+                                                ruang tersisa
+                                            </strong>
+                                        </span>
+                                    </>
+                                )
                             ) : (
                                 <Link
                                     href="/login"
@@ -1138,7 +1741,28 @@ export default function CommunityRadarIndex({
                                     {alerts.length}
                                 </span>
                             </button>
-                        )}
+
+                            {currentUser && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsNoticeSandboxOpen(true)}
+                                    className="cursor-pointer inline-flex items-center gap-2 rounded-2xl border-2 border-[#3B2A1E] bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition-all"
+                                    title="Kotak Pesan Notifikasi & Moderasi Komunitas"
+                                >
+                                    <Bell className="size-4 text-[#D4573A]" />
+                                    <span>Pesan Notif</span>
+                                    {unreadNoticesCount > 0 ? (
+                                        <span className="inline-flex size-5 items-center justify-center rounded-full bg-[#D4573A] text-[10px] font-black text-white shadow-sm animate-pulse">
+                                            {unreadNoticesCount}
+                                        </span>
+                                    ) : (
+                                        <span className="rounded-lg border border-[#3B2A1E]/30 bg-[#FFF8EC] px-1.5 py-0.5 text-[11px] font-bold text-[#6B5646]">
+                                            {moderationNotices.length}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
+                        </div>
 
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-[#6B5646]">
@@ -1171,7 +1795,7 @@ export default function CommunityRadarIndex({
                         </div>
 
                         <div className="flex flex-wrap gap-1.5">
-                            {categories.map((c) => (
+                            {categoryList.map((c) => (
                                 <button
                                     key={c.key}
                                     type="button"
@@ -1215,56 +1839,58 @@ export default function CommunityRadarIndex({
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                         {/* Sidebar: Discussion Rooms List & Quota */}
                         <div className="space-y-4 lg:col-span-4">
-                            {/* Daily Quota Info Card */}
-                            <Card variant="glass" className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-['Fredoka',system-ui,sans-serif] text-sm font-bold text-[#3B2A1E]">
-                                        Kuota Ruang Harian
-                                    </span>
-                                    <Badge variant="warn">
-                                        Maks {dailyQuota.max}/Hari
-                                    </Badge>
-                                </div>
+                            {/* Daily Quota Info Card (hidden for admin) */}
+                            {!currentUser?.is_admin && (
+                                <Card variant="glass" className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-['Fredoka',system-ui,sans-serif] text-sm font-bold text-[#3B2A1E]">
+                                            Kuota Ruang Harian
+                                        </span>
+                                        <Badge variant="warn">
+                                            Maks {dailyQuota.max}/Hari
+                                        </Badge>
+                                    </div>
 
-                                {currentUser ? (
-                                    <>
-                                        <div className="mt-3 flex gap-2">
-                                            {Array.from({
-                                                length: dailyQuota.max,
-                                            }).map((_, idx) => {
-                                                const isUsed =
-                                                    idx < dailyQuota.used;
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        className={`h-2.5 flex-1 rounded-full border border-[#3B2A1E] ${
-                                                            isUsed
-                                                                ? 'bg-[#3B2A1E]'
-                                                                : 'bg-[#8ECDF0]'
-                                                        }`}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
+                                    {currentUser ? (
+                                        <>
+                                            <div className="mt-3 flex gap-2">
+                                                {Array.from({
+                                                    length: dailyQuota.max,
+                                                }).map((_, idx) => {
+                                                    const isUsed =
+                                                        idx < dailyQuota.used;
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className={`h-2.5 flex-1 rounded-full border border-[#3B2A1E] ${
+                                                                isUsed
+                                                                    ? 'bg-[#3B2A1E]'
+                                                                    : 'bg-[#8ECDF0]'
+                                                            }`}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                            <p className="mt-2 text-xs font-semibold text-[#6B5646]">
+                                                Anda telah membuat{' '}
+                                                <strong className="text-[#3B2A1E]">
+                                                    {dailyQuota.used} dari{' '}
+                                                    {dailyQuota.max}
+                                                </strong>{' '}
+                                                ruang diskusi hari ini.
+                                            </p>
+                                        </>
+                                    ) : (
                                         <p className="mt-2 text-xs font-semibold text-[#6B5646]">
-                                            Anda telah membuat{' '}
+                                            Pengguna terdaftar dapat membuat maksimal{' '}
                                             <strong className="text-[#3B2A1E]">
-                                                {dailyQuota.used} dari{' '}
-                                                {dailyQuota.max}
-                                            </strong>{' '}
-                                            ruang diskusi hari ini.
+                                                3 ruang diskusi per hari
+                                            </strong>
+                                            .
                                         </p>
-                                    </>
-                                ) : (
-                                    <p className="mt-2 text-xs font-semibold text-[#6B5646]">
-                                        Pengguna terdaftar dapat membuat maksimal{' '}
-                                        <strong className="text-[#3B2A1E]">
-                                            3 ruang diskusi per hari
-                                        </strong>
-                                        .
-                                    </p>
-                                )}
-                            </Card>
+                                    )}
+                                </Card>
+                            )}
 
                             {/* Search Rooms Input */}
                             <div className="relative">
@@ -1296,10 +1922,10 @@ export default function CommunityRadarIndex({
                                 {filteredRooms.map((room) => {
                                     const isSelected =
                                         activeRoom?.id === room.id;
-                                    const catMeta = categoryBadgeLabel[
+                                    const catMeta = categoryBadgeMap[
                                         room.category
                                     ] ?? {
-                                        label: 'Diskusi',
+                                        label: room.category,
                                         variant: 'neutral' as const,
                                     };
 
@@ -1323,12 +1949,20 @@ export default function CommunityRadarIndex({
                                                 >
                                                     {catMeta.label}
                                                 </Badge>
-                                                {room.is_pinned && (
-                                                    <span className="inline-flex items-center gap-1 rounded-full border border-[#3B2A1E] bg-[#FFF8EC] px-2 py-0.5 text-[10px] font-extrabold text-[#3B2A1E]">
-                                                        <Pin className="size-3 text-[#E06812]" />
-                                                        Penting
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-1">
+                                                    {room.is_verified_radar && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full border border-[#3B2A1E] bg-[#FFE27A] px-2 py-0.5 text-[10px] font-extrabold text-[#3B2A1E]">
+                                                            <CheckCircle2 className="size-3 text-[#3B2A1E]" />
+                                                            Modus Radar
+                                                        </span>
+                                                    )}
+                                                    {room.is_pinned && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full border border-[#3B2A1E] bg-[#FFF8EC] px-2 py-0.5 text-[10px] font-extrabold text-[#3B2A1E]">
+                                                            <Pin className="size-3 text-[#E06812]" />
+                                                            Penting
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <h3 className="mt-2 font-['Fredoka',system-ui,sans-serif] text-base font-bold leading-snug text-[#3B2A1E] line-clamp-2">
@@ -1340,9 +1974,17 @@ export default function CommunityRadarIndex({
                                             </p>
 
                                             <div className="mt-3 flex items-center justify-between border-t border-[#EFE3D0] pt-2.5 text-[11px] font-bold text-[#6B5646]">
-                                                <span className="inline-flex items-center gap-1 truncate">
-                                                    <Users className="size-3.5 text-[#3B2A1E]" />
-                                                    {room.creator.name}
+                                                <span className="inline-flex items-center gap-1.5 truncate">
+                                                    {room.creator.avatar ? (
+                                                        <img
+                                                            src={room.creator.avatar}
+                                                            alt={room.creator.name}
+                                                            className="size-4 shrink-0 rounded-full border border-[#3B2A1E] object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Users className="size-3.5 text-[#3B2A1E]" />
+                                                    )}
+                                                    <span className="truncate">{room.creator.name}</span>
                                                 </span>
                                                 <span className="inline-flex shrink-0 items-center gap-1 text-[#3B2A1E]">
                                                     <MessageCircle className="size-3.5" />
@@ -1355,11 +1997,20 @@ export default function CommunityRadarIndex({
 
                                 {filteredRooms.length === 0 && (
                                     <Card
-                                        variant="subtle"
-                                        className="py-10 text-center text-xs font-semibold text-[#6B5646]"
+                                        variant="glass"
+                                        className="flex flex-col items-center justify-center px-4 py-8 text-center"
                                     >
-                                        Tidak ada ruang diskusi pada kategori
-                                        atau kata kunci ini.
+                                        <img
+                                            src="/empty_state.png"
+                                            alt="Tidak ada ruang diskusi"
+                                            className="mb-2.5 w-20 sm:w-24 h-auto object-contain select-none opacity-90"
+                                        />
+                                        <h4 className="font-['Fredoka',system-ui,sans-serif] text-sm font-bold text-[#3B2A1E]">
+                                            Tidak Ada Ruang Diskusi
+                                        </h4>
+                                        <p className="mt-1 text-xs leading-relaxed text-[#6B5646]">
+                                            Tidak ada ruang diskusi yang cocok dengan kategori atau kata kunci ini.
+                                        </p>
                                     </Card>
                                 )}
                             </div>
@@ -1374,47 +2025,197 @@ export default function CommunityRadarIndex({
                                 >
                                     {/* Room Header */}
                                     <div className="border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                        {/* Top Bar: Category Pill & Actions */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Badge
-                                                    variant={
-                                                        categoryBadgeLabel[
-                                                            activeRoom.category
-                                                        ]?.variant ?? 'warn'
-                                                    }
-                                                >
-                                                    {categoryBadgeLabel[
-                                                        activeRoom.category
-                                                    ]?.label ??
-                                                        activeRoom.category}
-                                                </Badge>
-                                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#6B5646]">
-                                                    <Clock className="size-3.5" />
-                                                    Dibuka oleh{' '}
-                                                    <strong className="text-[#3B2A1E]">
-                                                        {
-                                                            activeRoom.creator
-                                                                .name
+                                                {currentUser?.is_admin ? (
+                                                    <div className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#3B2A1E] bg-white px-2.5 py-1 shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
+                                                        <span className="text-[11px] font-bold text-[#6B5646]">
+                                                            Kategori:
+                                                        </span>
+                                                        <select
+                                                            value={activeRoom.category}
+                                                            onChange={(e) =>
+                                                                handleUpdateRoomCategory(
+                                                                    activeRoom.id,
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            disabled={isUpdatingCategory}
+                                                            className="cursor-pointer bg-transparent text-xs font-bold text-[#3B2A1E] focus:outline-none"
+                                                        >
+                                                            {categoryList
+                                                                .filter(
+                                                                    (c) =>
+                                                                        c.key !==
+                                                                        'all',
+                                                                )
+                                                                .map((cat) => (
+                                                                    <option
+                                                                        key={
+                                                                            cat.key
+                                                                        }
+                                                                        value={
+                                                                            cat.key
+                                                                        }
+                                                                    >
+                                                                        {cat.label}
+                                                                    </option>
+                                                                ))}
+                                                        </select>
+                                                        {isUpdatingCategory && (
+                                                            <Loader2 className="size-3 animate-spin text-[#3B2A1E]" />
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <Badge
+                                                        variant={
+                                                            categoryBadgeMap[
+                                                                activeRoom.category
+                                                            ]?.variant ?? 'warn'
                                                         }
-                                                    </strong>{' '}
-                                                    •{' '}
-                                                    {
-                                                        activeRoom.created_at_human
-                                                    }
-                                                </span>
+                                                    >
+                                                        {categoryBadgeMap[
+                                                            activeRoom.category
+                                                        ]?.label ??
+                                                            activeRoom.category}
+                                                    </Badge>
+                                                )}
+
+                                                {activeRoom.is_verified_radar && (
+                                                    <span className="inline-flex items-center gap-1 rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-2.5 py-1 text-[11px] font-black text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
+                                                        <CheckCircle2 className="size-3 text-[#3B2A1E]" />
+                                                        Terverifikasi di Radar
+                                                    </span>
+                                                )}
                                             </div>
+
+                                            {/* Action Buttons */}
+                                            {(currentUser?.is_admin ||
+                                                (currentUser &&
+                                                    currentUser.id ===
+                                                        activeRoom.creator.id)) && (
+                                                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                                    {currentUser?.is_admin &&
+                                                        !activeRoom.is_verified_radar && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="primary"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    handleOpenVerifyModal(
+                                                                        activeRoom,
+                                                                    )
+                                                                }
+                                                                className="cursor-pointer whitespace-nowrap text-xs"
+                                                            >
+                                                                <Radio className="size-3.5" />
+                                                                <span>
+                                                                    Jadikan Modus Terverifikasi
+                                                                </span>
+                                                            </Button>
+                                                        )}
+
+                                                    {currentUser &&
+                                                        (currentUser.is_admin ||
+                                                            currentUser.id ===
+                                                                activeRoom.creator.id) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setConfirmDeleteModal({
+                                                                        type: 'room',
+                                                                        id: activeRoom.id,
+                                                                        title: activeRoom.title,
+                                                                    })
+                                                                }
+                                                                disabled={
+                                                                    deletingRoomId ===
+                                                                    activeRoom.id
+                                                                }
+                                                                className="cursor-pointer inline-flex h-8 items-center gap-1.5 rounded-xl border-2 border-[#D4573A] bg-[#FFF8EC] px-3 text-xs font-bold text-[#D4573A] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] transition-all hover:bg-[#D4573A] hover:text-white disabled:opacity-50 whitespace-nowrap"
+                                                                title="Hapus ruang diskusi ini"
+                                                            >
+                                                                {deletingRoomId ===
+                                                                activeRoom.id ? (
+                                                                    <Loader2 className="size-3 animate-spin" />
+                                                                ) : (
+                                                                    <Trash2 className="size-3" />
+                                                                )}
+                                                                <span>Hapus Ruang</span>
+                                                            </button>
+                                                        )}
+                                                </div>
+                                            )}
                                         </div>
 
-                                        <h2 className="mt-2 font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E]">
-                                            {activeRoom.title}
-                                        </h2>
-                                        <p className="mt-1 text-xs sm:text-sm leading-relaxed text-[#6B5646]">
-                                            {activeRoom.description}
-                                        </p>
+                                        {/* Room Title & Description */}
+                                        <div className="mt-3">
+                                            <h2 className="font-['Fredoka',system-ui,sans-serif] text-xl sm:text-2xl font-bold tracking-tight text-[#3B2A1E]">
+                                                {activeRoom.title}
+                                            </h2>
+                                            {activeRoom.description && (
+                                                <p className="mt-1 text-xs sm:text-sm leading-relaxed text-[#6B5646]">
+                                                    {activeRoom.description}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Meta Footer */}
+                                        <div className="mt-3.5 flex flex-wrap items-center gap-3 border-t border-[#EFE3D0] pt-2.5 text-xs text-[#6B5646]">
+                                            <div className="flex items-center gap-1.5">
+                                                {activeRoom.creator.avatar ? (
+                                                    <img
+                                                        src={activeRoom.creator.avatar}
+                                                        alt={activeRoom.creator.name}
+                                                        className="size-4 shrink-0 rounded-full border border-[#3B2A1E] object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-[#3B2A1E] bg-[#FFE27A] text-[9px] font-bold text-[#3B2A1E]">
+                                                        {activeRoom.creator.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <span>
+                                                    Dibuka oleh{' '}
+                                                    <strong className="font-bold text-[#3B2A1E]">
+                                                        {activeRoom.creator.name}
+                                                    </strong>
+                                                </span>
+                                            </div>
+
+                                            <span className="text-[#3B2A1E]/30">•</span>
+
+                                            <div className="flex items-center gap-1">
+                                                <Clock className="size-3.5 shrink-0 text-[#6B5646]" />
+                                                <span>{activeRoom.created_at_human}</span>
+                                            </div>
+
+                                            <span className="text-[#3B2A1E]/30">•</span>
+
+                                            <div className="flex items-center gap-1">
+                                                <MessageCircle className="size-3.5 shrink-0 text-[#6B5646]" />
+                                                <span>{activeRoom.messages_count} pesan</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Messages Stream */}
                                     <div className="max-h-[520px] min-h-[360px] space-y-4 overflow-y-auto bg-[#FFFDF9] p-5 sm:p-6">
+                                        {activeRoom.messages.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                                <img
+                                                    src="/empty_state.png"
+                                                    alt="Belum ada pesan"
+                                                    className="mb-3 w-24 sm:w-28 h-auto object-contain select-none opacity-90"
+                                                />
+                                                <h4 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
+                                                    Belum Ada Percakapan di Ruang Ini
+                                                </h4>
+                                                <p className="mt-1 max-w-sm text-xs leading-relaxed text-[#6B5646]">
+                                                    Jadilah yang pertama memulai percakapan atau berbagi informasi kewaspadaan siber di ruang diskusi ini!
+                                                </p>
+                                            </div>
+                                        )}
                                         {activeRoom.messages.map((msg) => {
                                             const isOwn =
                                                 currentUser?.id === msg.user.id;
@@ -1440,31 +2241,75 @@ export default function CommunityRadarIndex({
                                                     {/* Message Author */}
                                                     <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-[#EFE3D0] pb-2">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="flex size-7 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] text-xs font-extrabold text-[#3B2A1E]">
-                                                                {msg.user.name
-                                                                    .charAt(0)
-                                                                    .toUpperCase()}
-                                                            </div>
+                                                            {msg.user.avatar ? (
+                                                                <img
+                                                                    src={msg.user.avatar}
+                                                                    alt={msg.user.name}
+                                                                    className="size-7 shrink-0 rounded-xl border-2 border-[#3B2A1E] object-cover shadow-[1.5px_1.5px_0px_0px_#3B2A1E]"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex size-7 shrink-0 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] text-xs font-extrabold text-[#3B2A1E]">
+                                                                    {msg.user.name
+                                                                        .charAt(0)
+                                                                        .toUpperCase()}
+                                                                </div>
+                                                            )}
                                                             <span className="text-xs sm:text-sm font-bold text-[#3B2A1E]">
                                                                 {msg.user.name}
                                                             </span>
-                                                            {msg.user
-                                                                .is_admin && (
-                                                                <span className="inline-flex items-center gap-1 rounded-lg border border-[#3B2A1E] bg-[#8ECDF0] px-2 py-0.5 text-[10px] font-extrabold text-[#3B2A1E]">
-                                                                    <ShieldCheck className="size-3" />
-                                                                    Guardian
-                                                                </span>
-                                                            )}
                                                         </div>
-                                                        <span className="text-[11px] font-semibold text-[#6B5646]">
-                                                            {
-                                                                msg.created_at_human
-                                                            }{' '}
-                                                            •{' '}
-                                                            {
-                                                                msg.created_at_time
-                                                            }
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[11px] font-semibold text-[#6B5646]">
+                                                                {
+                                                                    msg.created_at_human
+                                                                }{' '}
+                                                                •{' '}
+                                                                {
+                                                                    msg.created_at_time
+                                                                }
+                                                            </span>
+                                                            {currentUser &&
+                                                                (currentUser.is_admin ||
+                                                                    currentUser.id ===
+                                                                        msg.user.id) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setConfirmDeleteModal({
+                                                                                type: 'message',
+                                                                                id: msg.id,
+                                                                                title:
+                                                                                    msg.body
+                                                                                        ? msg.body.length >
+                                                                                          35
+                                                                                            ? msg.body.substring(
+                                                                                                  0,
+                                                                                                  35,
+                                                                                              ) +
+                                                                                              '...'
+                                                                                            : msg.body
+                                                                                        : 'Pesan gambar',
+                                                                                roomId:
+                                                                                    activeRoom.id,
+                                                                            })
+                                                                        }
+                                                                        disabled={
+                                                                            deletingMessageId ===
+                                                                            msg.id
+                                                                        }
+                                                                        className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-[#D4573A]/40 bg-[#FFF8EC] px-2 py-0.5 text-[10px] font-bold text-[#D4573A] transition-all hover:bg-[#D4573A] hover:text-white disabled:opacity-50"
+                                                                        title="Hapus pesan ini (Admin / Penulis)"
+                                                                    >
+                                                                        {deletingMessageId ===
+                                                                        msg.id ? (
+                                                                            <Loader2 className="size-2.5 animate-spin" />
+                                                                        ) : (
+                                                                            <Trash2 className="size-2.5" />
+                                                                        )}
+                                                                        <span>Hapus</span>
+                                                                    </button>
+                                                                )}
+                                                        </div>
                                                     </div>
 
                                                     {/* Markdown Message Body */}
@@ -1504,6 +2349,7 @@ export default function CommunityRadarIndex({
                                                             type="button"
                                                             disabled={
                                                                 !currentUser ||
+                                                                currentUser.is_admin ||
                                                                 Boolean(
                                                                     pendingReactionByMsg[
                                                                         msg.id
@@ -1568,6 +2414,7 @@ export default function CommunityRadarIndex({
                                                                         type="button"
                                                                         disabled={
                                                                             !currentUser ||
+                                                                            currentUser.is_admin ||
                                                                             Boolean(
                                                                                 pendingReactionByMsg[
                                                                                     msg
@@ -1606,7 +2453,7 @@ export default function CommunityRadarIndex({
                                                             })}
 
                                                         {/* Reaction Picker & Keyboard Emoji Input */}
-                                                        {currentUser && (
+                                                        {currentUser && !currentUser.is_admin && (
                                                             <div className="relative">
                                                                 <button
                                                                     type="button"
@@ -1780,7 +2627,16 @@ export default function CommunityRadarIndex({
 
                                     {/* Message Composer (Markdown + Image) */}
                                     <div className="border-t-2 border-[#EFE3D0] bg-[#FFF8EC] p-4 sm:p-5">
-                                        {currentUser ? (
+                                        {currentUser?.is_admin ? (
+                                            <div className="flex flex-col gap-1.5 rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                                <span className="text-xs font-bold text-[#6B5646]">
+                                                    *Hanya Lihat
+                                                </span>
+                                                <p className="text-xs sm:text-sm font-semibold leading-relaxed text-[#3B2A1E]">
+                                                    Sebagai administrator, Anda berada dalam mode pemantauan murni tanpa interaksi pesan langsung ke anggota. Anda dapat memantau percakapan dan mengelola/menambahkan kategori dari ruang diskusi ini.
+                                                </p>
+                                            </div>
+                                        ) : currentUser ? (
                                             <form
                                                 onSubmit={handleSendMessage}
                                                 className="space-y-3"
@@ -2026,11 +2882,20 @@ export default function CommunityRadarIndex({
                                 </Card>
                             ) : (
                                 <Card
-                                    variant="subtle"
-                                    className="py-16 text-center text-sm font-semibold text-[#6B5646]"
+                                    variant="glass"
+                                    className="flex flex-col items-center justify-center px-6 py-12 sm:px-8 sm:py-16 text-center"
                                 >
-                                    Pilih ruang diskusi di sebelah kiri untuk
-                                    mulai membaca atau mengirim pesan.
+                                    <img
+                                        src="/empty_state.png"
+                                        alt="Pilih ruang diskusi"
+                                        className="mb-3 w-28 sm:w-32 h-auto object-contain select-none opacity-90"
+                                    />
+                                    <h3 className="font-['Fredoka',system-ui,sans-serif] text-base sm:text-lg font-bold text-[#3B2A1E]">
+                                        Pilih Ruang Diskusi Komunitas
+                                    </h3>
+                                    <p className="mt-1.5 max-w-sm text-xs sm:text-sm leading-relaxed text-[#6B5646]">
+                                        Pilih salah satu ruang diskusi di sebelah kiri untuk mulai membaca, membagikan informasi kewaspadaan, atau berinteraksi dengan sesama Guardian.
+                                    </p>
                                 </Card>
                             )}
                         </div>
@@ -2044,7 +2909,7 @@ export default function CommunityRadarIndex({
                     <section className="mx-auto max-w-5xl px-6 pt-4">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             {/* Search */}
-                            <div className="relative w-full sm:max-w-sm">
+                            <div className="relative w-full sm:max-w-md">
                                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
                                     <Search className="size-4 text-[#6B5646]" />
                                 </div>
@@ -2069,36 +2934,20 @@ export default function CommunityRadarIndex({
                                 )}
                             </div>
 
-                            {/* Sort */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[#6B5646]">
-                                    Urutkan:
-                                </span>
-                                <div className="flex rounded-xl border-2 border-[#EFE3D0] bg-white p-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSortBy('trending')}
-                                        className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                                            sortBy === 'trending'
-                                                ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
-                                                : 'text-[#6B5646] hover:text-[#3B2A1E]'
-                                        }`}
-                                    >
-                                        Paling Marak
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSortBy('latest')}
-                                        className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                                            sortBy === 'latest'
-                                                ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
-                                                : 'text-[#6B5646] hover:text-[#3B2A1E]'
-                                        }`}
-                                    >
-                                        Terbaru
-                                    </button>
-                                </div>
-                            </div>
+                            {/* CTA Button */}
+                            <Button
+                                variant="primary"
+                                size="md"
+                                onClick={() => {
+                                    setActiveTab('discussions');
+                                    if (currentUser) {
+                                        setIsCreateRoomOpen(true);
+                                    }
+                                }}
+                            >
+                                <MessageSquarePlus className="size-4" />
+                                <span>Mulai Diskusi Kasus</span>
+                            </Button>
                         </div>
                     </section>
 
@@ -2162,18 +3011,23 @@ export default function CommunityRadarIndex({
                                             </div>
 
                                             {/* Action Buttons */}
-                                            <div className="flex shrink-0 flex-row gap-2 sm:flex-col sm:items-end">
+                                            <div className="flex shrink-0 flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                                                 <button
                                                     type="button"
                                                     onClick={() =>
                                                         handleUpvote(alert.id)
                                                     }
-                                                    disabled={hasUpvoted}
+                                                    disabled={hasUpvoted || Boolean(currentUser?.is_admin)}
+                                                    title={
+                                                        currentUser?.is_admin
+                                                            ? 'Administrator dalam mode pemantauan hanya-lihat.'
+                                                            : undefined
+                                                    }
                                                     className={`cursor-pointer inline-flex h-9 items-center gap-2 rounded-xl border-2 px-3.5 text-xs font-bold transition-all ${
                                                         hasUpvoted
                                                             ? 'border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]'
                                                             : 'border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] hover:bg-[#FFF8EC]'
-                                                    }`}
+                                                    } disabled:cursor-not-allowed disabled:opacity-70`}
                                                 >
                                                     <ThumbsUp className="size-3.5" />
                                                     <span>
@@ -2194,6 +3048,31 @@ export default function CommunityRadarIndex({
                                                     <Share2 className="size-3.5" />
                                                     Bagikan ke WA
                                                 </a>
+
+                                                {currentUser?.is_admin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleDeletePattern(
+                                                                alert.id,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            deletingPatternId ===
+                                                            alert.id
+                                                        }
+                                                        className="cursor-pointer inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D4573A] bg-[#FFF8EC] px-2.5 text-[11px] font-bold text-[#D4573A] transition-all hover:bg-[#D4573A] hover:text-white disabled:opacity-50"
+                                                        title="Hapus modus penipuan ini (Admin)"
+                                                    >
+                                                        {deletingPatternId ===
+                                                        alert.id ? (
+                                                            <Loader2 className="size-3 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="size-3" />
+                                                        )}
+                                                        <span>Hapus</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </Card>
@@ -2202,11 +3081,37 @@ export default function CommunityRadarIndex({
 
                             {filteredAlerts.length === 0 && (
                                 <Card
-                                    variant="subtle"
-                                    className="py-16 text-center text-sm font-semibold text-[#6B5646]"
+                                    variant="glass"
+                                    className="flex flex-col items-center justify-center px-6 py-10 sm:px-8 sm:py-14 text-center"
                                 >
-                                    Tidak ada laporan penipuan yang cocok dengan
-                                    pencarian Anda.
+                                    <img
+                                        src="/empty_state.png"
+                                        alt="Belum ada data radar"
+                                        className="mb-3 w-28 sm:w-32 h-auto object-contain select-none opacity-90"
+                                    />
+                                    <h3 className="font-['Fredoka',system-ui,sans-serif] text-base sm:text-lg font-bold text-[#3B2A1E]">
+                                        {alerts.length === 0
+                                            ? 'Belum Ada Data Modus Penipuan di Radar'
+                                            : 'Tidak Ada Laporan Penipuan Ditemukan'}
+                                    </h3>
+                                    <p className="mt-1.5 max-w-md text-xs sm:text-sm leading-relaxed text-[#6B5646]">
+                                        {alerts.length === 0
+                                            ? 'Administrator dapat memverifikasi topik dari Ruang Diskusi Komunitas untuk diterbitkan sebagai modus resmi di radar ini.'
+                                            : 'Coba pilih kategori lain atau periksa kembali kata kunci pencarian Anda.'}
+                                    </p>
+                                    {alerts.length === 0 && (
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onClick={() => setActiveTab('discussions')}
+                                            className="mt-4"
+                                        >
+                                            <MessageSquare className="size-4" />
+                                            <span>
+                                                Lihat Ruang Diskusi Komunitas
+                                            </span>
+                                        </Button>
+                                    )}
                                 </Card>
                             )}
                         </div>
@@ -2227,8 +3132,7 @@ export default function CommunityRadarIndex({
                     />
                     <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_6px_0px_0px_#3B2A1E]">
                         <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
-                            <div className="flex items-center gap-2.5">
-                                <Sparkles className="size-5 text-[#E06812]" />
+                            <div>
                                 <h2 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E]">
                                     Buat Ruang Diskusi Baru
                                 </h2>
@@ -2246,18 +3150,6 @@ export default function CommunityRadarIndex({
                             onSubmit={handleCreateRoom}
                             className="space-y-4 p-6"
                         >
-                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 text-xs font-semibold text-[#6B5646] shadow-[2px_2px_0px_0px_#3B2A1E]">
-                                Setiap anggota dapat membuat maksimal{' '}
-                                <strong className="text-[#3B2A1E]">
-                                    3 ruang diskusi per hari
-                                </strong>
-                                . Sisa kuota Anda hari ini:{' '}
-                                <strong className="text-[#E06812]">
-                                    {dailyQuota.remaining} dari {dailyQuota.max}{' '}
-                                    ruang
-                                </strong>
-                                .
-                            </div>
 
                             {roomError && (
                                 <div className="rounded-2xl border-2 border-[#3B2A1E] bg-[#D4573A] p-3.5 text-xs font-bold text-white">
@@ -2300,21 +3192,16 @@ export default function CommunityRadarIndex({
                                     }
                                     className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
                                 >
-                                    <option value="apk_malware">
-                                        Malware APK
-                                    </option>
-                                    <option value="phishing_banking">
-                                        Phishing Bank
-                                    </option>
-                                    <option value="social_engineering">
-                                        Rekayasa Sosial
-                                    </option>
-                                    <option value="fake_job">
-                                        Lowongan Palsu
-                                    </option>
-                                    <option value="fake_giveaway">
-                                        Undian Palsu
-                                    </option>
+                                    {categoryList
+                                        .filter((c) => c.key !== 'all')
+                                        .map((cat) => (
+                                            <option
+                                                key={cat.key}
+                                                value={cat.key}
+                                            >
+                                                {cat.label}
+                                            </option>
+                                        ))}
                                 </select>
                             </div>
 
@@ -2367,6 +3254,370 @@ export default function CommunityRadarIndex({
                 </div>
             )}
 
+            {/* Modal: Add Category (Admin only) */}
+            {isAddCategoryOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-[#3B2A1E]/50 p-4 backdrop-blur-xs"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="fixed inset-0"
+                        onClick={() => setIsAddCategoryOpen(false)}
+                    />
+                    <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_6px_0px_0px_#3B2A1E]">
+                        <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E]">
+                                    Tambah Kategori Percakapan
+                                </h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddCategoryOpen(false)}
+                                className="flex size-9 cursor-pointer items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                            >
+                                <X className="size-4" strokeWidth={2.5} />
+                            </button>
+                        </div>
+
+                        <form
+                            onSubmit={handleAddCategory}
+                            className="space-y-4 p-6"
+                        >
+                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 text-xs font-semibold text-[#6B5646] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                Kategori baru akan langsung dapat digunakan oleh seluruh anggota komunitas saat membuka ruang diskusi baru maupun mengelompokkan percakapan.
+                            </div>
+
+                            {categoryError && (
+                                <div className="rounded-2xl border-2 border-[#3B2A1E] bg-[#D4573A] p-3.5 text-xs font-bold text-white">
+                                    {categoryError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Nama Kategori (Label Tampilan)
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    minLength={3}
+                                    maxLength={50}
+                                    value={newCategoryForm.label}
+                                    onChange={(e) =>
+                                        setNewCategoryForm({
+                                            ...newCategoryForm,
+                                            label: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Contoh: Modus AI Voice & Deepfake"
+                                    className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Kunci / Slug Kategori (Opsional)
+                                </label>
+                                <input
+                                    type="text"
+                                    maxLength={50}
+                                    value={newCategoryForm.key}
+                                    onChange={(e) =>
+                                        setNewCategoryForm({
+                                            ...newCategoryForm,
+                                            key: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Otomatis dibuat dari nama jika dikosongkan"
+                                    className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Warna Lencana (Badge Variant)
+                                </label>
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    {[
+                                        { val: 'brand' as const, label: 'Brand (Oranye)', bg: 'bg-[#FF9A3C]' },
+                                        { val: 'danger' as const, label: 'Bahaya (Merah)', bg: 'bg-[#D4573A]' },
+                                        { val: 'warn' as const, label: 'Waspada (Kuning)', bg: 'bg-[#FFE27A]' },
+                                        { val: 'neutral' as const, label: 'Netral (Krem)', bg: 'bg-[#FFF8EC]' },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.val}
+                                            type="button"
+                                            onClick={() =>
+                                                setNewCategoryForm({
+                                                    ...newCategoryForm,
+                                                    variant: opt.val,
+                                                })
+                                            }
+                                            className={`cursor-pointer flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2.5 text-xs font-bold transition-all ${
+                                                newCategoryForm.variant === opt.val
+                                                    ? 'border-[#3B2A1E] bg-[#FFE27A] shadow-[2px_2px_0px_0px_#3B2A1E]'
+                                                    : 'border-[#EFE3D0] bg-white text-[#6B5646] hover:border-[#3B2A1E]'
+                                            }`}
+                                        >
+                                            <span className={`size-4 rounded-full border border-[#3B2A1E] ${opt.bg}`} />
+                                            <span>{opt.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="md"
+                                    onClick={() => setIsAddCategoryOpen(false)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    size="md"
+                                    disabled={
+                                        isAddingCategory ||
+                                        !newCategoryForm.label.trim()
+                                    }
+                                >
+                                    {isAddingCategory && (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    )}
+                                    <span>Simpan Kategori</span>
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Verify Discussion Room as Radar Pattern (Admin only) */}
+            {isVerifyModalOpen && verifyModalRoom && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-[#3B2A1E]/50 p-4 backdrop-blur-xs"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="fixed inset-0"
+                        onClick={() => {
+                            if (!isVerifyingRoom) {
+                                setIsVerifyModalOpen(false);
+                                setVerifyModalRoom(null);
+                            }
+                        }}
+                    />
+                    <div className="relative z-10 flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_6px_0px_0px_#3B2A1E]">
+                        <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
+                            <div className="flex items-center gap-2.5">
+                                <Radio className="size-5 text-[#E06812]" />
+                                <h3 className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
+                                    Jadikan Modus Terverifikasi
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!isVerifyingRoom) {
+                                        setIsVerifyModalOpen(false);
+                                        setVerifyModalRoom(null);
+                                    }
+                                }}
+                                className="flex size-9 cursor-pointer items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                            >
+                                <X className="size-4" strokeWidth={2.5} />
+                            </button>
+                        </div>
+
+                        <form
+                            onSubmit={handleVerifyRoomAsPattern}
+                            className="space-y-4 p-6 overflow-y-auto"
+                        >
+                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 text-xs font-semibold text-[#6B5646] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                Mengkurasi ruang diskusi:{' '}
+                                <strong className="text-[#3B2A1E]">
+                                    {verifyModalRoom.title}
+                                </strong>{' '}
+                                dari pelapor{' '}
+                                <strong className="text-[#3B2A1E]">
+                                    {verifyModalRoom.creator.name}
+                                </strong>
+                                . Modus yang Anda verifikasi akan tayang di
+                                Daftar Modus Radar dan terhubung langsung ke obrolan ini.
+                            </div>
+
+                            {verifyError && (
+                                <div className="rounded-2xl border-2 border-[#3B2A1E] bg-[#D4573A] p-3.5 text-xs font-bold text-white">
+                                    {verifyError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Judul Modus Penipuan *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={255}
+                                    value={verifyForm.title}
+                                    onChange={(e) =>
+                                        setVerifyForm({
+                                            ...verifyForm,
+                                            title: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Contoh: Modus Freelance Like & Subscribe Deposit Telegram"
+                                    className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                        Kategori Modus *
+                                    </label>
+                                    <select
+                                        value={verifyForm.category}
+                                        onChange={(e) =>
+                                            setVerifyForm({
+                                                ...verifyForm,
+                                                category: e.target.value,
+                                            })
+                                        }
+                                        className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-3 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                    >
+                                        {categoryList
+                                            .filter((c) => c.key !== 'all')
+                                            .map((cat) => (
+                                                <option
+                                                    key={cat.key}
+                                                    value={cat.key}
+                                                >
+                                                    {cat.label}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                        Platform / Media *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={100}
+                                        value={verifyForm.platform}
+                                        onChange={(e) =>
+                                            setVerifyForm({
+                                                ...verifyForm,
+                                                platform: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Contoh: WhatsApp, Telegram, IG"
+                                        className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Wilayah / Lokasi Kejadian (Opsional)
+                                </label>
+                                <input
+                                    type="text"
+                                    maxLength={150}
+                                    value={verifyForm.location}
+                                    onChange={(e) =>
+                                        setVerifyForm({
+                                            ...verifyForm,
+                                            location: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Contoh: Jakarta Selatan, Surabaya, Nasional"
+                                    className="h-11 w-full rounded-2xl border-2 border-[#3B2A1E] bg-white px-4 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Ringkasan Kronologi / Modus *
+                                </label>
+                                <textarea
+                                    required
+                                    rows={4}
+                                    value={verifyForm.description}
+                                    onChange={(e) =>
+                                        setVerifyForm({
+                                            ...verifyForm,
+                                            description: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Jelaskan bagaimana modus ini beroperasi, pancingan awal pelaku, dan kerugian yang ditimbulkan..."
+                                    className="w-full rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-xs font-bold text-[#3B2A1E]">
+                                    Ciri Percakapan / Bukti Teks (Opsional)
+                                </label>
+                                <textarea
+                                    rows={2}
+                                    value={verifyForm.evidence_text}
+                                    onChange={(e) =>
+                                        setVerifyForm({
+                                            ...verifyForm,
+                                            evidence_text: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Contoh: 'Tugas 1 cair Rp20.000. Untuk misi berikutnya wajib deposit Rp500.000 ke rekening...'"
+                                    className="w-full rounded-2xl border-2 border-[#3B2A1E] bg-white p-3.5 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="md"
+                                    onClick={() => {
+                                        setIsVerifyModalOpen(false);
+                                        setVerifyModalRoom(null);
+                                    }}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    size="md"
+                                    disabled={
+                                        isVerifyingRoom ||
+                                        !verifyForm.title.trim() ||
+                                        !verifyForm.description.trim()
+                                    }
+                                >
+                                    {isVerifyingRoom && (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    )}
+                                    <span>
+                                        Verifikasi & Terbitkan ke Radar
+                                    </span>
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Modal: Image Lightbox */}
             {lightboxImageUrl && (
                 <div
@@ -2396,6 +3647,392 @@ export default function CommunityRadarIndex({
                             alt="Lampiran penuh"
                             className="max-h-[75vh] w-auto rounded-2xl border-2 border-[#3B2A1E] object-contain"
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Confirm Delete Room or Message */}
+            {confirmDeleteModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-[#3B2A1E]/70 p-4 backdrop-blur-xs"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="fixed inset-0"
+                        onClick={() => {
+                            if (!deletingRoomId && !deletingMessageId) {
+                                setConfirmDeleteModal(null);
+                            }
+                        }}
+                    />
+                    <div className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_6px_0px_0px_#3B2A1E]">
+                        <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex size-8 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#D4573A] text-white shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
+                                    <Trash2 className="size-4" />
+                                </div>
+                                <h3 className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
+                                    {confirmDeleteModal.type === 'room'
+                                        ? 'Hapus Ruang Diskusi'
+                                        : 'Hapus Pesan Diskusi'}
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!deletingRoomId && !deletingMessageId) {
+                                        setConfirmDeleteModal(null);
+                                    }
+                                }}
+                                className="flex size-8 cursor-pointer items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                            >
+                                <X className="size-4" strokeWidth={2.5} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 text-xs leading-relaxed text-[#6B5646] shadow-[2px_2px_0px_0px_#3B2A1E]">
+                                {confirmDeleteModal.type === 'room' ? (
+                                    <>
+                                        Apakah Anda yakin ingin menghapus ruang
+                                        diskusi{' '}
+                                        <strong className="text-[#3B2A1E]">
+                                            "{confirmDeleteModal.title}"
+                                        </strong>
+                                        ? Seluruh pesan dan riwayat di dalamnya
+                                        akan dihapus secara permanen untuk
+                                        menjaga keamanan dan etika komunitas.
+                                    </>
+                                ) : (
+                                    <>
+                                        Apakah Anda yakin ingin menghapus pesan:{' '}
+                                        <strong className="text-[#3B2A1E]">
+                                            "{confirmDeleteModal.title}"
+                                        </strong>
+                                        ? Pesan yang mengandung kata-kata tidak
+                                        pantas atau informasi yang menyalahi
+                                        etika akan dihapus secara permanen.
+                                    </>
+                                )}
+                            </div>
+
+                            {currentUser?.is_admin && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-[#3B2A1E]">
+                                            Alasan Penghapusan{' '}
+                                            <span className="text-[#D4573A]">
+                                                * (Wajib oleh Admin)
+                                            </span>
+                                        </label>
+                                        <span className="text-[10px] font-bold text-[#6B5646]">
+                                            {deleteReason.length}/1000
+                                        </span>
+                                    </div>
+
+                                    {/* Preset Chips */}
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {[
+                                            'Kata-kata kasar atau tidak pantas',
+                                            'Spam / promosi berulang tanpa izin',
+                                            'Informasi palsu / disinformasi hoax',
+                                            'Potensi penipuan baru / data pribadi',
+                                        ].map((preset) => (
+                                            <button
+                                                key={preset}
+                                                type="button"
+                                                onClick={() => {
+                                                    setDeleteReason(preset);
+                                                    setDeleteReasonError(null);
+                                                }}
+                                                className="cursor-pointer rounded-lg border border-[#3B2A1E]/30 bg-white px-2 py-0.5 text-[10px] font-bold text-[#3B2A1E] hover:bg-[#FFE27A] transition"
+                                            >
+                                                + {preset}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <textarea
+                                        rows={3}
+                                        value={deleteReason}
+                                        onChange={(e) => {
+                                            setDeleteReason(e.target.value);
+                                            if (
+                                                deleteReasonError &&
+                                                e.target.value.trim().length >=
+                                                    5
+                                            ) {
+                                                setDeleteReasonError(null);
+                                            }
+                                        }}
+                                        placeholder="Tuliskan alasan profesional agar pengguna memahami moderasi ini..."
+                                        className="w-full rounded-2xl border-2 border-[#3B2A1E] bg-white p-3 text-xs sm:text-sm font-semibold text-[#3B2A1E] placeholder:text-[#6B5646]/60 shadow-[2px_2px_0px_0px_#3B2A1E] focus:border-[#FF9A3C] focus:outline-none"
+                                    />
+
+                                    {deleteReasonError ? (
+                                        <p className="text-[11px] font-bold text-[#D4573A]">
+                                            {deleteReasonError}
+                                        </p>
+                                    ) : (
+                                        <p className="text-[10px] text-[#6B5646]">
+                                            Alasan ini akan otomatis masuk ke
+                                            kotak <strong>Pesan Notif</strong>{' '}
+                                            pengguna terkait.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-2.5 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="md"
+                                    disabled={Boolean(
+                                        deletingRoomId || deletingMessageId,
+                                    )}
+                                    onClick={() => {
+                                        setConfirmDeleteModal(null);
+                                        setDeleteReason('');
+                                        setDeleteReasonError(null);
+                                    }}
+                                >
+                                    Batal
+                                </Button>
+                                <button
+                                    type="button"
+                                    disabled={
+                                        Boolean(
+                                            deletingRoomId ||
+                                                deletingMessageId,
+                                        ) ||
+                                        Boolean(
+                                            currentUser?.is_admin &&
+                                                deleteReason.trim().length < 5,
+                                        )
+                                    }
+                                    onClick={() => {
+                                        if (confirmDeleteModal.type === 'room') {
+                                            handleDeleteRoom(
+                                                confirmDeleteModal.id,
+                                            );
+                                        } else if (confirmDeleteModal.roomId) {
+                                            handleDeleteMessage(
+                                                confirmDeleteModal.id,
+                                                confirmDeleteModal.roomId,
+                                            );
+                                        }
+                                    }}
+                                    className="cursor-pointer inline-flex h-10 items-center justify-center gap-2 rounded-xl border-2 border-[#3B2A1E] bg-[#D4573A] px-5 text-xs font-black text-white shadow-[2px_2px_0px_0px_#3B2A1E] transition-all hover:bg-[#b83c21] disabled:opacity-50"
+                                >
+                                    {(deletingRoomId || deletingMessageId) && (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    )}
+                                    <span>Ya, Hapus</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal / Drawer: Sandbox Pesan Notifikasi Komunitas */}
+            {isNoticeSandboxOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-[#3B2A1E]/70 p-4 backdrop-blur-xs"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="fixed inset-0"
+                        onClick={() => setIsNoticeSandboxOpen(false)}
+                    />
+                    <div className="relative z-10 flex w-full max-w-2xl max-h-[85vh] flex-col overflow-hidden rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_6px_0px_0px_#3B2A1E]">
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex size-9 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
+                                    <Bell className="size-4.5" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
+                                            Kotak Pesan Notifikasi Komunitas
+                                        </h3>
+                                        {unreadNoticesCount > 0 && (
+                                            <span className="inline-flex items-center rounded-full bg-[#D4573A] px-2 py-0.5 text-[10px] font-black text-white">
+                                                {unreadNoticesCount} baru
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-[11px] font-semibold text-[#6B5646]">
+                                        Transparansi moderasi ruang dan pesan dari Administrator Cekara
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {unreadNoticesCount > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleMarkAllNoticesAsRead}
+                                        disabled={isMarkingAllRead}
+                                        className="cursor-pointer inline-flex items-center gap-1 rounded-xl border-2 border-[#3B2A1E] bg-white px-2.5 py-1 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                                        title="Tandai semua sudah dibaca"
+                                    >
+                                        {isMarkingAllRead ? (
+                                            <Loader2 className="size-3 animate-spin" />
+                                        ) : (
+                                            <CheckCheck className="size-3" />
+                                        )}
+                                        <span className="hidden sm:inline">
+                                            Tandai Semua Dibaca
+                                        </span>
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setIsNoticeSandboxOpen(false)
+                                    }
+                                    className="flex size-9 cursor-pointer items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-white text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                                >
+                                    <X className="size-4" strokeWidth={2.5} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-3.5 bg-[#FFFDF9]">
+                            {moderationNotices.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                    <img
+                                        src="/empty_state.png"
+                                        alt="Kotak notifikasi bersih"
+                                        className="mb-3 w-28 h-auto object-contain select-none opacity-90"
+                                    />
+                                    <h4 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
+                                        Kotak Notifikasi Bersih!
+                                    </h4>
+                                    <p className="mt-1 max-w-sm text-xs leading-relaxed text-[#6B5646]">
+                                        Tidak ada catatan teguran atau penghapusan
+                                        konten pada akun Anda. Tetap patuhi
+                                        panduan komunitas Cekara dan saling
+                                        menjaga ruang diskusi yang aman!
+                                    </p>
+                                </div>
+                            ) : (
+                                moderationNotices.map((notice) => (
+                                    <div
+                                        key={notice.id}
+                                        className={`rounded-2xl border-2 border-[#3B2A1E] p-4 shadow-[2px_2px_0px_0px_#3B2A1E] transition-all ${
+                                            !notice.is_read
+                                                ? 'bg-[#FFF8EC] ring-2 ring-[#FF9A3C]/40'
+                                                : 'bg-white'
+                                        }`}
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFE3D0] pb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className={`inline-flex items-center gap-1 rounded-lg border border-[#3B2A1E] px-2 py-0.5 text-[10px] font-black uppercase ${
+                                                        notice.type ===
+                                                        'room_deleted'
+                                                            ? 'bg-[#D4573A] text-white'
+                                                            : 'bg-[#FFE27A] text-[#3B2A1E]'
+                                                    }`}
+                                                >
+                                                    <AlertTriangle className="size-2.5" />
+                                                    {notice.type ===
+                                                    'room_deleted'
+                                                        ? 'Ruang Diskusi Dihapus'
+                                                        : 'Pesan Diskusi Dihapus'}
+                                                </span>
+                                                {!notice.is_read && (
+                                                    <span className="size-2 rounded-full bg-[#D4573A] animate-pulse" />
+                                                )}
+                                            </div>
+                                            <span className="text-[11px] font-semibold text-[#6B5646]">
+                                                {notice.created_at_human} •{' '}
+                                                {notice.created_at_time}
+                                            </span>
+                                        </div>
+
+                                        {/* Content Details */}
+                                        <div className="mt-2.5 space-y-1.5">
+                                            {notice.room_title &&
+                                                notice.type ===
+                                                    'message_deleted' && (
+                                                    <div className="text-[11px] font-semibold text-[#6B5646]">
+                                                        Ruang Diskusi:{' '}
+                                                        <strong className="text-[#3B2A1E]">
+                                                            {notice.room_title}
+                                                        </strong>
+                                                    </div>
+                                                )}
+                                            <div className="rounded-xl border border-[#3B2A1E]/20 bg-[#FFFDF9] px-3 py-2 text-xs font-medium text-[#4A3B32]">
+                                                <span className="font-bold text-[#3B2A1E]">
+                                                    Konten terdampak:{' '}
+                                                </span>
+                                                "{notice.target_title}"
+                                            </div>
+                                        </div>
+
+                                        {/* Admin Reason Box */}
+                                        <div className="mt-2.5 rounded-xl border-2 border-[#D4573A]/40 bg-[#FFF4F0] p-3">
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-[#D4573A]">
+                                                <ShieldAlert className="size-3.5" />
+                                                <span>
+                                                    Alasan dari Moderator Admin:
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-xs sm:text-sm font-semibold leading-relaxed text-[#3B2A1E]">
+                                                "{notice.reason}"
+                                            </p>
+                                        </div>
+
+                                        {/* Footer Actions */}
+                                        <div className="mt-3 flex items-center justify-between border-t border-[#EFE3D0] pt-2 text-[11px] text-[#6B5646]">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-bold text-[#3B2A1E]">
+                                                    {notice.admin_name}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {!notice.is_read && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleMarkNoticeAsRead(
+                                                                notice.id,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            markingReadNoticeId ===
+                                                            notice.id
+                                                        }
+                                                        className="cursor-pointer font-bold text-[#E06812] hover:underline"
+                                                    >
+                                                        Tandai Dibaca
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleDeleteNotice(
+                                                            notice.id,
+                                                        )
+                                                    }
+                                                    className="cursor-pointer text-[#D4573A] hover:underline"
+                                                >
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

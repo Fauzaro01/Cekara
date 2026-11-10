@@ -26,6 +26,7 @@ class SimulationController extends Controller
 
         $scenarios = SimulationScenario::query()
             ->active()
+            ->withCount('attempts')
             ->get()
             ->map(function (SimulationScenario $scenario) use ($user) {
                 $userAttempt = null;
@@ -47,6 +48,7 @@ class SimulationController extends Controller
                     'sender_name' => $scenario->sender_name,
                     'sender_avatar' => $scenario->sender_avatar,
                     'order' => $scenario->order,
+                    'attempts_count' => (int) $scenario->attempts_count,
                     'has_attempted' => $userAttempt !== null,
                     'latest_score' => $userAttempt?->score,
                     'is_safe' => $userAttempt?->is_safe,

@@ -42,6 +42,21 @@ class LlmProvider extends Model
     }
 
     /**
+     * Decrypt the given encrypted string safely without crashing if MAC is invalid or APP_KEY changed.
+     *
+     * @param  string  $value
+     * @return mixed
+     */
+    public function fromEncryptedString($value)
+    {
+        try {
+            return parent::fromEncryptedString($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Scope a query to only include active providers.
      */
     public function scopeActive(Builder $query): Builder
@@ -66,17 +81,23 @@ class LlmProvider extends Model
      */
     public function getMaskedApiKey(): ?string
     {
+        $raw = $this->getRawOriginal('api_key') ?? ($this->attributes['api_key'] ?? null);
+        if (empty($raw)) {
+            return null;
+        }
+
         try {
-            if (empty($this->api_key)) {
-                return null;
+            $decrypted = $this->api_key;
+            if (empty($decrypted)) {
+                return '••••••••';
             }
 
-            $length = strlen($this->api_key);
+            $length = strlen($decrypted);
             if ($length <= 8) {
                 return str_repeat('•', 8);
             }
 
-            return substr($this->api_key, 0, 4).str_repeat('•', 6).substr($this->api_key, -4);
+            return substr($decrypted, 0, 4).str_repeat('•', 6).substr($decrypted, -4);
         } catch (\Throwable) {
             return '••••••••';
         }

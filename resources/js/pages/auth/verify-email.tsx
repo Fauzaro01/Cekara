@@ -1,6 +1,6 @@
 import type { FormEventHandler } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { CheckCircle2, Mail, RefreshCw } from 'lucide-react';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,15 +30,12 @@ export default function VerifyEmail({ status, email }: VerifyEmailProps) {
             <div className="mx-auto flex w-full max-w-md flex-col justify-center px-4 py-16 sm:px-6">
                 <Card className="shadow-[4px_4px_0px_0px_#3B2A1E]">
                     <div className="mb-6 flex flex-col items-center text-center">
-                        <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF3DC] text-[#E06812] shadow-[3px_3px_0px_0px_#3B2A1E]">
-                            <Mail className="size-7" />
-                        </div>
                         <h1 className="font-['Fredoka',system-ui,sans-serif] text-2xl font-bold tracking-tight text-[#3B2A1E]">
                             Verifikasi Alamat Email
                         </h1>
                         <p className="mt-2 text-sm font-medium leading-relaxed text-[#6B5646]">
                             Terima kasih telah mendaftar! Sebelum dapat masuk menggunakan akun Anda, silakan buka tautan halaman verifikasi yang telah kami kirimkan ke email{' '}
-                            {email ? (
+                            {email ? (gt
                                 <span className="font-bold text-[#3B2A1E]">
                                     {email}
                                 </span>

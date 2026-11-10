@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { useSkeletonMount, SimulationsSkeleton } from '@/components/ui/skeleton';
 
 interface ScenarioItem {
     id: number;
@@ -16,6 +17,7 @@ interface ScenarioItem {
     sender_name: string;
     sender_avatar: string | null;
     order: number;
+    attempts_count?: number;
     has_attempted: boolean;
     latest_score: number | null;
     is_safe: boolean | null;
@@ -45,10 +47,11 @@ const categories = [
 export default function SimulationIndex({ scenarios, userStats }: Props) {
     const { auth } = usePage<{
         auth?: {
-            user?: { id: number; name: string; email: string } | null;
+            user?: { id: number; name: string; email: string; is_admin?: boolean } | null;
         };
     }>().props;
     const user = auth?.user;
+    const isInitialLoading = useSkeletonMount(280);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [sortBy, setSortBy] = useState<'trending' | 'latest'>('trending');
@@ -88,8 +91,22 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
             if (sortBy === 'latest') {
                 return b.id - a.id;
             }
+            const countA = a.attempts_count ?? 0;
+            const countB = b.attempts_count ?? 0;
+            if (countB !== countA) {
+                return countB - countA;
+            }
             return a.order - b.order;
         });
+
+    if (isInitialLoading) {
+        return (
+            <AppLayout>
+                <Head title="Laboratorium Simulasi - Cekara" />
+                <SimulationsSkeleton />
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>
@@ -114,7 +131,7 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
 
             {/* Filter & Search Bar */}
             <section className="mx-auto max-w-5xl px-6 pt-6 sm:pt-8">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     {/* Search */}
                     <div className="relative w-full sm:max-w-sm">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
@@ -139,34 +156,47 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                         )}
                     </div>
 
-                    {/* Sort */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#6B5646]">
-                            Urutkan:
-                        </span>
-                        <div className="flex rounded-xl border-2 border-[#EFE3D0] bg-white p-1">
-                            <button
-                                type="button"
-                                onClick={() => setSortBy('trending')}
-                                className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                                    sortBy === 'trending'
-                                        ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
-                                        : 'text-[#6B5646] hover:text-[#3B2A1E]'
-                                }`}
+                    {/* Right Side: Admin Button (if admin) + Sort Filter */}
+                    <div className="flex flex-col items-start sm:items-end gap-2.5">
+                        {user?.is_admin && (
+                            <Link
+                                href="/admin/simulasi"
+                                className={buttonClasses('primary', 'md')}
+                                title="Kelola Modul Simulasi (Admin)"
                             >
-                                Paling Marak
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSortBy('latest')}
-                                className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                                    sortBy === 'latest'
-                                        ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
-                                        : 'text-[#6B5646] hover:text-[#3B2A1E]'
-                                }`}
-                            >
-                                Terbaru
-                            </button>
+                                <span>Kelola Modul Simulasi</span>
+                            </Link>
+                        )}
+
+                        {/* Sort */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-[#6B5646]">
+                                Urutkan:
+                            </span>
+                            <div className="flex rounded-xl border-2 border-[#EFE3D0] bg-white p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setSortBy('trending')}
+                                    className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                                        sortBy === 'trending'
+                                            ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
+                                            : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                    }`}
+                                >
+                                    Paling Marak
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSortBy('latest')}
+                                    className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                                        sortBy === 'latest'
+                                            ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
+                                            : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                    }`}
+                                >
+                                    Terbaru
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,25 +264,42 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                                 </div>
                             </div>
 
-                            <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800">
-                                <Link
-                                    href={
-                                        user
-                                            ? `/simulasi/${scenario.slug}`
-                                            : `/login?redirect=${encodeURIComponent(`/simulasi/${scenario.slug}`)}`
-                                    }
-                                    className={`group w-full ${buttonClasses(
-                                        scenario.has_attempted
-                                            ? 'outline'
-                                            : 'primary',
-                                    )}`}
-                                >
-                                    <span>
-                                        {scenario.has_attempted
-                                            ? 'Ulangi Simulasi'
-                                            : 'Mulai Latihan'}
-                                    </span>
-                                </Link>
+                            <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800 flex flex-col gap-2">
+                                {user?.is_admin ? (
+                                    <>
+                                        <Link
+                                            href={`/admin/simulasi?search=${encodeURIComponent(scenario.title)}`}
+                                            className={`group w-full ${buttonClasses('primary')}`}
+                                        >
+                                            <span>Kelola Modul Ini</span>
+                                        </Link>
+                                        <Link
+                                            href={`/simulasi/${scenario.slug}`}
+                                            className="text-center text-[11px] font-bold text-[#6B5646] hover:text-[#3B2A1E] hover:underline py-0.5"
+                                        >
+                                            Uji Coba Tampilan Pengguna &rarr;
+                                        </Link>
+                                    </>
+                                ) : (
+                                    <Link
+                                        href={
+                                            user
+                                                ? `/simulasi/${scenario.slug}`
+                                                : `/login?redirect=${encodeURIComponent(`/simulasi/${scenario.slug}`)}`
+                                        }
+                                        className={`group w-full ${buttonClasses(
+                                            scenario.has_attempted
+                                                ? 'outline'
+                                                : 'primary',
+                                        )}`}
+                                    >
+                                        <span>
+                                            {scenario.has_attempted
+                                                ? 'Ulangi Simulasi'
+                                                : 'Mulai Latihan'}
+                                        </span>
+                                    </Link>
+                                )}
                             </div>
                         </Card>
                     ))}

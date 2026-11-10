@@ -42,7 +42,15 @@ test('community radar can filter by category', function () {
 });
 
 test('user can upvote a community alert', function () {
-    $alert = ScamPatternContribution::first();
+    $alert = ScamPatternContribution::create([
+        'title' => 'Modus Stiker QRIS Palsu',
+        'category' => 'social_engineering',
+        'platform' => 'QRIS Fisik / Offline',
+        'location' => 'Jakarta Selatan',
+        'description' => 'Pelaku menempelkan stiker barcode QRIS miliknya sendiri.',
+        'is_verified' => true,
+        'upvotes_count' => 5,
+    ]);
     $initialCount = $alert->upvotes_count;
 
     $response = $this->postJson(route('radar.upvote', $alert->id));

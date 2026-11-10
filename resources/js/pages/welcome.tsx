@@ -980,6 +980,7 @@ export default function Welcome() {
                         </div>
 
                         {/* KOTAK PEMERIKSA (SATU FOKUS UTAMA) */}
+                        <div id="cek-pesan" className="relative -top-24 block pointer-events-none" />
                         <div
                             id="pemeriksa"
                             className="rounded-[24px] border-2 border-[#3B2A1E] bg-[#FFFFFF] p-5 shadow-[4px_4px_0px_0px_#3B2A1E] sm:p-7"

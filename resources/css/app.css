@@ -75,6 +75,7 @@
 html {
     background-color: #fff8ec;
     scroll-behavior: auto !important;
+    scrollbar-gutter: stable;
 }
 
 body {

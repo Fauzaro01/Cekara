@@ -74,7 +74,7 @@ class CommunityRadarController extends Controller
             ->selectRaw('platform, count(*) as count')
             ->groupBy('platform')
             ->orderByDesc('count')
-            ->first()?->platform ?? 'WhatsApp';
+            ->first()?->platform ?? '-';
 
         $rooms = $this->getFormattedRooms();
         $dailyQuota = $this->getDailyRoomQuota($request->user());

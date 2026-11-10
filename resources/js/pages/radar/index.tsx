@@ -35,7 +35,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import type { Auth } from '@/types/auth';
+
+interface SharedProps {
+    auth?: Auth;
+    [key: string]: unknown;
+}
 
 interface ThreatAlert {
     id: number;
@@ -927,7 +934,7 @@ export default function CommunityRadarIndex({
         }
 
         try {
-            const res = await fetch(`/radar/${alertId}/upvote`, {
+            const res = await fetch(`/komunitas/${alertId}/upvote`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -947,11 +954,59 @@ export default function CommunityRadarIndex({
                             : a,
                     ),
                 );
-                setNotification(data.message);
-                setTimeout(() => setNotification(null), 4000);
+                toast.success(data.message || 'Berhasil memberikan konfirmasi pada laporan ini.');
+            } else {
+                toast.error(data.message || 'Gagal menambahkan konfirmasi.');
             }
         } catch {
-            setNotification('Gagal menambahkan konfirmasi.');
+            toast.error('Gagal menambahkan konfirmasi. Periksa koneksi internet Anda.');
+        }
+    };
+
+    const handleSubmitReport = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setFormError(null);
+        setIsSubmittingReport(true);
+
+        try {
+            const res = await fetch('/komunitas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-XSRF-TOKEN': getXsrfToken(),
+                },
+                body: JSON.stringify(reportForm),
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(
+                    data.message || 'Laporan modus kejahatan berhasil dikirim.'
+                );
+                setIsReportModalOpen(false);
+                setReportForm({
+                    title: '',
+                    category: 'apk_malware',
+                    platform: '',
+                    location: '',
+                    description: '',
+                    evidence_text: '',
+                });
+                router.reload({ only: ['alerts', 'stats'] });
+            } else {
+                setFormError(
+                    data.message ||
+                        'Gagal mengirim laporan. Pastikan seluruh kolom wajib telah diisi dengan benar.'
+                );
+            }
+        } catch {
+            setFormError(
+                'Terjadi kesalahan saat mengirim laporan. Silakan coba beberapa saat lagi.'
+            );
+        } finally {
+            setIsSubmittingReport(false);
         }
     };
 
@@ -998,7 +1053,7 @@ export default function CommunityRadarIndex({
                             </div>
 
                             <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
-                                Radar Ancaman Komunitas
+                                Komunitas Pemberantas Kejahatan
                             </h1>
                             <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#6B5646] sm:text-base">
                                 Pantau modus kejahatan siber terkini dan berdiskusi
@@ -1083,6 +1138,36 @@ export default function CommunityRadarIndex({
                                     {alerts.length}
                                 </span>
                             </button>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-[#6B5646]">
+                                Urutkan:
+                            </span>
+                            <div className="flex rounded-xl border-2 border-[#EFE3D0] bg-white p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setSortBy('trending')}
+                                    className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                                        sortBy === 'trending'
+                                            ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
+                                            : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                    }`}
+                                >
+                                    Paling Marak
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSortBy('latest')}
+                                    className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                                        sortBy === 'latest'
+                                            ? 'border border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E]'
+                                            : 'text-[#6B5646] hover:text-[#3B2A1E]'
+                                    }`}
+                                >
+                                    Terbaru
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex flex-wrap gap-1.5">

@@ -26,6 +26,7 @@ test('users can authenticate using the login screen', function () {
 
     $this->assertAuthenticatedAs($user);
     $response->assertRedirect($dashboardUrl);
+    $response->assertSessionHas('success', "Anda berhasil masuk sebagai {$user->name}");
 });
 
 test('users can logout and session is invalidated', function () {

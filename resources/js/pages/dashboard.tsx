@@ -1,27 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import {
-    Activity,
-    AlertTriangle,
-    ArrowRight,
-    Award,
-    CheckCircle2,
-    FileText,
-    Gamepad2,
-    Image as ImageIcon,
-    Link2,
-    MessageSquare,
-    Send,
-    Shield,
-    ShieldAlert,
-    Trash2,
-    X,
-    Zap,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
 import type { Auth } from '@/types/auth';
 
@@ -108,7 +92,7 @@ export default function Dashboard({
         setIsSubmitting(true);
 
         try {
-            const res = await fetch('/radar', {
+            const res = await fetch('/komunitas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -128,21 +112,20 @@ export default function Dashboard({
 
             const data = await res.json();
             if (res.ok && data.success) {
-                setNotification(data.message);
+                toast.success(data.message || 'Laporan modus penipuan berhasil dikirim!');
                 setIsReporting(false);
                 setFormTitle('');
                 setFormLocation('');
                 setFormDescription('');
                 setFormEvidence('');
-                setTimeout(() => setNotification(null), 6000);
             } else {
-                setNotification(
+                toast.error(
                     data.message ||
                         'Gagal mengirim laporan. Pastikan semua kolom terisi dengan benar.',
                 );
             }
         } catch {
-            setNotification('Terjadi kendala jaringan saat mengirim laporan.');
+            toast.error('Terjadi kendala jaringan saat mengirim laporan.');
         } finally {
             setIsSubmitting(false);
         }
@@ -164,6 +147,12 @@ export default function Dashboard({
             setDeletingId(id);
             router.delete(`/scans/${id}`, {
                 preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Riwayat pemindaian berhasil dihapus.');
+                },
+                onError: () => {
+                    toast.error('Gagal menghapus riwayat pemindaian.');
+                },
                 onFinish: () => setDeletingId(null),
             });
         }
@@ -200,16 +189,6 @@ export default function Dashboard({
         );
     };
 
-    const getScanTypeIcon = (type: string) => {
-        switch (type.toLowerCase()) {
-            case 'image':
-                return <ImageIcon className="size-3.5" />;
-            case 'url':
-                return <Link2 className="size-3.5" />;
-            default:
-                return <MessageSquare className="size-3.5" />;
-        }
-    };
 
     const getScanTypeLabel = (type: string) => {
         switch (type.toLowerCase()) {
@@ -229,12 +208,70 @@ export default function Dashboard({
             <div className="mx-auto max-w-5xl px-6 py-8">
                 {/* User Greeting & Header Banner */}
                 <div className="relative mb-8 overflow-hidden rounded-2xl border border-slate-200/80 bg-linear-to-br from-white via-brand-50/20 to-white p-6 shadow-xs sm:p-8 dark:border-slate-800 dark:from-slate-900/60 dark:via-brand-950/20 dark:to-slate-900/40">
-                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <div className="max-w-xl">
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
+                    {/* Abstract Geometric Orange Squares Line-art (Behind text, subtle opacity) */}
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -top-6 -left-6 z-0 h-[120%] w-[420px] max-w-[85%] select-none opacity-[0.14] sm:w-[500px] dark:opacity-[0.22]"
+                    >
+                        <svg
+                            viewBox="0 0 520 260"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-full w-full text-[#E06812]"
+                        >
+                            {/* Connecting lines */}
+                            <path d="M210 200 L210 260" />
+                            <path d="M80 140 L80 180" />
+                            <path d="M270 140 L340 140 L340 260" />
+                            <path d="M155 85 L200 85" />
+                            <path d="M310 52 L260 52" />
+
+                            {/* Abstract outline squares */}
+                            <rect x="35" y="25" width="120" height="120" rx="16" />
+                            <rect x="135" y="70" width="135" height="135" rx="18" />
+                            <rect x="310" y="30" width="46" height="46" rx="10" />
+                            <rect x="45" y="180" width="60" height="60" rx="12" />
+                            <rect x="290" y="115" width="110" height="110" rx="16" />
+                        </svg>
+                    </div>
+
+                    {/* Abstract Geometric Orange Squares Line-art (Top-Right / Behind mascot) */}
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -top-4 -right-6 z-0 h-[115%] w-[260px] select-none opacity-[0.14] sm:w-[320px] dark:opacity-[0.22]"
+                    >
+                        <svg
+                            viewBox="0 0 320 220"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-full w-full text-[#E06812]"
+                        >
+                            {/* Connecting lines */}
+                            <path d="M220 0 L220 130" />
+                            <path d="M90 40 L270 40" />
+                            <path d="M160 100 L160 180" />
+                            <path d="M250 85 L295 85" />
+
+                            {/* Abstract outline squares */}
+                            <rect x="175" y="15" width="80" height="80" rx="14" />
+                            <rect x="110" y="45" width="90" height="90" rx="14" />
+                            <rect x="255" y="55" width="45" height="45" rx="8" />
+                            <rect x="65" y="95" width="60" height="60" rx="10" />
+                        </svg>
+                    </div>
+
+                    <div className="relative z-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
+                        <div className="max-w-xl py-2">
+                            <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl sm:text-4xl md:text-[40px] font-bold tracking-tight text-[#3B2A1E] leading-tight">
                                 Halo, {user?.name ?? 'Guardian'}!
                             </h1>
-                            <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
+                            <p className="mt-2.5 sm:mt-3 text-sm sm:text-base lg:text-[17px] leading-relaxed text-[#6B5646] font-semibold">
                                 Pusat kendali kesiapsiagaan siber dan riwayat
                                 proteksi digital pribadi Anda. Pantau skor
                                 kewaspadaan dan latih insting keamanan secara
@@ -242,11 +279,11 @@ export default function Dashboard({
                             </p>
                         </div>
 
-                        <div className="flex shrink-0 items-center justify-center sm:justify-end">
+                        <div className="flex shrink-0 items-end justify-center sm:justify-end sm:mr-8 md:mr-16 lg:mr-20 -mb-6 sm:-mb-8 self-end">
                             <img
                                 src="/maskot_gaya.png"
                                 alt="Maskot Cekara"
-                                className="h-28 w-auto object-contain select-none drop-shadow-md transition-transform duration-300 hover:scale-105 sm:h-36 md:h-40"
+                                className="h-40 w-auto object-contain select-none drop-shadow-md sm:h-52 md:h-60"
                             />
                         </div>
                     </div>
@@ -255,251 +292,73 @@ export default function Dashboard({
                 {/* Notification Toast */}
                 {notification && (
                     <div className="mb-8 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#3B2A1E] bg-[#8ECDF0] p-4 text-xs font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E]">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="size-4 shrink-0 text-[#3B2A1E]" />
-                            <span>{notification}</span>
-                        </div>
+                        <span>{notification}</span>
                         <Link
-                            href="/radar"
+                            href="/komunitas"
                             className="shrink-0 rounded-xl border-2 border-[#3B2A1E] bg-[#FFF8EC] px-3 py-1.5 text-xs font-bold text-[#3B2A1E] shadow-[1px_1px_0px_0px_#3B2A1E] transition hover:bg-[#FFE27A]"
                         >
-                            Buka Radar Komunitas
+                            Buka Komunitas
                         </Link>
                     </div>
                 )}
 
-                {/* Guardian Metrics (4 Cards Grid) */}
-                <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {/* Card 1: Pangkat Guardian */}
-                    <Card
-                        variant="floating"
-                        className="flex flex-col justify-between p-5"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Pangkat Guardian
-                            </span>
-                            <span className="rounded-xl bg-brand-50 p-2 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400">
-                                <Award className="size-4" />
-                            </span>
-                        </div>
-                        <div className="mt-4">
-                            <div className="text-lg font-bold text-slate-900 sm:text-xl dark:text-slate-100">
-                                {guardianStatus.rank}
-                            </div>
-                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                {guardianStatus.rank === 'Master Guardian' ? (
-                                    <span className="flex items-center gap-1 font-medium text-safe">
-                                        <CheckCircle2 className="size-3" />{' '}
-                                        Tingkat Tertinggi
-                                    </span>
-                                ) : (
-                                    <span>
-                                        Tingkatkan skor & simulasi untuk naik
-                                        pangkat
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Card 2: Skor Kewaspadaan */}
-                    <Card
-                        variant="floating"
-                        className="flex flex-col justify-between p-5"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Skor Kewaspadaan
-                            </span>
-                            <span className="rounded-xl bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-                                <Activity className="size-4" />
-                            </span>
-                        </div>
-                        <div className="mt-4">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                    {guardianStatus.alertness_score}
-                                </span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    / 100
-                                </span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between text-xs">
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                    {guardianStatus.alertness_label}
-                                </span>
-                            </div>
-                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                <div
-                                    className="h-full rounded-full bg-linear-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-                                    style={{
-                                        width: `${Math.min(100, guardianStatus.alertness_score)}%`,
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Card 3: Statistik Simulasi */}
-                    <Card
-                        variant="floating"
-                        className="flex flex-col justify-between p-5"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Latihan Simulasi
-                            </span>
-                            <span className="rounded-xl bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
-                                <Gamepad2 className="size-4" />
-                            </span>
-                        </div>
-                        <div className="mt-4">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                    {guardianStatus.completed_simulations}
-                                </span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    / {guardianStatus.total_simulations}{' '}
-                                    Skenario
-                                </span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                                <span>Tingkat Selesai:</span>
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                    {guardianStatus.simulation_completion_rate}%
-                                </span>
-                            </div>
-                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                <div
-                                    className="h-full rounded-full bg-linear-to-r from-indigo-500 to-indigo-400 transition-all duration-500"
-                                    style={{
-                                        width: `${Math.min(100, guardianStatus.simulation_completion_rate)}%`,
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Card 4: Total Riwayat Pemindaian */}
-                    <Card
-                        variant="floating"
-                        className="flex flex-col justify-between p-5"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                Riwayat Cek
-                            </span>
-                            <span className="rounded-xl bg-amber-50 p-2 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
-                                <ShieldAlert className="size-4" />
-                            </span>
-                        </div>
-                        <div className="mt-4">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                                    {guardianStatus.total_scans}
-                                </span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    Pemindaian
-                                </span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between text-xs">
-                                <span className="font-medium text-danger">
-                                    {guardianStatus.threats_detected} Bahaya
-                                </span>
-                                <span className="text-slate-300 dark:text-slate-700">
-                                    •
-                                </span>
-                                <span className="font-medium text-safe">
-                                    {guardianStatus.safe_scans} Aman
-                                </span>
-                            </div>
-                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                Tersimpan permanen di akun Anda
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Quick Actions (3 Action Cards) */}
+                {/* Quick Actions (3 Action Cards - Clean text without icons) */}
                 <div className="mb-10">
-                    <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                        <Zap className="size-4 text-brand-600 dark:text-brand-400" />
-                        Aksi Cepat Guardian
-                    </h2>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        {/* Action 1: Cek Pesan Baru */}
+                        {/* Action 1: Cek Pesan Baru (Pemindai Langsung) */}
                         <Link
-                            href="/#cek-pesan"
+                            href="/#pemeriksa"
                             className="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-brand-600"
                         >
-                            <div className="flex items-start gap-3.5">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-transform group-hover:scale-105 dark:bg-brand-950/50 dark:text-brand-400">
-                                    <Shield className="size-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-900 group-hover:text-brand-600 dark:text-slate-100 dark:group-hover:text-brand-400">
-                                        Cek Pesan Baru
-                                    </h3>
-                                    <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                        Analisis teks, URL mencurigakan, atau
-                                        unggah screenshot chat berisiko.
-                                    </p>
-                                </div>
+                            <div>
+                                <h3 className="font-semibold text-slate-900 group-hover:text-brand-600 dark:text-slate-100 dark:group-hover:text-brand-400">
+                                    Cek Pesan Baru
+                                </h3>
+                                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                    Analisis teks, URL mencurigakan, atau
+                                    unggah screenshot chat berisiko secara langsung.
+                                </p>
                             </div>
-                            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-brand-600 transition-transform group-hover:translate-x-1 dark:text-brand-400">
-                                Buka Detektor{' '}
-                                <ArrowRight className="size-3.5" />
+                            <div className="mt-4 text-xs font-semibold text-brand-600 transition-transform group-hover:translate-x-1 dark:text-brand-400">
+                                Buka Pemindai
                             </div>
                         </Link>
 
                         {/* Action 2: Latihan Simulasi */}
                         <Link
                             href="/simulasi"
-                            className="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-indigo-600"
+                            className="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#8ECDF0] hover:shadow-md dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-sky-500"
                         >
-                            <div className="flex items-start gap-3.5">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 transition-transform group-hover:scale-105 dark:bg-indigo-950/50 dark:text-indigo-400">
-                                    <Gamepad2 className="size-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400">
-                                        Latihan Simulasi
-                                    </h3>
-                                    <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                        Asah insting pertahanan dengan simulasi
-                                        keputusan modus penipuan nyata.
-                                    </p>
-                                </div>
+                            <div>
+                                <h3 className="font-semibold text-slate-900 group-hover:text-[#0284C7] dark:text-slate-100 dark:group-hover:text-sky-400">
+                                    Latihan Simulasi
+                                </h3>
+                                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                    Asah insting pertahanan dengan simulasi
+                                    keputusan modus penipuan nyata.
+                                </p>
                             </div>
-                            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition-transform group-hover:translate-x-1 dark:text-indigo-400">
-                                Mulai Latihan{' '}
-                                <ArrowRight className="size-3.5" />
+                            <div className="mt-4 text-xs font-semibold text-[#0284C7] transition-transform group-hover:translate-x-1 dark:text-sky-400">
+                                Mulai Latihan
                             </div>
                         </Link>
 
-                        {/* Action 3: Pusat Tindakan Darurat */}
+                        {/* Action 3: Komunitas */}
                         <Link
-                            href="/tanggap-darurat"
-                            className="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-red-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-red-600"
+                            href="/komunitas"
+                            className="group flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-emerald-600"
                         >
-                            <div className="flex items-start gap-3.5">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-danger transition-transform group-hover:scale-105 dark:bg-red-950/50 dark:text-red-400">
-                                    <ShieldAlert className="size-5" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-900 group-hover:text-danger dark:text-slate-100 dark:group-hover:text-red-400">
-                                        Pusat Tindakan Darurat
-                                    </h3>
-                                    <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                        Panduan cepat jika terlanjur instal APK,
-                                        transfer uang, atau KTP tersebar.
-                                    </p>
-                                </div>
+                            <div>
+                                <h3 className="font-semibold text-slate-900 group-hover:text-emerald-600 dark:text-slate-100 dark:group-hover:text-emerald-400">
+                                    Radar Komunitas
+                                </h3>
+                                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                    Pantau laporan modus penipuan terbaru dari
+                                    warga dan bagikan temuan mencurigakan Anda.
+                                </p>
                             </div>
-                            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-danger transition-transform group-hover:translate-x-1 dark:text-red-400">
-                                Tangani Insiden{' '}
-                                <ArrowRight className="size-3.5" />
+                            <div className="mt-4 text-xs font-semibold text-emerald-600 transition-transform group-hover:translate-x-1 dark:text-emerald-400">
+                                Buka Komunitas
                             </div>
                         </Link>
                     </div>
@@ -509,8 +368,7 @@ export default function Dashboard({
                 <div className="mb-10">
                     <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                         <div>
-                            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                                <FileText className="size-4 text-brand-600 dark:text-brand-400" />
+                            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                                 Riwayat Pemindaian Penipuan
                             </h2>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -571,26 +429,21 @@ export default function Dashboard({
                     {filteredScans.length === 0 ? (
                         <Card
                             variant="glass"
-                            className="flex flex-col items-center justify-center p-12 text-center"
+                            className="flex flex-col items-center justify-center px-6 py-8 sm:px-8 sm:py-10 text-center"
                         >
-                            <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
-                                <FileText className="size-6" />
-                            </div>
-                            <h3 className="mt-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            <img
+                                src="/empty_state.png"
+                                alt="Belum ada riwayat pemindaian"
+                                className="mb-3 w-28 sm:w-32 h-auto object-contain select-none opacity-90"
+                            />
+                            <h3 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
                                 Belum ada riwayat pemindaian
                             </h3>
-                            <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                            <p className="mt-1 max-w-sm text-xs leading-relaxed text-[#6B5646]">
                                 Tempelkan pesan, masukkan link mencurigakan,
                                 atau unggah tangkapan layar chat untuk melihat
                                 hasil analisis di sini.
                             </p>
-                            <Link
-                                href="/#cek-pesan"
-                                className={`${buttonClasses('primary')} mt-5 text-xs shadow-sm`}
-                            >
-                                <Zap className="mr-1.5 size-3.5" />
-                                Pindai Pesan Sekarang
-                            </Link>
                         </Card>
                     ) : (
                         <div className="flex flex-col gap-4">
@@ -602,10 +455,7 @@ export default function Dashboard({
                                 >
                                     <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                                {getScanTypeIcon(
-                                                    scan.scan_type,
-                                                )}
+                                            <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                                 {getScanTypeLabel(
                                                     scan.scan_type,
                                                 )}
@@ -626,10 +476,9 @@ export default function Dashboard({
                                                 disabled={
                                                     deletingId === scan.id
                                                 }
-                                                className="inline-flex items-center gap-1 text-slate-400 transition-colors hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
+                                                className="inline-flex items-center text-slate-400 transition-colors hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
                                                 title="Hapus riwayat pemindaian"
                                             >
-                                                <Trash2 className="size-3.5" />
                                                 {deletingId === scan.id
                                                     ? 'Menghapus...'
                                                     : 'Hapus'}
@@ -651,8 +500,7 @@ export default function Dashboard({
                                     {scan.red_flags &&
                                         scan.red_flags.length > 0 && (
                                             <div className="mt-3 rounded-xl border border-red-100 bg-red-50/40 p-3 dark:border-red-950/40 dark:bg-red-950/20">
-                                                <div className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-                                                    <AlertTriangle className="size-3.5" />
+                                                <div className="text-xs font-semibold text-danger">
                                                     Indikasi Mencurigakan:
                                                 </div>
                                                 <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-xs text-slate-700 dark:text-slate-300">
@@ -670,8 +518,7 @@ export default function Dashboard({
                                     {/* Recommendations */}
                                     {scan.recommendations &&
                                         scan.recommendations.length > 0 && (
-                                            <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 dark:border-emerald-950/40 dark:bg-emerald-950/20">
-                                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                            <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 dark:border-emerald-950/40 dark:bg-emerald-950/20">
                                                 <div>
                                                     <div className="text-xs font-semibold text-safe">
                                                         Rekomendasi Tindakan:
@@ -691,22 +538,57 @@ export default function Dashboard({
                     )}
                 </div>
 
-                {/* Recent Simulations Journey (Secondary Section) */}
-                {recentSimulations.length > 0 && (
-                    <div className="mb-8">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                                <Gamepad2 className="size-4 text-indigo-600 dark:text-indigo-400" />
-                                Riwayat Latihan Simulasi Terbaru
+                {/* Recent Simulations Journey */}
+                <div className="mb-8">
+                    <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                Simulasi Pembelajaran yang Baru Diikuti
                             </h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Progres dan hasil skor skenario latihan interaktif yang telah Anda ikuti.
+                            </p>
+                        </div>
+                        <Link
+                            href="/simulasi"
+                            className="inline-flex items-center text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                            Lihat Semua Skenario
+                        </Link>
+                    </div>
+
+                    {recentSimulations.length === 0 ? (
+                        <Card
+                            variant="glass"
+                            className="flex flex-col items-center justify-center px-6 py-8 sm:px-8 sm:py-10 text-center"
+                        >
+                            <img
+                                src="/empty_state.png"
+                                alt="Belum ada simulasi yang diikuti"
+                                className="mb-3 w-28 sm:w-32 h-auto object-contain select-none opacity-90"
+                            />
+                            <h3 className="font-['Fredoka',system-ui,sans-serif] text-base font-bold text-[#3B2A1E]">
+                                Belum ada simulasi yang diikuti
+                            </h3>
+                            <p className="mt-1 max-w-sm text-xs leading-relaxed text-[#6B5646]">
+                                Anda belum mencoba modul latihan simulasi interaktif. Jelajahi skenario untuk menguji kewaspadaan menghadapi penipuan digital.
+                            </p>
                             <Link
                                 href="/simulasi"
-                                className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+                                className={`${buttonClasses('primary', 'sm')} group mt-4 inline-flex items-center gap-2 text-xs font-bold shadow-sm`}
                             >
-                                Lihat Semua Skenario{' '}
-                                <ArrowRight className="size-3" />
+                                <span>Mulai Pelajari Simulasi</span>
+                                <svg
+                                    className="size-4 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
+                                </svg>
                             </Link>
-                        </div>
+                        </Card>
+                    ) : (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {recentSimulations.map((attempt) => (
                                 <Card
@@ -740,8 +622,8 @@ export default function Dashboard({
                                 </Card>
                             ))}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Modal Laporkan Modus Baru */}
@@ -914,7 +796,6 @@ export default function Dashboard({
                                     disabled={isSubmitting}
                                     className={buttonClasses('primary')}
                                 >
-                                    <Send className="mr-1.5 size-3.5" />
                                     {isSubmitting
                                         ? 'Mengirim...'
                                         : 'Kirim Laporan Modus'}

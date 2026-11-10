@@ -31,11 +31,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $userName = $request->user()->name;
+        $successMessage = "Anda berhasil masuk sebagai {$userName}";
+
         if ($request->filled('redirect')) {
-            return redirect($request->input('redirect'));
+            return redirect($request->input('redirect'))->with('success', $successMessage);
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false))->with('success', $successMessage);
     }
 
     /**

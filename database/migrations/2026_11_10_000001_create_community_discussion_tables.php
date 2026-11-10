@@ -57,4 +57,3 @@ return new class extends Migration
         Schema::dropIfExists('community_rooms');
     }
 };
-

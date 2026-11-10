@@ -1,6 +1,5 @@
 <?php
 
-use App\Events\CommunityMessageReacted;
 use App\Events\CommunityMessageSent;
 use App\Events\CommunityRoomCreated;
 use App\Models\CommunityMessage;
@@ -11,6 +10,7 @@ use Database\Seeders\CommunityRadarSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(CommunityRadarSeeder::class);
@@ -162,9 +162,7 @@ test('authenticated user can send markdown messages and upload images in a discu
     });
 });
 
-test('authenticated user can toggle like and keyboard emoji reactions in real-time', function () {
-    Event::fake([CommunityMessageReacted::class]);
-
+test('authenticated user can toggle like and keyboard emoji reactions instantly', function () {
     $user = User::factory()->create();
     $message = CommunityMessage::firstOrFail();
 
@@ -183,8 +181,6 @@ test('authenticated user can toggle like and keyboard emoji reactions in real-ti
 
     $removeResponse->assertOk();
     $removeResponse->assertJsonPath('action', 'removed');
-
-    Event::assertDispatchedTimes(CommunityMessageReacted::class, 2);
 });
 
 test('real-time sync endpoint returns rooms and daily quota', function () {
@@ -200,4 +196,148 @@ test('real-time sync endpoint returns rooms and daily quota', function () {
         'daily_room_quota' => ['used', 'max', 'remaining'],
         'server_time',
     ]);
+});
+
+test('unauthenticated guest cannot create a discussion room', function () {
+    $response = $this->postJson(route('radar.rooms.store'), [
+        'title' => 'Ruang Diskusi Percobaan Guest',
+        'category' => 'general',
+        'description' => 'Percobaan membuat ruang oleh guest tanpa autentikasi.',
+    ]);
+
+    $response->assertUnauthorized();
+    expect(CommunityRoom::where('title', 'Ruang Diskusi Percobaan Guest')->exists())->toBeFalse();
+});
+
+test('unauthenticated guest cannot post a message in a discussion room', function () {
+    $room = CommunityRoom::firstOrFail();
+
+    $response = $this->postJson(route('radar.rooms.messages.store', $room->id), [
+        'body' => 'Pesan percobaan dari guest tanpa login.',
+    ]);
+
+    $response->assertUnauthorized();
+});
+
+test('unauthenticated guest cannot toggle a message reaction', function () {
+    $message = CommunityMessage::firstOrFail();
+
+    $response = $this->postJson(route('radar.messages.reactions.toggle', $message->id), [
+        'emoji' => '👍',
+    ]);
+
+    $response->assertUnauthorized();
+});
+
+test('sending a message with neither body nor image fails with 422', function () {
+    $user = User::factory()->create();
+    $room = CommunityRoom::firstOrFail();
+
+    $response = $this->actingAs($user)->postJson(route('radar.rooms.messages.store', $room->id), [
+        'body' => '',
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors(['body', 'image']);
+});
+
+test('uploading an image exceeding 5MB fails with 422', function () {
+    $user = User::factory()->create();
+    $room = CommunityRoom::firstOrFail();
+
+    // 5200 KB > 5120 KB (5 MB limit)
+    $oversizedFile = UploadedFile::fake()->create('bukti-terlalu-besar.png', 5200, 'image/png');
+
+    $response = $this->actingAs($user)->post(
+        route('radar.rooms.messages.store', $room->id),
+        ['image' => $oversizedFile],
+        ['Accept' => 'application/json']
+    );
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors(['image']);
+    expect($response->json('errors.image.0'))->toContain('5 MB');
+});
+
+test('authenticated user can send text-only message without image', function () {
+    Event::fake([CommunityMessageSent::class]);
+    $user = User::factory()->create();
+    $room = CommunityRoom::firstOrFail();
+
+    $response = $this->actingAs($user)->postJson(route('radar.rooms.messages.store', $room->id), [
+        'body' => 'Pesan informasi teks saja tanpa lampiran berkas gambar.',
+    ]);
+
+    $response->assertStatus(201);
+    $response->assertJsonPath('success', true);
+    $response->assertJsonPath('message.body', 'Pesan informasi teks saja tanpa lampiran berkas gambar.');
+    expect($response->json('message.image_url'))->toBeNull();
+});
+
+test('authenticated user can send image-only message without body text', function () {
+    Event::fake([CommunityMessageSent::class]);
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $room = CommunityRoom::firstOrFail();
+    $image = UploadedFile::fake()->image('hanya-gambar.png', 400, 300);
+
+    $response = $this->actingAs($user)->post(
+        route('radar.rooms.messages.store', $room->id),
+        ['image' => $image],
+        ['Accept' => 'application/json']
+    );
+
+    $response->assertStatus(201);
+    $response->assertJsonPath('success', true);
+    $response->assertJsonPath('message.body', null);
+    expect($response->json('message.image_url'))->not->toBeNull();
+});
+
+test('rooms created yesterday do not count against todays 3-room quota', function () {
+    Event::fake([CommunityRoomCreated::class]);
+    $user = User::factory()->create();
+
+    // Create 3 rooms yesterday for this user
+    for ($i = 1; $i <= 3; $i++) {
+        $yesterdayRoom = CommunityRoom::create([
+            'user_id' => $user->id,
+            'title' => "Ruang Kemarin #{$i}",
+            'slug' => "ruang-kemarin-{$i}-".Str::lower(Str::random(6)),
+            'category' => 'apk_malware',
+            'description' => "Pembahasan kasus penipuan kemarin bagian {$i}.",
+            'is_pinned' => false,
+        ]);
+        CommunityRoom::where('id', $yesterdayRoom->id)->update([
+            'created_at' => now()->subDay(),
+        ]);
+    }
+
+    expect(CommunityRoom::where('user_id', $user->id)->count())->toBe(3);
+
+    // Today the user should still be able to create 3 rooms
+    for ($i = 1; $i <= 3; $i++) {
+        $response = $this->actingAs($user)->postJson(route('radar.rooms.store'), [
+            'title' => "Ruang Baru Hari Ini #{$i}",
+            'category' => 'phishing_banking',
+            'description' => "Diskusi valid dibuat hari ini bagian {$i}.",
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('daily_room_quota.used', $i);
+        $response->assertJsonPath('daily_room_quota.remaining', 3 - $i);
+    }
+
+    expect(CommunityRoom::where('user_id', $user->id)->count())->toBe(6);
+
+    // 4th room today must fail with 422 quota exceeded
+    $fourthResponse = $this->actingAs($user)->postJson(route('radar.rooms.store'), [
+        'title' => 'Ruang Hari Ini Ke-4 Melebihi Kuota',
+        'category' => 'social_engineering',
+        'description' => 'Percobaan membuat ruang ke-4 hari ini harus ditolak.',
+    ]);
+
+    $fourthResponse->assertStatus(422);
+    $fourthResponse->assertJsonValidationErrors(['quota']);
+    expect(CommunityRoom::where('user_id', $user->id)->count())->toBe(6);
 });

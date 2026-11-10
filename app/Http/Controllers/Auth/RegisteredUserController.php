@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\RecaptchaRule;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,9 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('auth/register');
+        return Inertia::render('auth/register', [
+            'recaptchaSiteKey' => config('services.recaptcha.site_key'),
+        ]);
     }
 
     /**
@@ -30,10 +33,16 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $recaptchaToken = $request->input('g-recaptcha-response') ?? $request->input('recaptcha_token');
+        $request->merge(['g-recaptcha-response' => $recaptchaToken]);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'g-recaptcha-response' => ['required', 'string', new RecaptchaRule],
+        ], [
+            'g-recaptcha-response.required' => 'Verifikasi reCAPTCHA wajib diselesaikan.',
         ]);
 
         $user = User::create([

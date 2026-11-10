@@ -66,4 +66,3 @@ class CommunityRoom extends Model
         return $this->hasMany(CommunityMessage::class);
     }
 }
-

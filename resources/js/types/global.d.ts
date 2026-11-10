@@ -16,3 +16,27 @@ declare module '@inertiajs/core' {
         };
     }
 }
+
+export interface Grecaptcha {
+    ready(callback: () => void): void;
+    render(container: string | HTMLElement, parameters: {
+        sitekey: string;
+        theme?: 'light' | 'dark';
+        size?: 'normal' | 'compact';
+        tabindex?: number;
+        callback?: (token: string) => void;
+        'expired-callback'?: () => void;
+        'error-callback'?: () => void;
+        hl?: string;
+    }): number;
+    reset(widgetId?: number): void;
+    getResponse(widgetId?: number): string;
+}
+
+declare global {
+    interface Window {
+        grecaptcha?: Grecaptcha;
+        onRecaptchaLoad?: () => void;
+    }
+}
+

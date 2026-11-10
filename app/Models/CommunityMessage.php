@@ -58,4 +58,3 @@ class CommunityMessage extends Model
         return $this->hasMany(CommunityMessageReaction::class);
     }
 }
-

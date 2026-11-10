@@ -9,4 +9,3 @@ Broadcast::channel('community.radar', function (): bool {
 Broadcast::channel('community.room.{roomId}', function (): bool {
     return true;
 });
-

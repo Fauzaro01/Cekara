@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Events\CommunityAlertUpvoted;
-use App\Events\CommunityMessageReacted;
 use App\Events\CommunityMessageSent;
 use App\Events\CommunityRoomCreated;
 use App\Models\CommunityMessage;
@@ -307,16 +306,6 @@ class CommunityRadarController extends Controller
 
         $message->load('reactions');
         $reactionsPayload = $this->formatReactions($message);
-
-        try {
-            broadcast(new CommunityMessageReacted(
-                $message->community_room_id,
-                $message->id,
-                $reactionsPayload
-            ));
-        } catch (Throwable) {
-            // Continue smoothly if WebSocket server is unreachable
-        }
 
         return response()->json([
             'success' => true,

@@ -1,13 +1,39 @@
 import type { FormEventHandler } from 'react';
-import { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { useRef, useState } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { Eye, EyeClosed } from 'lucide-react';
+import {
+    RecaptchaWidget,
+    type RecaptchaWidgetRef,
+} from '@/components/recaptcha-widget';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 
-export default function Register() {
+interface RegisterProps {
+    recaptchaSiteKey?: string;
+}
+
+interface RegisterFormData {
+    name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+    'g-recaptcha-response': string;
+    recaptcha_token?: string;
+    redirect: string;
+}
+
+export default function Register({ recaptchaSiteKey }: RegisterProps) {
+    const page = usePage();
+    const siteKey =
+        recaptchaSiteKey ||
+        (page.props.recaptchaSiteKey as string) ||
+        (page.props.recaptcha_site_key as string) ||
+        '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
+
+    const recaptchaRef = useRef<RecaptchaWidgetRef>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -17,13 +43,15 @@ export default function Register() {
             : null;
     const redirectParam = urlParams?.get('redirect') || '';
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-        redirect: redirectParam,
-    });
+    const { data, setData, post, processing, errors, reset } =
+        useForm<RegisterFormData>({
+            name: '',
+            email: '',
+            password: '',
+            password_confirmation: '',
+            'g-recaptcha-response': '',
+            redirect: redirectParam,
+        });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -33,7 +61,15 @@ export default function Register() {
                 ? `/register?redirect=${encodeURIComponent(redirectParam)}`
                 : '/register',
             {
-                onFinish: () => reset('password', 'password_confirmation'),
+                onFinish: () => {
+                    reset('password', 'password_confirmation');
+                    recaptchaRef.current?.reset();
+                    setData('g-recaptcha-response', '');
+                },
+                onError: () => {
+                    recaptchaRef.current?.reset();
+                    setData('g-recaptcha-response', '');
+                },
             },
         );
     };
@@ -214,6 +250,31 @@ export default function Register() {
                             {errors.password_confirmation && (
                                 <p className="mt-1 text-sm font-medium text-red-600">
                                     {errors.password_confirmation}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <RecaptchaWidget
+                                ref={recaptchaRef}
+                                siteKey={siteKey}
+                                onChange={(token) =>
+                                    setData('g-recaptcha-response', token)
+                                }
+                                onExpired={() => {
+                                    recaptchaRef.current?.reset();
+                                    setData('g-recaptcha-response', '');
+                                }}
+                                onError={() => {
+                                    recaptchaRef.current?.reset();
+                                    setData('g-recaptcha-response', '');
+                                }}
+                            />
+                            {(errors['g-recaptcha-response'] ||
+                                errors.recaptcha_token) && (
+                                <p className="mt-1 text-center text-sm font-medium text-red-600">
+                                    {errors['g-recaptcha-response'] ||
+                                        errors.recaptcha_token}
                                 </p>
                             )}
                         </div>

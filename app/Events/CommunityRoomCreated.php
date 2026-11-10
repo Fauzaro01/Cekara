@@ -49,4 +49,3 @@ class CommunityRoomCreated implements ShouldBroadcastNow
         ];
     }
 }
-

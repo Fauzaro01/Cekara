@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 
@@ -146,6 +147,10 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
     });
 
     test('privilege escalation attack via registration payload is thwarted', function () {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify*' => Http::response(['success' => true]),
+        ]);
+
         $url = route('register');
 
         $this->post($url, [
@@ -156,6 +161,7 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
             'is_admin' => true,
             'isAdmin' => true,
             'role' => 'admin',
+            'g-recaptcha-response' => 'mock-valid-token',
         ]);
 
         $createdUser = User::where('email', 'attacker@example.com')->first();
@@ -189,6 +195,10 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
     |--------------------------------------------------------------------------
     */
     test('duplicate email registration is rejected with Indonesian validation message', function () {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify*' => Http::response(['success' => true]),
+        ]);
+
         User::factory()->create([
             'email' => 'existing.user@example.com',
         ]);
@@ -198,6 +208,7 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
             'email' => 'existing.user@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'g-recaptcha-response' => 'mock-valid-token',
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -206,11 +217,16 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
     });
 
     test('password confirmation mismatch is rejected with validation.confirmed message', function () {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify*' => Http::response(['success' => true]),
+        ]);
+
         $response = $this->post(route('register'), [
             'name' => 'Mismatch Test',
             'email' => 'mismatch@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'DifferentPassword123!',
+            'g-recaptcha-response' => 'mock-valid-token',
         ]);
 
         $response->assertSessionHasErrors(['password']);
@@ -219,11 +235,16 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
     });
 
     test('password below minimum length is rejected with Indonesian validation message', function () {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify*' => Http::response(['success' => true]),
+        ]);
+
         $response = $this->post(route('register'), [
             'name' => 'Short Pass',
             'email' => 'shortpass@example.com',
             'password' => '123',
             'password_confirmation' => '123',
+            'g-recaptcha-response' => 'mock-valid-token',
         ]);
 
         $response->assertSessionHasErrors(['password']);
@@ -232,11 +253,16 @@ describe('Milestone 2 Adversarial Auth & Role Challenges', function () {
     });
 
     test('uppercase registration email is rejected with Indonesian validation message', function () {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify*' => Http::response(['success' => true]),
+        ]);
+
         $response = $this->post(route('register'), [
             'name' => 'Uppercase Email User',
             'email' => 'UPPERCASE@EXAMPLE.COM',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'g-recaptcha-response' => 'mock-valid-token',
         ]);
 
         $response->assertSessionHasErrors(['email']);

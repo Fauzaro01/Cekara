@@ -56,4 +56,3 @@ class CommunityMessageReacted implements ShouldBroadcastNow
         ];
     }
 }
-

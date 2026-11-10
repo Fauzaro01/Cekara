@@ -28,7 +28,6 @@ import {
     Sparkles,
     ThumbsUp,
     Users,
-    Wifi,
     X,
 } from 'lucide-react';
 import type { ClipboardEvent, FormEvent, ReactNode } from 'react';
@@ -399,6 +398,9 @@ export default function CommunityRadarIndex({
         number | null
     >(null);
     const [keyboardEmojiInput, setKeyboardEmojiInput] = useState('');
+    const [pendingReactionByMsg, setPendingReactionByMsg] = useState<
+        Record<number, string | null>
+    >({});
     const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(
         null,
     );
@@ -564,15 +566,6 @@ export default function CommunityRadarIndex({
                                 parsedData.message,
                             );
                         } else if (
-                            eventName.endsWith('message.reacted') &&
-                            parsedData?.reactions
-                        ) {
-                            mergeReactionsIntoMessage(
-                                Number(parsedData.room_id),
-                                Number(parsedData.message_id),
-                                parsedData.reactions,
-                            );
-                        } else if (
                             eventName.endsWith('alert.upvoted') &&
                             parsedData?.alert_id
                         ) {
@@ -622,10 +615,10 @@ export default function CommunityRadarIndex({
         };
     }, [realtimeConfig, mergeMessageIntoRoom, mergeReactionsIntoMessage]);
 
-    // Real-time fallback sync when WebSocket daemon is not active
+    // Background delta sync for reactions and rooms
     useEffect(() => {
         const interval = window.setInterval(async () => {
-            if (document.hidden || reverbConnected) {
+            if (document.hidden) {
                 return;
             }
             try {
@@ -878,7 +871,7 @@ export default function CommunityRadarIndex({
     };
 
     const handleToggleReaction = async (messageId: number, emoji: string) => {
-        if (!currentUser || !activeRoom) {
+        if (!currentUser || !activeRoom || pendingReactionByMsg[messageId]) {
             return;
         }
 
@@ -887,23 +880,32 @@ export default function CommunityRadarIndex({
             return;
         }
 
+        const targetRoomId = activeRoom.id;
+        setPendingReactionByMsg((prev) => ({
+            ...prev,
+            [messageId]: cleanEmoji,
+        }));
+
         try {
-            const res = await fetch(`/radar/messages/${messageId}/reactions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getXsrfToken(),
-                },
-                body: JSON.stringify({ emoji: cleanEmoji }),
-            });
+            const [res] = await Promise.all([
+                fetch(`/radar/messages/${messageId}/reactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': getXsrfToken(),
+                    },
+                    body: JSON.stringify({ emoji: cleanEmoji }),
+                }),
+                new Promise((resolve) => window.setTimeout(resolve, 1000)),
+            ]);
 
             if (res.ok) {
                 const data = await res.json();
                 if (data.reactions) {
                     mergeReactionsIntoMessage(
-                        Number(data.room_id || activeRoom.id),
+                        Number(data.room_id || targetRoomId),
                         messageId,
                         data.reactions,
                     );
@@ -911,6 +913,11 @@ export default function CommunityRadarIndex({
             }
         } catch {
             // Ignore network error
+        } finally {
+            setPendingReactionByMsg((prev) => ({
+                ...prev,
+                [messageId]: null,
+            }));
         }
     };
 
@@ -988,21 +995,6 @@ export default function CommunityRadarIndex({
                                 <Badge variant="warn" withDot>
                                     Komunitas Guardian
                                 </Badge>
-                                <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#3B2A1E] bg-white px-3 py-1 text-xs font-bold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
-                                    <span
-                                        className={`size-2 rounded-full ${
-                                            reverbConnected
-                                                ? 'bg-emerald-500 animate-ping'
-                                                : 'bg-[#FF9A3C]'
-                                        }`}
-                                    />
-                                    <Wifi className="size-3.5 text-[#3B2A1E]" />
-                                    <span>
-                                        {reverbConnected
-                                            ? 'Laravel Reverb WebSocket Terhubung'
-                                            : 'Real-Time Komunitas Aktif'}
-                                    </span>
-                                </span>
                             </div>
 
                             <h1 className="font-['Fredoka',system-ui,sans-serif] text-3xl leading-tight font-bold tracking-tight text-[#3B2A1E] sm:text-4xl md:text-[40px]">
@@ -1326,11 +1318,6 @@ export default function CommunityRadarIndex({
                                                     }
                                                 </span>
                                             </div>
-
-                                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#3B2A1E] bg-[#8ECDF0]/40 px-2.5 py-0.5 text-[11px] font-bold text-[#3B2A1E]">
-                                                <span className="size-1.5 rounded-full bg-[#3B2A1E] animate-ping" />
-                                                Live Reverb
-                                            </span>
                                         </div>
 
                                         <h2 className="mt-2 font-['Fredoka',system-ui,sans-serif] text-xl font-bold text-[#3B2A1E]">
@@ -1431,7 +1418,12 @@ export default function CommunityRadarIndex({
                                                         <button
                                                             type="button"
                                                             disabled={
-                                                                !currentUser
+                                                                !currentUser ||
+                                                                Boolean(
+                                                                    pendingReactionByMsg[
+                                                                        msg.id
+                                                                    ],
+                                                                )
                                                             }
                                                             onClick={() =>
                                                                 handleToggleReaction(
@@ -1443,9 +1435,15 @@ export default function CommunityRadarIndex({
                                                                 hasLiked
                                                                     ? 'border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
                                                                     : 'border-[#EFE3D0] bg-white text-[#6B5646] hover:border-[#3B2A1E] hover:text-[#3B2A1E]'
-                                                            } disabled:cursor-not-allowed disabled:opacity-60`}
+                                                            } disabled:cursor-not-allowed disabled:opacity-70`}
                                                         >
-                                                            <ThumbsUp className="size-3.5" />
+                                                            {pendingReactionByMsg[
+                                                                msg.id
+                                                            ] === '👍' ? (
+                                                                <Loader2 className="size-3.5 animate-spin text-[#3B2A1E]" />
+                                                            ) : (
+                                                                <ThumbsUp className="size-3.5" />
+                                                            )}
                                                             <span>Suka</span>
                                                             {likeReaction &&
                                                                 likeReaction.count >
@@ -1472,6 +1470,11 @@ export default function CommunityRadarIndex({
                                                                               currentUser.id,
                                                                           )
                                                                         : false;
+                                                                const isPendingThisEmoji =
+                                                                    pendingReactionByMsg[
+                                                                        msg.id
+                                                                    ] ===
+                                                                    reaction.emoji;
                                                                 return (
                                                                     <button
                                                                         key={
@@ -1479,7 +1482,13 @@ export default function CommunityRadarIndex({
                                                                         }
                                                                         type="button"
                                                                         disabled={
-                                                                            !currentUser
+                                                                            !currentUser ||
+                                                                            Boolean(
+                                                                                pendingReactionByMsg[
+                                                                                    msg
+                                                                                        .id
+                                                                                ],
+                                                                            )
                                                                         }
                                                                         onClick={() =>
                                                                             handleToggleReaction(
@@ -1491,13 +1500,17 @@ export default function CommunityRadarIndex({
                                                                             reacted
                                                                                 ? 'border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]'
                                                                                 : 'border-[#EFE3D0] bg-white text-[#3B2A1E] hover:border-[#3B2A1E]'
-                                                                        } disabled:cursor-not-allowed`}
+                                                                        } disabled:cursor-not-allowed disabled:opacity-70`}
                                                                     >
-                                                                        <span>
-                                                                            {
-                                                                                reaction.emoji
-                                                                            }
-                                                                        </span>
+                                                                        {isPendingThisEmoji ? (
+                                                                            <Loader2 className="size-3 animate-spin text-[#3B2A1E]" />
+                                                                        ) : (
+                                                                            <span>
+                                                                                {
+                                                                                    reaction.emoji
+                                                                                }
+                                                                            </span>
+                                                                        )}
                                                                         <span>
                                                                             {
                                                                                 reaction.count
@@ -1523,9 +1536,25 @@ export default function CommunityRadarIndex({
                                                                             '',
                                                                         );
                                                                     }}
-                                                                    className="cursor-pointer inline-flex items-center gap-1 rounded-xl border-2 border-dashed border-[#3B2A1E]/40 bg-[#FFF8EC] px-2.5 py-1 text-xs font-bold text-[#6B5646] hover:border-[#3B2A1E] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E]"
+                                                                    disabled={Boolean(
+                                                                        pendingReactionByMsg[
+                                                                            msg
+                                                                                .id
+                                                                        ],
+                                                                    )}
+                                                                    className="cursor-pointer inline-flex items-center gap-1 rounded-xl border-2 border-dashed border-[#3B2A1E]/40 bg-[#FFF8EC] px-2.5 py-1 text-xs font-bold text-[#6B5646] hover:border-[#3B2A1E] hover:bg-[#FFE27A]/50 hover:text-[#3B2A1E] disabled:cursor-not-allowed disabled:opacity-70"
                                                                 >
-                                                                    <Smile className="size-3.5" />
+                                                                    {pendingReactionByMsg[
+                                                                        msg.id
+                                                                    ] &&
+                                                                    pendingReactionByMsg[
+                                                                        msg.id
+                                                                    ] !==
+                                                                        '👍' ? (
+                                                                        <Loader2 className="size-3.5 animate-spin text-[#3B2A1E]" />
+                                                                    ) : (
+                                                                        <Smile className="size-3.5" />
+                                                                    )}
                                                                     <span>
                                                                         + Reaksi
                                                                     </span>

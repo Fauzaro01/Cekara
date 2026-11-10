@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Search, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
@@ -230,24 +229,6 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                             className="flex flex-col justify-between p-6 transition-all duration-200 hover:-translate-y-1 hover:border-brand-300 dark:hover:border-brand-700"
                         >
                             <div>
-                                {scenario.has_attempted && (
-                                    <div className="mb-3 flex items-center justify-end">
-                                        <Badge
-                                            variant={
-                                                scenario.is_safe
-                                                    ? 'safe'
-                                                    : 'danger'
-                                            }
-                                            withDot
-                                        >
-                                            {scenario.is_safe
-                                                ? 'Aman'
-                                                : 'Terkecoh'}{' '}
-                                            ({scenario.latest_score})
-                                        </Badge>
-                                    </div>
-                                )}
-
                                 <h3 className="text-base font-bold text-[#3B2A1E]">
                                     {scenario.title}
                                 </h3>
@@ -275,9 +256,17 @@ export default function SimulationIndex({ scenarios, userStats }: Props) {
                                         </Link>
                                         <Link
                                             href={`/simulasi/${scenario.slug}`}
-                                            className="text-center text-[11px] font-bold text-[#6B5646] hover:text-[#3B2A1E] hover:underline py-0.5"
+                                            className="group inline-flex items-center justify-center gap-1.5 text-center text-xs font-bold text-[#6B5646] hover:text-[#3B2A1E] py-1 transition-colors"
                                         >
-                                            Uji Coba Tampilan Pengguna &rarr;
+                                            <span>Uji Coba Tampilan Pengguna</span>
+                                            {/* Google Material Symbols: arrow_forward */}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                className="size-3.5 fill-current transition-transform duration-150 group-hover:translate-x-1"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" />
+                                            </svg>
                                         </Link>
                                     </>
                                 ) : (

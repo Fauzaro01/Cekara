@@ -35,7 +35,7 @@ export default function VerifyEmail({ status, email }: VerifyEmailProps) {
                         </h1>
                         <p className="mt-2 text-sm font-medium leading-relaxed text-[#6B5646]">
                             Terima kasih telah mendaftar! Sebelum dapat masuk menggunakan akun Anda, silakan buka tautan halaman verifikasi yang telah kami kirimkan ke email{' '}
-                            {email ? (gt
+                            {email ? (
                                 <span className="font-bold text-[#3B2A1E]">
                                     {email}
                                 </span>

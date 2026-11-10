@@ -72,7 +72,7 @@ interface AdminSimulationsProps {
         status: string;
         per_page?: number;
     };
-    stats: {
+    stats?: {
         total_scenarios: number;
         active_scenarios: number;
         total_attempts: number;
@@ -467,33 +467,6 @@ export default function AdminSimulationsIndex({ scenarios, filters, stats, flash
                     </div>
                 </div>
 
-                {/* Stats Row */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[3px_3px_0px_0px_#3B2A1E]">
-                        <p className="text-xs font-bold text-[#6B5646]">Total Skenario</p>
-                        <p className="mt-1 font-['Fredoka',system-ui,sans-serif] text-2xl font-bold text-[#3B2A1E]">
-                            {stats.total_scenarios} Modul
-                        </p>
-                    </div>
-                    <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[3px_3px_0px_0px_#3B2A1E]">
-                        <p className="text-xs font-bold text-[#6B5646]">Skenario Aktif</p>
-                        <p className="mt-1 font-['Fredoka',system-ui,sans-serif] text-2xl font-bold text-[#2E7D32]">
-                            {stats.active_scenarios} Aktif
-                        </p>
-                    </div>
-                    <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[3px_3px_0px_0px_#3B2A1E]">
-                        <p className="text-xs font-bold text-[#6B5646]">Total Percobaan Latihan</p>
-                        <p className="mt-1 font-['Fredoka',system-ui,sans-serif] text-2xl font-bold text-[#E06812]">
-                            {stats.total_attempts} Kali
-                        </p>
-                    </div>
-                    <div className="rounded-2xl border-2 border-[#3B2A1E] bg-white p-4 shadow-[3px_3px_0px_0px_#3B2A1E]">
-                        <p className="text-xs font-bold text-[#6B5646]">Rata-rata Skor User</p>
-                        <p className="mt-1 font-['Fredoka',system-ui,sans-serif] text-2xl font-bold text-[#1D608F]">
-                            {stats.average_score} / 100
-                        </p>
-                    </div>
-                </div>
 
                 {/* Filter and Control Bar */}
                 <div className="rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] p-4 sm:p-5 shadow-[4px_4px_0px_0px_#3B2A1E] space-y-4">
@@ -617,12 +590,6 @@ export default function AdminSimulationsIndex({ scenarios, filters, stats, flash
                                 badgeBg: 'bg-stone-100 border-stone-400',
                                 text: 'text-stone-700',
                             };
-                            const diff = DIFFICULTY_MAP[scenario.difficulty] || {
-                                label: scenario.difficulty,
-                                badgeBg: 'bg-stone-100 border-stone-400',
-                                text: 'text-stone-700',
-                            };
-
                             return (
                                 <div
                                     key={scenario.id}
@@ -631,18 +598,10 @@ export default function AdminSimulationsIndex({ scenarios, filters, stats, flash
                                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                         <div className="space-y-2">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <span className="rounded-lg border-2 border-[#3B2A1E] bg-[#FFE27A] px-2 py-0.5 text-xs font-black text-[#3B2A1E]">
-                                                    Urutan #{scenario.order}
-                                                </span>
                                                 <span
                                                     className={`rounded-lg border-2 px-2.5 py-0.5 text-xs font-bold ${cat.badgeBg} ${cat.text}`}
                                                 >
                                                     {cat.label}
-                                                </span>
-                                                <span
-                                                    className={`rounded-lg border-2 px-2 py-0.5 text-xs font-bold ${diff.badgeBg} ${diff.text}`}
-                                                >
-                                                    {diff.label}
                                                 </span>
                                                 <button
                                                     type="button"
@@ -1359,9 +1318,17 @@ export default function AdminSimulationsIndex({ scenarios, filters, stats, flash
                                                 else if (activeTab === 'chat') setActiveTab('options');
                                                 else if (activeTab === 'options') setActiveTab('education');
                                             }}
-                                            className="rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] hover:bg-[#FFD747] transition"
+                                            className="group inline-flex items-center gap-1.5 rounded-2xl border-2 border-[#3B2A1E] bg-[#FFE27A] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] hover:bg-[#FFD747] transition"
                                         >
-                                            Lanjut Tab Berikutnya &rarr;
+                                            <span>Lanjut Tab Berikutnya</span>
+                                            {/* Google Material Symbols: arrow_forward */}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                className="size-4 shrink-0 fill-current transition-transform duration-150 group-hover:translate-x-1"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" />
+                                            </svg>
                                         </button>
                                     ) : (
                                         <Button

@@ -292,11 +292,15 @@ export default function AppLayout({ children }: PropsWithChildren) {
         };
     }, [termsModal, accountDrawerOpen]);
 
-    const isLandingPage = url === '/' || url.startsWith('/?');
+    const isLandingPage = url === '/' || url.startsWith('/?') || url.startsWith('/#');
+    const isPublicPage =
+        isLandingPage ||
+        url === '/panduan-keluarga' ||
+        url.startsWith('/panduan-keluarga');
 
     const isGuestActive = (path: string) => {
         if (path === '/') {
-            return url === '/';
+            return isLandingPage;
         }
         return url.startsWith(path);
     };
@@ -487,7 +491,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
     // Modern Bottom Bar Navigation
     const renderBottomBar = () => {
-        if (!user) return null;
+        if (!user || isPublicPage) return null;
 
         return (
             <>
@@ -1013,9 +1017,10 @@ export default function AppLayout({ children }: PropsWithChildren) {
     };
 
     // =========================================================================
-    // CASE 1: LOGGED IN USER (Bottom Bar & Clean Full-Width Layout - ZERO Top Navbar)
+    // CASE 1: LOGGED IN USER IN-APP PANEL (Bottom Bar & Clean Full-Width Layout - ZERO Top Navbar)
+    // Only applied on authenticated in-app panel pages, NOT on the landing page or public pages!
     // =========================================================================
-    if (user) {
+    if (user && !isPublicPage) {
         return (
             <div className="flex min-h-screen flex-col bg-[#FFF8EC] font-['Nunito',system-ui,sans-serif] text-[#3B2A1E]">
                 {renderNavigationIndicator()}
@@ -1027,8 +1032,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     }`}
                 >
                     <main className="flex-1 min-w-0">{children}</main>
-                    {/* Halaman in-app setelah login (dashboard, simulasi, komunitas, profil, dll) tidak menampilkan footer marketing */}
-                    {isLandingPage && renderFooter()}
                 </div>
 
                 {/* Account Drawer Modal */}
@@ -1111,9 +1114,40 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
                         {/* Right Toolbar */}
                         <div className="flex items-center gap-2.5 sm:gap-3">
-                            <div className="hidden items-center sm:flex">
-                                <AuthSwitchToggle variant="header" />
-                            </div>
+                            {user ? (
+                                <div className="hidden items-center gap-2 sm:flex">
+                                    <Link
+                                        href={user.is_admin ? '/admin/dashboard' : '/dashboard'}
+                                        className="inline-flex h-10 items-center justify-center rounded-full border-2 border-[#3B2A1E] bg-[#FF9A3C] px-4 text-xs sm:text-sm font-extrabold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] transition-all hover:bg-[#FFE27A] hover:scale-105 active:translate-y-0.5 cursor-pointer"
+                                    >
+                                        <span>{user.is_admin ? 'Panel Admin' : 'Dashboard'}</span>
+                                    </Link>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setAccountDrawerOpen(true)}
+                                        className="flex size-10 items-center justify-center rounded-full border-2 border-[#3B2A1E] bg-[#FFE27A] shadow-[2px_2px_0px_0px_#3B2A1E] hover:bg-[#FF9A3C] hover:scale-105 transition cursor-pointer overflow-hidden"
+                                        title={`Menu Akun: ${user.name}`}
+                                        aria-label="Buka menu profil dan pengaturan akun"
+                                    >
+                                        {user.avatar ? (
+                                            <img
+                                                src={user.avatar}
+                                                alt={user.name}
+                                                className="size-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-sm font-black text-[#3B2A1E]">
+                                                {user.name.charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="hidden items-center sm:flex">
+                                    <AuthSwitchToggle variant="header" />
+                                </div>
+                            )}
 
                             {/* Mobile Hamburger Toggle */}
                             <button
@@ -1131,7 +1165,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                         </div>
                     </div>
 
-                    {/* Mobile Drawer for Guests */}
+                    {/* Mobile Drawer */}
                     {mobileMenuOpen && (
                         <div className="border-t-2 border-[#3B2A1E]/15 px-4 pt-3 pb-4 lg:hidden">
                             <nav className="flex flex-col gap-1.5">
@@ -1161,7 +1195,29 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
                             {/* Mobile Auth Actions */}
                             <div className="mt-3 border-t-2 border-[#3B2A1E]/15 pt-3">
-                                <AuthSwitchToggle variant="mobile" />
+                                {user ? (
+                                    <div className="flex flex-col gap-2">
+                                        <Link
+                                            href={user.is_admin ? '/admin/dashboard' : '/dashboard'}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="flex items-center justify-center rounded-full border-2 border-[#3B2A1E] bg-[#FF9A3C] py-2.5 text-xs sm:text-sm font-extrabold text-[#3B2A1E] shadow-[2px_2px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition"
+                                        >
+                                            <span>Buka Panel {user.is_admin ? 'Admin' : 'Dashboard'}</span>
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMobileMenuOpen(false);
+                                                setAccountDrawerOpen(true);
+                                            }}
+                                            className="flex items-center justify-center gap-2 rounded-full border-2 border-[#3B2A1E] bg-[#FFF8EC] py-2 text-xs sm:text-sm font-extrabold text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E] hover:bg-[#FFE27A] transition cursor-pointer"
+                                        >
+                                            <span>Menu Akun ({user.name})</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <AuthSwitchToggle variant="mobile" />
+                                )}
                             </div>
                         </div>
                     )}
@@ -1170,6 +1226,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
             {/* Main Content Area */}
             <main className="flex-1 pt-24 sm:pt-28">{children}</main>
+
+            {/* Account Drawer Modal for Logged In User */}
+            {user && renderAccountDrawer()}
 
             {renderFooter()}
 

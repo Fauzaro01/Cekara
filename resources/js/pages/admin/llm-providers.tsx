@@ -27,7 +27,7 @@ const defaultProvidersList: LlmProviderItem[] = [
         id: 1,
         key: 'gemini',
         name: 'Google Gemini',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash-lite',
         base_url: 'https://generativelanguage.googleapis.com/v1beta',
         is_active: true,
         has_api_key: false,

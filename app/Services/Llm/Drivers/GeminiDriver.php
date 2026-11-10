@@ -25,6 +25,9 @@ class GeminiDriver implements LlmDriverInterface
 
         $baseUrl = rtrim($this->provider?->base_url ?: 'https://generativelanguage.googleapis.com/v1beta', '/');
         $primaryModel = $this->provider?->model ?: 'gemini-3.5-flash-lite';
+        if ($primaryModel === 'gemini-1.5-flash') {
+            $primaryModel = 'gemini-3.5-flash-lite';
+        }
 
         $analyzedText = trim($content);
         if ($analyzedText === '' && ! empty($context['image'])) {
@@ -98,7 +101,7 @@ PROMPT;
 
         $modelsToTry = [$primaryModel];
         if (! $this->isHttpFaked()) {
-            foreach (['gemini-2.5-flash', 'gemini-3.5-flash-lite'] as $fallbackModel) {
+            foreach (['gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'] as $fallbackModel) {
                 if (! in_array($fallbackModel, $modelsToTry, true)) {
                     $modelsToTry[] = $fallbackModel;
                 }
@@ -121,14 +124,24 @@ PROMPT;
                 $client = $client->withoutVerifying();
             }
 
-            $response = $client->post($endpoint, $payload);
+            // Retry up to 2 times for transient spikes (503/429)
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
+                $response = $client->post($endpoint, $payload);
 
-            if ($response->successful()) {
+                if ($response->successful()) {
+                    break 2;
+                }
+
+                if (in_array($response->status(), [429, 503], true) && $attempt < 2) {
+                    usleep(350000); // 350ms pause before quick retry
+                    continue;
+                }
+
                 break;
             }
 
-            // Only try fallback model on transient capacity (503/429) or deprecated model (404)
-            if (! in_array($response->status(), [404, 429, 503], true)) {
+            // Only try next fallback model on transient capacity (503/429) or deprecated model (404)
+            if (! in_array($response?->status(), [404, 429, 503], true)) {
                 break;
             }
         }

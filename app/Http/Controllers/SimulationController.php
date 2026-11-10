@@ -30,7 +30,7 @@ class SimulationController extends Controller
             ->get()
             ->map(function (SimulationScenario $scenario) use ($user) {
                 $userAttempt = null;
-                if ($user) {
+                if ($user && ! $user->is_admin) {
                     $userAttempt = SimulationAttempt::query()
                         ->where('user_id', $user->id)
                         ->where('simulation_scenario_id', $scenario->id)
@@ -83,7 +83,7 @@ class SimulationController extends Controller
         $user = $request->user();
         $latestAttempt = null;
 
-        if ($user) {
+        if ($user && ! $user->is_admin) {
             $latestAttempt = SimulationAttempt::query()
                 ->where('user_id', $user->id)
                 ->where('simulation_scenario_id', $scenario->id)
@@ -145,8 +145,9 @@ class SimulationController extends Controller
         $isSafe = (bool) ($chosen['is_safe'] ?? false);
         $score = (int) ($chosen['score'] ?? 0);
 
+        $currentUser = $request->user();
         $attempt = SimulationAttempt::create([
-            'user_id' => $request->user()?->id,
+            'user_id' => ($currentUser && ! $currentUser->is_admin) ? $currentUser->id : null,
             'simulation_scenario_id' => $scenario->id,
             'selected_option' => $selectedOptionId,
             'is_safe' => $isSafe,

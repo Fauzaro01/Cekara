@@ -1647,14 +1647,16 @@ export default function CommunityRadarIndex({
                         {/* Dynamic CTA depending on Active Tab */}
                         <div className="flex flex-col items-start gap-2 sm:items-end">
                             {activeTab === 'radar' ? (
-                                <Button
-                                    variant="outline"
-                                    size="md"
-                                    onClick={() => setActiveTab('discussions')}
-                                >
-                                    <MessageSquare className="size-4" />
-                                    <span>Buka Obrolan Komunitas</span>
-                                </Button>
+                                !currentUser?.is_admin && (
+                                    <Button
+                                        variant="outline"
+                                        size="md"
+                                        onClick={() => setActiveTab('discussions')}
+                                    >
+                                        <MessageSquare className="size-4" />
+                                        <span>Buka Obrolan Komunitas</span>
+                                    </Button>
+                                )
                             ) : currentUser ? (
                                 currentUser.is_admin ? (
                                     <Button
@@ -1695,15 +1697,7 @@ export default function CommunityRadarIndex({
                                         </span>
                                     </>
                                 )
-                            ) : (
-                                <Link
-                                    href="/login"
-                                    className={buttonClasses('primary', 'md')}
-                                >
-                                    <Lock className="size-4" />
-                                    <span>Masuk untuk Buat Ruang Diskusi</span>
-                                </Link>
-                            )}
+                            ) : null}
                         </div>
                     </div>
 
@@ -2860,22 +2854,26 @@ export default function CommunityRadarIndex({
                                                 </div>
                                             </form>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-[#3B2A1E]/40 bg-white p-4 sm:flex-row">
-                                                <p className="text-xs font-semibold text-[#6B5646]">
-                                                    Silakan masuk untuk mengirim
-                                                    pesan Markdown, mengunggah
-                                                    gambar, dan memberikan reaksi
-                                                    emoji.
-                                                </p>
-                                                <Link
-                                                    href="/login"
-                                                    className={buttonClasses(
-                                                        'primary',
-                                                        'sm',
-                                                    )}
-                                                >
-                                                    Masuk Akun
-                                                </Link>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border-2 border-[#3B2A1E] bg-[#FFF8EC] p-4 sm:p-5 shadow-[3px_3px_0px_0px_#3B2A1E]">
+                                                <div className="min-w-0">
+                                                    <h4 className="font-['Fredoka',system-ui,sans-serif] text-sm sm:text-base font-bold text-[#3B2A1E] leading-snug">
+                                                        Ingin Ikut Berdiskusi?
+                                                    </h4>
+                                                    <p className="mt-1 text-xs sm:text-[13px] font-semibold text-[#6B5646] leading-relaxed">
+                                                        Silakan masuk ke akun Anda untuk mengirim pesan, mengunggah tangkapan layar bukti, dan memberikan reaksi emoji.
+                                                    </p>
+                                                </div>
+                                                <div className="flex shrink-0 items-center sm:self-center">
+                                                    <Link
+                                                        href="/login"
+                                                        className={`whitespace-nowrap shrink-0 ${buttonClasses(
+                                                            'primary',
+                                                            'sm',
+                                                        )} px-5 shadow-[2px_2px_0px_0px_#3B2A1E]`}
+                                                    >
+                                                        <span>Masuk Akun</span>
+                                                    </Link>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -2935,19 +2933,21 @@ export default function CommunityRadarIndex({
                             </div>
 
                             {/* CTA Button */}
-                            <Button
-                                variant="primary"
-                                size="md"
-                                onClick={() => {
-                                    setActiveTab('discussions');
-                                    if (currentUser) {
-                                        setIsCreateRoomOpen(true);
-                                    }
-                                }}
-                            >
-                                <MessageSquarePlus className="size-4" />
-                                <span>Mulai Diskusi Kasus</span>
-                            </Button>
+                            {!currentUser?.is_admin && (
+                                <Button
+                                    variant="primary"
+                                    size="md"
+                                    onClick={() => {
+                                        setActiveTab('discussions');
+                                        if (currentUser) {
+                                            setIsCreateRoomOpen(true);
+                                        }
+                                    }}
+                                >
+                                    <MessageSquarePlus className="size-4" />
+                                    <span>Mulai Diskusi Kasus</span>
+                                </Button>
+                            )}
                         </div>
                     </section>
 
@@ -3851,25 +3851,20 @@ export default function CommunityRadarIndex({
                     <div className="relative z-10 flex w-full max-w-2xl max-h-[85vh] flex-col overflow-hidden rounded-3xl border-3 border-[#3B2A1E] bg-[#FFF8EC] shadow-[6px_6px_0px_0px_#3B2A1E]">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b-2 border-[#EFE3D0] bg-[#FFF8EC] px-6 py-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex size-9 items-center justify-center rounded-xl border-2 border-[#3B2A1E] bg-[#FFE27A] text-[#3B2A1E] shadow-[1.5px_1.5px_0px_0px_#3B2A1E]">
-                                    <Bell className="size-4.5" />
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
+                                        Kotak Pesan Notifikasi Komunitas
+                                    </h3>
+                                    {unreadNoticesCount > 0 && (
+                                        <span className="inline-flex items-center rounded-full bg-[#D4573A] px-2 py-0.5 text-[10px] font-black text-white">
+                                            {unreadNoticesCount} baru
+                                        </span>
+                                    )}
                                 </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-['Fredoka',system-ui,sans-serif] text-lg font-bold text-[#3B2A1E]">
-                                            Kotak Pesan Notifikasi Komunitas
-                                        </h3>
-                                        {unreadNoticesCount > 0 && (
-                                            <span className="inline-flex items-center rounded-full bg-[#D4573A] px-2 py-0.5 text-[10px] font-black text-white">
-                                                {unreadNoticesCount} baru
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-[11px] font-semibold text-[#6B5646]">
-                                        Transparansi moderasi ruang dan pesan dari Administrator Cekara
-                                    </p>
-                                </div>
+                                <p className="text-[11px] font-semibold text-[#6B5646]">
+                                    Transparansi moderasi ruang dan pesan dari Administrator Cekara
+                                </p>
                             </div>
 
                             <div className="flex items-center gap-2">

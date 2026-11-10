@@ -16,7 +16,7 @@ class LlmProviderSeeder extends Seeder
             ['key' => 'gemini'],
             [
                 'name' => 'Google Gemini',
-                'model' => 'gemini-1.5-flash',
+                'model' => 'gemini-3.5-flash-lite',
                 'base_url' => 'https://generativelanguage.googleapis.com/v1beta',
                 'custom_headers' => null,
                 'is_active' => true,

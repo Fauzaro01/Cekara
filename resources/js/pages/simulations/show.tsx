@@ -223,10 +223,6 @@ export default function SimulationShow({ scenario, latestAttempt }: Props) {
                         <ArrowLeft className="size-3.5" />
                         Kembali ke Daftar Skenario
                     </Link>
-                    <Badge variant="brand">
-                        <Gamepad2 className="mr-1 size-3" />
-                        Simulasi Interaktif
-                    </Badge>
                 </div>
 
                 {/* Scenario Header Card */}
@@ -355,17 +351,11 @@ export default function SimulationShow({ scenario, latestAttempt }: Props) {
                         {!evaluation ? (
                             /* Phase 1: Thinking & Decision Choices */
                             <Card variant="floating" className="p-6">
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="brand">
-                                        <Sparkles className="mr-1 size-3" />
-                                        Tahap Berpikir
-                                    </Badge>
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                        Pilih Keputusan Anda
-                                    </span>
-                                </div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-[#6B5646]">
+                                    Pilih Keputusan Anda
+                                </p>
 
-                                <h2 className="mt-3 text-lg font-bold text-slate-900 dark:text-slate-100">
+                                <h2 className="mt-1.5 text-lg font-bold text-slate-900 dark:text-slate-100">
                                     Apa tindakan terbaik yang akan Anda ambil?
                                 </h2>
 

@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\VerifyEmailNotification;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * @property int $id
@@ -23,9 +26,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'is_admin', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -51,6 +54,28 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Send the email verification notification.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        try {
+            $this->notify(new VerifyEmailNotification);
+        } catch (Throwable $e) {
+            Log::warning('SMTP email verification delivery failed, falling back to log mailer.', [
+                'email' => $this->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            try {
+                config(['mail.default' => 'log']);
+                $this->notify(new VerifyEmailNotification);
+            } catch (Throwable) {
+                // Prevent registration crash if fallback mailer also fails
+            }
+        }
     }
 
     /**
@@ -89,5 +114,25 @@ class User extends Authenticatable
     public function emergencyChecklistProgress(): HasMany
     {
         return $this->hasMany(EmergencyChecklistProgress::class);
+    }
+
+    /**
+     * Get the community discussion rooms created by this user.
+     *
+     * @return HasMany<CommunityRoom, $this>
+     */
+    public function communityRooms(): HasMany
+    {
+        return $this->hasMany(CommunityRoom::class);
+    }
+
+    /**
+     * Get the community messages sent by this user.
+     *
+     * @return HasMany<CommunityMessage, $this>
+     */
+    public function communityMessages(): HasMany
+    {
+        return $this->hasMany(CommunityMessage::class);
     }
 }

@@ -16,11 +16,18 @@ Route::inertia('/', 'welcome')->name('home');
 Route::get('/tanggap-darurat', [EmergencyActionController::class, 'index'])->name('emergency.index');
 Route::redirect('/act', '/tanggap-darurat');
 
-// Komunitas Pemberantas Kejahatan (Community Threat Radar)
-Route::get('/komunitas', [CommunityRadarController::class, 'index'])->name('radar.index');
-Route::post('/komunitas/{pattern}/upvote', [CommunityRadarController::class, 'upvote'])->name('radar.upvote');
-Route::post('/komunitas', [CommunityRadarController::class, 'store'])->name('radar.store');
-Route::redirect('/radar', '/komunitas');
+// Radar Ancaman Komunitas (Community Threat Radar & Real-Time Discussion Rooms)
+Route::get('/radar', [CommunityRadarController::class, 'index'])->name('radar.index');
+Route::get('/radar/sync', [CommunityRadarController::class, 'sync'])->name('radar.sync');
+Route::get('/radar/rooms/{room}/messages', [CommunityRadarController::class, 'roomMessages'])->name('radar.rooms.messages');
+Route::post('/radar/{pattern}/upvote', [CommunityRadarController::class, 'upvote'])->name('radar.upvote');
+Route::post('/radar', [CommunityRadarController::class, 'store'])->name('radar.store');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/radar/rooms', [CommunityRadarController::class, 'storeRoom'])->name('radar.rooms.store');
+    Route::post('/radar/rooms/{room}/messages', [CommunityRadarController::class, 'storeMessage'])->name('radar.rooms.messages.store');
+    Route::post('/radar/messages/{message}/reactions', [CommunityRadarController::class, 'toggleReaction'])->name('radar.messages.reactions.toggle');
+});
 
 // Toolkit Guardian untuk Orang Tua & Guru (Family & School Guardian)
 Route::get('/panduan-keluarga', [FamilyGuardianController::class, 'index'])->name('family.index');
@@ -51,8 +58,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/llm-providers/{provider}/activate', [LlmProviderController::class, 'activate'])->name('llm-providers.activate');
 });
 
-// Authenticated User Routes (Auth Gate)
-Route::middleware('auth')->group(function () {
+// Authenticated User Routes (Auth & Email Verified Gate)
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::delete('/scans/{id}', [DashboardController::class, 'destroyScan'])
         ->whereNumber('id')

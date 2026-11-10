@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\RecaptchaRule;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +21,9 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('auth/register');
+        return Inertia::render('auth/register', [
+            'recaptchaSiteKey' => config('services.recaptcha.site_key'),
+        ]);
     }
 
     /**
@@ -31,10 +33,16 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $recaptchaToken = $request->input('g-recaptcha-response') ?? $request->input('recaptcha_token');
+        $request->merge(['g-recaptcha-response' => $recaptchaToken]);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'g-recaptcha-response' => ['required', 'string', new RecaptchaRule],
+        ], [
+            'g-recaptcha-response.required' => 'Verifikasi reCAPTCHA wajib diselesaikan.',
         ]);
 
         $user = User::create([
@@ -46,14 +54,9 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        Auth::login($user);
+        session(['verification_email' => $user->email]);
 
-        $successMessage = "Anda berhasil masuk sebagai {$user->name}";
-
-        if ($request->filled('redirect')) {
-            return redirect($request->input('redirect'))->with('success', $successMessage);
-        }
-
-        return redirect()->intended(route('dashboard', absolute: false))->with('success', $successMessage);
+        return redirect()->route('verification.notice')
+            ->with('status', 'verification-link-sent');
     }
 }

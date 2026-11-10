@@ -740,11 +740,16 @@ describe('Section 5: Auth & Security Boundaries', function () {
     });
 
     test('user registration trims leading and trailing whitespace from email', function () {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify*' => Http::response(['success' => true]),
+        ]);
+
         $response = $this->post(route('register'), [
             'name' => 'Budi Santoso',
             'email' => 'budi.santoso@example.com',
             'password' => 'BudiPassword123!',
             'password_confirmation' => 'BudiPassword123!',
+            'g-recaptcha-response' => 'mock-valid-token',
         ]);
 
         $response->assertRedirect();
